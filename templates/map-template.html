@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>儒教与道教 · 知识地图</title>
+  <style>
+    :root {
+      --bg-page: #F7F8F7;
+      --bg-card: #FFFFFF;
+      --bg-subtle: #F2F4F2;
+      --bg-green-soft: #EBF2EE;
+      --text-main: #1A1A1A;
+      --text-secondary: #595959;
+      --text-muted: #7A7F7A;
+      --border-light: #D8DDD8;
+      --border-strong: #BFC5BF;
+      --green-main: #1F4E3D;
+      --green-dark: #2D5A43;
+      --green-mid: #4A7C62;
+      --font-serif: "Noto Serif SC", "Songti SC", "STSong", Georgia, serif;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.65;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 顶部栏 */
+    .topbar {
+      background-color: var(--bg-card);
+      border-bottom: 1px solid var(--border-light);
+      padding: 14px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .back-link {
+      font-size: 13px;
+      color: var(--green-main);
+      text-decoration: none;
+      border: 1px solid var(--border-light);
+      padding: 5px 12px;
+      background-color: var(--bg-page);
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .back-link:hover {
+      border-color: var(--green-main);
+      background-color: var(--bg-green-soft);
+    }
+
+    .title-block h1 {
+      font-family: var(--font-serif);
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-main);
+      line-height: 1.3;
+    }
+
+    .title-block p {
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    .perspective-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .ctrl-btn {
+      appearance: none;
+      background-color: var(--bg-card);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-light);
+      padding: 6px 13px;
+      font-size: 12.5px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .ctrl-btn:hover:not(:disabled) {
+      border-color: var(--green-main);
+      color: var(--green-main);
+    }
+
+    .ctrl-btn.active {
+      background-color: var(--green-main);
+      border-color: var(--green-main);
+      color: #FFFFFF;
+    }
+
+    .ctrl-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    /* 主体可拖动双栏 */
+    .workspace {
+      flex: 1;
+      display: flex;
+      min-height: calc(100vh - 68px);
+      overflow: hidden;
+    }
+
+    .workspace.resizing {
+      cursor: col-resize;
+      user-select: none;
+    }
+
+    /* 左侧图谱区 */
+    .canvas-pane {
+      flex: 1;
+      min-width: 340px;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--bg-page);
+    }
+
+    /* 中间可拖动分隔条 */
+    .resizer {
+      width: 6px;
+      flex-shrink: 0;
+      background-color: var(--border-light);
+      cursor: col-resize;
+      position: relative;
+      transition: background-color 0.15s ease;
+    }
+
+    .resizer::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 2px;
+      height: 28px;
+      background-color: var(--text-muted);
+      opacity: 0.45;
+    }
+
+    .resizer:hover,
+    .resizer.dragging {
+      background-color: var(--green-mid);
+    }
+
+    .resizer:hover::after,
+    .resizer.dragging::after {
+      background-color: #FFFFFF;
+      opacity: 0.9;
+    }
+
+    .legend-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 20px;
+      background-color: var(--bg-card);
+      border-bottom: 1px solid var(--border-light);
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .legend-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .legend-line {
+      display: inline-block;
+      width: 24px;
+      height: 0;
+      border-top-width: 2px;
+      border-top-style: solid;
+    }
+
+    .legend-line.both {
+      border-top-color: #595959;
+    }
+
+    .legend-line.primary {
+      border-top-color: #1F4E3D;
+    }
+
+    .legend-line.secondary {
+      border-top-color: #4A7C62;
+      border-top-style: dashed;
+    }
+
+    .svg-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      overflow: auto;
+    }
+
+    svg#mapSvg {
+      width: 100%;
+      max-width: 1000px;
+      height: auto;
+      display: block;
+      user-select: none;
+    }
+
+    /* SVG 内部样式 */
+    .edge-path {
+      fill: none;
+      transition: opacity 0.2s ease, stroke 0.2s ease, stroke-width 0.2s ease;
+      cursor: pointer;
+    }
+
+    .edge-hit {
+      fill: none;
+      stroke: transparent;
+      stroke-width: 16;
+      cursor: pointer;
+    }
+
+    .edge-label-group {
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+    }
+
+    .edge-label-bg {
+      fill: #FFFFFF;
+      stroke: #D8DDD8;
+      stroke-width: 1;
+    }
+
+    .edge-label-group.highlighted .edge-label-bg {
+      fill: #EBF2EE;
+      stroke: #1F4E3D;
+    }
+
+    .edge-label-text {
+      font-size: 11px;
+      fill: #595959;
+      text-anchor: middle;
+      dominant-baseline: central;
+    }
+
+    .edge-label-group.highlighted .edge-label-text {
+      fill: #1F4E3D;
+      font-weight: 600;
+    }
+
+    .node-group {
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+    }
+
+    .node-rect {
+      fill: #FFFFFF;
+      stroke: #BFC5BF;
+      stroke-width: 1.25;
+      transition: fill 0.15s ease, stroke 0.15s ease, stroke-width 0.15s ease;
+    }
+
+    .node-group:hover .node-rect {
+      fill: #EBF2EE;
+      stroke: #1F4E3D;
+    }
+
+    .node-group.highlighted .node-rect {
+      stroke: #1F4E3D;
+      stroke-width: 1.8;
+    }
+
+    .node-group.selected .node-rect {
+      fill: #EBF2EE;
+      stroke: #1F4E3D;
+      stroke-width: 2.2;
+    }
+
+    .node-accent-bar {
+      fill: #D8DDD8;
+      transition: fill 0.15s ease;
+    }
+
+    .node-group.highlighted .node-accent-bar,
+    .node-group.selected .node-accent-bar,
+    .node-group:hover .node-accent-bar {
+      fill: #1F4E3D;
+    }
+
+    .node-cat {
+      font-size: 10.5px;
+      fill: #4A7C62;
+      letter-spacing: 0.04em;
+      text-anchor: middle;
+    }
+
+    .node-title {
+      font-family: var(--font-serif);
+      font-size: 14px;
+      font-weight: 600;
+      fill: #1A1A1A;
+      text-anchor: middle;
+    }
+
+    .node-brief {
+      font-size: 11px;
+      fill: #595959;
+      text-anchor: middle;
+    }
+
+    .dimmed {
+      opacity: 0.2;
+    }
+
+    /* 底部步进条 */
+    .stepper-bar {
+      background-color: var(--bg-card);
+      border-top: 1px solid var(--border-light);
+      padding: 14px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .step-info {
+      flex: 1;
+      min-width: 240px;
+    }
+
+    .step-tag {
+      font-size: 11.5px;
+      color: var(--green-main);
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .step-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .step-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* 右侧详情面板 */
+    .detail-pane {
+      width: 400px;
+      min-width: 260px;
+      max-width: 72vw;
+      flex-shrink: 0;
+      background-color: var(--bg-card);
+      padding: 24px;
+      overflow-y: auto;
+      max-height: calc(100vh - 68px);
+    }
+
+    .detail-kicker {
+      font-size: 11.5px;
+      color: var(--green-main);
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .detail-title {
+      font-family: var(--font-serif);
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .detail-summary {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+
+    .detail-section {
+      margin-bottom: 22px;
+    }
+
+    .detail-section h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 10px;
+      padding-left: 8px;
+      border-left: 2px solid var(--green-main);
+    }
+
+    .point-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .point-list li {
+      font-size: 13px;
+      color: var(--text-secondary);
+      padding: 8px 10px;
+      background-color: var(--bg-page);
+      border: 1px solid var(--bg-subtle);
+      line-height: 1.65;
+    }
+
+    .point-list li strong {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    .perspective-note {
+      font-size: 13px;
+      color: var(--text-secondary);
+      padding: 10px 12px;
+      background-color: var(--bg-green-soft);
+      border: 1px solid var(--border-light);
+      margin-bottom: 8px;
+    }
+
+    .perspective-note strong {
+      display: block;
+      font-size: 12px;
+      color: var(--green-main);
+      margin-bottom: 3px;
+    }
+
+    .rel-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .rel-item {
+      text-align: left;
+      width: 100%;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-light);
+      padding: 9px 11px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .rel-item:hover {
+      border-color: var(--green-main);
+      background-color: var(--bg-green-soft);
+    }
+
+    .rel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--green-main);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .rel-body {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    .node-index-btn {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      text-align: left;
+      padding: 10px 12px;
+      background-color: var(--bg-page);
+      border: 1px solid var(--border-light);
+      margin-bottom: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .node-index-btn:hover {
+      border-color: var(--green-main);
+      background-color: var(--bg-green-soft);
+    }
+
+    .node-index-btn span:first-child {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .node-index-btn span:last-child {
+      font-size: 11.5px;
+      color: var(--green-mid);
+    }
+
+    @media (max-width: 900px) {
+      .workspace {
+        flex-direction: column;
+        min-height: auto;
+        overflow: visible;
+      }
+      .canvas-pane {
+        min-width: 0;
+        border-bottom: 1px solid var(--border-light);
+      }
+      .resizer {
+        display: none;
+      }
+      .detail-pane {
+        width: 100% !important;
+        max-width: 100%;
+        max-height: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <a class="back-link" href="../index.html">← 返回总目录</a>
+      <div class="title-block">
+        <h1 id="pageTitle"></h1>
+        <p id="pageSubtitle"></p>
+      </div>
+    </div>
+    <div id="perspectiveGroup" class="perspective-group"></div>
+  </header>
+
+  <div id="workspace" class="workspace">
+    <section class="canvas-pane">
+      <div class="legend-bar">
+        <div id="legendItems" class="legend-items"></div>
+        <span>点击节点或连线查看详情，再次点击取消选中</span>
+      </div>
+      <div class="svg-wrapper">
+        <svg id="mapSvg" viewBox="0 0 980 560" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="stepper-bar">
+        <div class="step-info">
+          <div id="stepTag" class="step-tag"></div>
+          <div id="stepDesc" class="step-desc"></div>
+        </div>
+        <div class="step-actions">
+          <button id="prevStepBtn" class="ctrl-btn" type="button">上一步</button>
+          <button id="nextStepBtn" class="ctrl-btn" type="button">下一步</button>
+          <button id="resetBtn" class="ctrl-btn" type="button">重置全景</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="resizer" class="resizer" title="左右拖动调节分屏比例"></div>
+
+    <aside id="detailPane" class="detail-pane"></aside>
+  </div>
+
+  <script>
+    /* ============================================================
+     * MAP_DATA：本书专属数据区（新增书籍时仅需替换本对象内容）
+     * ============================================================ */
+    const MAP_DATA = {
+      meta: {
+        title: "儒教与道教：制度、伦理与生产关系",
+        subtitle: "马克斯·韦伯原著梳理与阿尔都塞唯物主义视角重读",
+        overview: "本图谱整合了《儒教与道教》的经济基础、国家体制、基层宗族、科举士人、儒道信仰、西欧清教对照以及阿尔都塞的唯物主义重读六个模块。可通过顶部切换分析视角，通过底部按逻辑步骤追踪因果链条，点击任意节点或连线查看详情，再次点击同一项即可恢复原状。"
+      },
+      perspectives: [
+        { id: "all", label: "全景互锁", legendLabel: "双重视角共用结构", lineClass: "both" },
+        { id: "weber", label: "韦伯视角", legendLabel: "韦伯伦理与制度路径", lineClass: "primary" },
+        { id: "althusser", label: "阿尔都塞重读", legendLabel: "阿尔都塞唯物倒置路径", lineClass: "secondary" }
+      ],
+      nodes: [
+        {
+          id: "n1",
+          x: 150,
+          y: 175,
+          category: "物质与政治基础",
+          title: "经济条件与国家体制",
+          brief: "货币城市 · 俸禄官僚 · 小农治理",
+          summary: "传统中国拥有国内和平、庞大人口、美洲白银流入、自由迁徙与国内贸易发达等有利条件，且缺乏印度式种姓隔离，但货币、城市、俸禄财政与小农结构共同限制了理性资本主义的自发生长。",
+          subPoints: [
+            { label: "货币紊乱", text: "铜钱与白银双轨并行，私铸频发且比价每日波动；朝廷缺乏国家银行与信用票据体系，资本转向土地购置和放贷。" },
+            { label: "行政型城市", text: "城市主要承担行政中心与军事据点职能，缺乏西欧城市的自治特许状和独立市民身份；进城商民户籍与祭祀隶属乡村宗族，行会缺乏武装力量。" },
+            { label: "家产官僚制与俸禄", text: "由西周血缘分封制和战车贵族，经春秋战国郡县制、游士与文书行政，演变为秦以后的中央集权帝国。法定薪俸微薄，朝廷默许地方官征收附加费与规费形成包税财政。" },
+            { label: "任期回避与胥吏", text: "三年调任与本籍回避维护了中央集权，却削弱了地方长期建设动力，官员高度依赖本地世袭胥吏；北宋王安石的财政理性化改革在官僚抵制下失败。" },
+            { label: "农业与基层治理", text: "行政力量止于县衙，乡村由乡绅、族长和保甲自治；跨流域治水强化早期中央权威；私有小农随王朝更替周期性恢复，明代一条鞭法与清代摊丁入亩定额化赋税，精耕细作降低了对机械和资本的需求。" }
+          ],
+          perspectivesNote: [
+            { label: "韦伯视角定位", text: "作为阻碍近代工业资本形成与理性核算的制度约束背景。" },
+            { label: "阿尔都塞视角定位", text: "构成决定上层意识形态形态的物质生产方式、阶级利益基础与镇压性国家机器（军队、衙门、刑律）。" }
+          ]
+        },
+        {
+          id: "n2",
+          x: 150,
+          y: 435,
+          category: "基层组织与司法",
+          title: "宗族、行会与司法形态",
+          brief: "血缘共同体 · 行会限竞 · 伦理司法",
+          summary: "宗族构成了传统社会最稳固的基层单位，与城市行会及实质伦理司法结合，维系了基层秩序与传统工匠生计，同时阻碍了现代企业制度和长期工业固定资本投资。",
+          subPoints: [
+            { label: "宗族自治与公产", text: "同姓家族聚族而居，修建祠堂、编修族谱、祭祀祖先，利用公田族产救济族人并资助子弟参加科举；族长与长老掌握内部裁决权，在乡村的实际权威往往超过县官。" },
+            { label: "家族商业的局限", text: "商号普遍采取家族合伙与血缘雇佣，家庭开支与企业资金混杂，缺乏独立法人地位和精确复式簿记；诸子均分继承制阻碍商业资本跨代集中。" },
+            { label: "商帮与行会控制", text: "商帮按籍贯建会馆排斥外来竞争；手工业行会统一规定学徒年限、工资、产品规格和价格，禁止降价与技术革新，并以罢市抵制官府额外摊派。" },
+            { label: "实质伦理司法", text: "知县兼任行政与审判官，缺乏专门法学训练，审理民事商事纠纷时优先考量儒家伦理、人情、宗族尊卑与地方习惯，缺乏可预测的形式理性法与独立商事法庭。" },
+            { label: "特许资本流向", text: "面对高昂的产权与契约不确定性，商业资本投向盐业、典当、茶政等依托官府特许权的领域。" }
+          ],
+          perspectivesNote: [
+            { label: "韦伯视角定位", text: "血缘纽带与实质司法取代形式理性法，直接压制了自由竞争、技术革新与匿名法人企业的诞生。" },
+            { label: "阿尔都塞视角定位", text: "宗族祠堂、乡约与祭祖守丧实践构成基层意识形态国家机器，与县衙镇压机器配合把农民固定在耕地上。" }
+          ]
+        },
+        {
+          id: "n3",
+          x: 490,
+          y: 175,
+          category: "统治身份等级",
+          title: "士人阶层与科举体制",
+          brief: "古典通才 · 文字垄断 · 依附与约束",
+          summary: "士人阶层依靠古典文化教养和官僚职位主导传统中国两千余年，通过科举与文言文垄断文化与政治权力，将全社会智力与财富持续吸引到功名仕途上。",
+          subPoints: [
+            { label: "通才选拔机制", text: "科举在形式上向男性平民开放，打破血统世袭垄断，但考试范围严格限定在儒家经典、经义注疏、诗赋与八股文，排斥技术、财政、军事与法律等专业训练。" },
+            { label: "文字读写垄断", text: "文言文与日常口语分离，掌握汉字需要十数年脱产学习，普通农工无力承担教育成本；大量社会人力与财富消耗在备考中，未能转化为自然科学与商业技术革新。" },
+            { label: "官僚经济依附", text: "士人享有免徭役和免刑罚特权，入仕依赖俸禄，未仕则以乡绅身份收取学田收入、代写诉状和调解纠纷，从未建立独立于皇权的教会组织。" },
+            { label: "对皇权的有限约束", text: "士人掌握经典解释权与史官记录权，通过谏议制度、礼法传统和祖宗家法对皇帝个人专断形成一定制约。" }
+          ],
+          perspectivesNote: [
+            { label: "韦伯视角定位", text: "作为儒教伦理的核心担纲者，确立了重道德通才、轻专业技术与商业逐利的社会价值取向。" },
+            { label: "阿尔都塞视角定位", text: "通过漫长文言教育制度严格区分脑力劳动者与体力劳动者，把文化权力集中在依赖农业俸禄和地租的统治阶层手中。" }
+          ]
+        },
+        {
+          id: "n4",
+          x: 490,
+          y: 435,
+          category: "伦理与信仰体系",
+          title: "儒教、道教与异端运动",
+          brief: "礼孝秩序 · 风水巫术 · 秘密教派",
+          summary: "正统儒教构建了适应现世的等级伦理，汉代以后组织化的道教与风水禁忌支配着民间日常决策，秘密教派在危机时刻爆发反抗但未能动摇社会根基。",
+          subPoints: [
+            { label: "儒教宇宙观与德行", text: "儒教缺乏创世人格神，视天为和谐的自然与道德秩序，主张天人感应。核心德行“礼”要求端庄克制，“孝”确立家族服从并延伸为政治上的“忠”，压制基于个人良知反抗权威的冲动。" },
+            { label: "儒教财富观与祭祀", text: "儒教认可适度富贵，但警惕商业逐利破坏等级秩序，促使富裕商人购地捐纳功名、抽离工商业资本。国家垄断祭天与高阶祭祀，士大夫在治理层面对民间鬼神巫术采取实用宽容态度。" },
+            { label: "道教的哲学与世俗化", text: "先秦老庄哲学属于少数隐居士人的无为与退隐方案；汉代以后道教演变为收费法术行会，聚焦肉体长生、炼丹、房中、导引、符咒与斋醮科仪。" },
+            { label: "风水禁忌阻碍革新", text: "风水学说把山川地形与家族兴衰挂钩，在近代铁路、修路与开矿引入初期引发周边宗族激烈反抗，使民众对改造自然与采用新技术保持高度戒备。" },
+            { label: "民间异端起义", text: "太平道、白莲教与太平天国融合道术、弥勒信仰与救世预言，在饥荒苛政下动员武装起义，但绝大多数教派依赖巫术灵验、缺乏理性日常伦理，最终遭到朝廷军事镇压。" }
+          ],
+          perspectivesNote: [
+            { label: "韦伯视角定位", text: "儒教的入世适应取向与民间巫术的完整保留，共同消解了彻底改造现世的内在心理张力。" },
+            { label: "阿尔都塞视角定位", text: "儒家礼孝执行主体询唤；大众道教平复底层焦虑获官府容忍，异端武装起义威胁生产关系则由军队镇压。" }
+          ]
+        },
+        {
+          id: "n5",
+          x: 830,
+          y: 435,
+          category: "跨文化横向对照",
+          title: "西欧清教与理性资本主义",
+          brief: "支配现世 · 彻底祛魅 · 普遍信任",
+          summary: "儒教与清教同属强调自我克制的理性伦理，但两者在理性化方向、救赎张力、祛魅程度与社会信任结构上走向了截然相反的道路。",
+          subPoints: [
+            { label: "适应世界与支配世界", text: "儒教致力于理性地适应既有和谐秩序；清教信仰超越尘世的全能上帝，视现世充满罪恶，致力于理性地支配和改造世界。" },
+            { label: "预定论与职业天职", text: "儒教缺乏原罪意识与终极救赎压力；清教徒在加尔文宗预定论驱动下将世俗劳动视为神圣天职，节制消费同时高效组织生产、计算成本与积累资本，以职业成功印证恩宠。" },
+            { label: "彻底祛魅与巫术留存", text: "清教将一切巫术、圣像崇拜和繁琐仪式视为亵渎神明并彻底清除，迫使信徒依靠理性规划与精确计算行事；儒教则在基层完整保留了占卜、祖先崇拜与风水信仰。" },
+            { label: "普遍契约与特殊信任", text: "儒教将道德义务限定在血缘和熟人圈子内（特殊主义），圈外充满猜忌；清教打破血缘界限，要求在普遍交往中出于对上帝的敬畏而恪守契约（普遍主义），大幅降低陌生人交易成本，支撑起信用金融与匿名合资企业。" }
+          ],
+          perspectivesNote: [
+            { label: "韦伯视角定位", text: "作为理解近代西欧资本主义精神兴起的正面参照系，凸显伦理张力与祛魅的决定性作用。" },
+            { label: "阿尔都塞视角定位", text: "新兴资产阶级对抗封建领主与天主教会时的阶级实践；清教教会、家庭读经与工场规章构成服务资本扩张的意识形态机器，天职观念询唤资产者持续投资与雇佣工人服从纪律。" }
+          ]
+        },
+        {
+          id: "n6",
+          x: 830,
+          y: 175,
+          category: "唯物主义理论重读",
+          title: "阿尔都塞：国家机器与生产关系",
+          brief: "物质实践 · 主体询唤 · 因果倒置",
+          summary: "借助《写给非哲学家的哲学入门》中的实践、国家机器、主体询唤与阶级斗争框架，把韦伯考察的伦理观念放回物质生产方式与阶级利益结构中重新检验。",
+          subPoints: [
+            { label: "意识形态的物质形态", text: "观念必须依托具体场所、制度与行动才能生效。书院、科举考场、宗族祠堂与婚丧祭祀礼仪构成了帝国的意识形态国家机器（ISA），民众在跪拜、守丧与乡约实践中持续使儒家观念生效。" },
+            { label: "主体询唤机制", text: "孝道、礼法与忠君原则执行询唤职能，使个体在成长过程中接受明确的身份与义务，主动认同自己在等级秩序中的位置。" },
+            { label: "两类国家机器的分工", text: "军队、衙门和律法构成镇压性国家机器（RSA），直接处理抗税与武装反抗；乡村宗族、乡绅和私塾负责日常意识形态教化，双方协作实现小农经济与俸禄官僚制生产关系的再生产。" },
+            { label: "唯物主义因果检验", text: "韦伯侧重论证儒教伦理对资本主义的抑制，唯物主义分析则指出物质生产方式和阶级关系决定主流意识形态：士大夫依靠农业俸禄和地租维持生计，因此排斥商业逐利，维护小农与官僚体制。" },
+            { label: "清教兴起的阶级逻辑", text: "西欧商品经济扩张与新兴资产阶级的现实利益支撑着清教占据主导地位，清教日常实践把普通人转化为适应雇佣劳动的主体，保障了资本主义生产关系的再生产。" }
+          ],
+          perspectivesNote: [
+            { label: "与韦伯的关系", text: "将韦伯“伦理取向决定经济路径”的解释方向倒置，揭示支撑观念长期存续的物质条件与阶级再生产机制。" }
+          ]
+        }
+      ],
+      edges: [
+        {
+          id: "e1",
+          source: "n1",
+          target: "n2",
+          perspective: "both",
+          label: "基层委任与法制缺位",
+          curve: 0,
+          labelT: 0.5,
+          detail: "中央行政止于县级衙门，帝国将乡村治安与税收摊派委托给宗族和乡绅；货币紊乱与形式理性法缺位，促使商业组织依赖家族血缘、行会保护与官府特许权。"
+        },
+        {
+          id: "e2",
+          source: "n2",
+          target: "n3",
+          perspective: "both",
+          label: "族产资助与财富入仕",
+          curve: 46,
+          labelT: 0.28,
+          detail: "宗族动用公田族产资助子弟脱产备考，富裕商人赚取资金后购置土地和捐纳功名，持续推动后代向士大夫阶层转化。"
+        },
+        {
+          id: "e3",
+          source: "n3",
+          target: "n2",
+          perspective: "both",
+          label: "功名庇护与免税特权",
+          curve: 46,
+          labelT: 0.28,
+          detail: "族中子弟考中进士、出任官职后，整个宗族获得免税特权和政治庇护，未入仕士人也以乡绅身份巩固乡村宗族权威。"
+        },
+        {
+          id: "e4",
+          source: "n3",
+          target: "n1",
+          perspective: "both",
+          label: "通才输送与礼法约束",
+          curve: 0,
+          labelT: 0.5,
+          detail: "科举向帝国持续输送非世袭古典通才官僚，维系中央集权与俸禄体制；同时士人借助经典解释权、史官记录与谏议制度有限约束皇权专断。"
+        },
+        {
+          id: "e5",
+          source: "n3",
+          target: "n4",
+          perspective: "weber",
+          label: "确立正统并宽容巫术",
+          curve: 0,
+          labelT: 0.5,
+          detail: "士人阶层垄断儒家经典解释权，把适应现世、重视礼孝与警惕逐利的伦理塑造成社会正统，并在治理层面对民间占卜与鬼神巫术采取实用宽容态度。"
+        },
+        {
+          id: "e6",
+          source: "n4",
+          target: "n1",
+          perspective: "weber",
+          label: "抑制逐利与阻挠革新",
+          curve: -24,
+          labelT: 0.76,
+          detail: "儒教贬抑商业牟利促使工商业资本不断流向土地与官职；道教风水禁忌引发民众抵制开矿、修路与铁路工程，共同阻碍近代工业资本主义形成。"
+        },
+        {
+          id: "e7",
+          source: "n4",
+          target: "n5",
+          perspective: "weber",
+          label: "四维理性化横向对照",
+          curve: 0,
+          labelT: 0.5,
+          detail: "韦伯在理性方向（适应与支配）、救赎张力（无原罪与预定论天职）、祛魅程度（保留巫术与彻底清除）以及信任结构（血缘特殊主义与契约普遍主义）四个维度对照儒教与清教。"
+        },
+        {
+          id: "e8",
+          source: "n1",
+          target: "n6",
+          perspective: "althusser",
+          label: "物质生产与阶级基础",
+          curve: -135,
+          labelT: 0.5,
+          detail: "小农经济、农业田赋与官僚俸禄地租构成了传统中国的物质生产方式和统治阶层利益基础，决定了儒教伦理得以长期主导社会的现实条件。"
+        },
+        {
+          id: "e9",
+          source: "n6",
+          target: "n3",
+          perspective: "althusser",
+          label: "固化脑力体力分工",
+          curve: 0,
+          labelT: 0.5,
+          detail: "书院与科举考场作为核心意识形态国家机器，依托高门槛的文言文学习严格区分脑力劳动者与体力劳动者，稳固官僚与乡绅对文化权力的占有。"
+        },
+        {
+          id: "e10",
+          source: "n6",
+          target: "n4",
+          perspective: "althusser",
+          label: "主体询唤与阶级镇压",
+          curve: -16,
+          labelT: 0.48,
+          detail: "祠堂、礼法与孝道执行询唤职能把人转化为顺从秩序的主体；道教法术安抚底层焦虑，当异端教派结合饥荒发动起义时，朝廷动用镇压性机器强行恢复原有生产关系。"
+        },
+        {
+          id: "e11",
+          source: "n6",
+          target: "n5",
+          perspective: "althusser",
+          label: "资产阶级机器对照",
+          curve: 0,
+          labelT: 0.5,
+          detail: "以唯物主义视角重读清教：西欧新兴资产阶级依托清教教会、家庭读经和工场规章建构意识形态机器，借天职观念询唤资产者投资与雇佣工人守纪，保障资本主义生产关系再生产。"
+        }
+      ],
+      steps: [
+        {
+          title: "步骤 1 / 5：物质约束与基层结构",
+          description: "从经济与政治起点出发，观察双轨货币、行政型城市、俸禄官僚制与小农经济如何委托宗族自治，并与实质伦理司法共同限制资本工业化。",
+          activeNodes: ["n1", "n2"],
+          activeEdges: ["e1"]
+        },
+        {
+          title: "步骤 2 / 5：宗族、科举与俸禄帝国的闭环",
+          description: "追踪宗族公产资助子弟备考、科举垄断文字与通才仕途、功名免税反哺宗族以及士人维持官僚体制的双向利益循环。",
+          activeNodes: ["n1", "n2", "n3"],
+          activeEdges: ["e1", "e2", "e3", "e4"]
+        },
+        {
+          title: "步骤 3 / 5：儒道信仰与现世秩序的稳定",
+          description: "进入韦伯的宗教伦理分析：士人确立适应现世的儒教礼孝秩序并宽容民间巫术，风水禁忌与重官轻商共同抽离工商业资本并阻挠技术改造。",
+          activeNodes: ["n1", "n3", "n4"],
+          activeEdges: ["e5", "e6"]
+        },
+        {
+          title: "步骤 4 / 5：儒教与西欧清教的四维对照",
+          description: "横向对比两种理性伦理的分叉点：适应现世与支配现世、无救赎张力与预定论天职、保留巫术与彻底祛魅、血缘特殊信任与普遍契约信任。",
+          activeNodes: ["n4", "n5"],
+          activeEdges: ["e7"]
+        },
+        {
+          title: "步骤 5 / 5：阿尔都塞的唯物重读与因果倒置",
+          description: "以物质生产方式和阶级关系重审全书：ISA 与 RSA 协作完成生产关系再生产，主体询唤塑造顺从身份，并对照西欧新兴资产阶级如何借助清教机器服务资本扩张。",
+          activeNodes: ["n1", "n3", "n4", "n5", "n6"],
+          activeEdges: ["e8", "e9", "e10", "e11"]
+        }
+      ]
+    };
+
+    /* ============================================================
+     * 渲染与交互引擎（母版通用逻辑，无需针对具体书籍修改）
+     * ============================================================ */
+    const NODE_W = 236;
+    const NODE_H = 92;
+
+    const state = {
+      perspective: "all",
+      stepIndex: -1,
+      selectedNodeId: null,
+      selectedEdgeId: null
+    };
+
+    const nodeMap = new Map(MAP_DATA.nodes.map(n => [n.id, n]));
+    const edgeMap = new Map(MAP_DATA.edges.map(e => [e.id, e]));
+
+    const workspaceEl = document.getElementById("workspace");
+    const resizerEl = document.getElementById("resizer");
+    const svgEl = document.getElementById("mapSvg");
+    const perspectiveGroupEl = document.getElementById("perspectiveGroup");
+    const legendItemsEl = document.getElementById("legendItems");
+    const detailPaneEl = document.getElementById("detailPane");
+    const stepTagEl = document.getElementById("stepTag");
+    const stepDescEl = document.getElementById("stepDesc");
+    const prevStepBtn = document.getElementById("prevStepBtn");
+    const nextStepBtn = document.getElementById("nextStepBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    /* 左右分屏拖动逻辑 */
+    let isDraggingSplit = false;
+
+    resizerEl.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      isDraggingSplit = true;
+      resizerEl.classList.add("dragging");
+      workspaceEl.classList.add("resizing");
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!isDraggingSplit) return;
+      const rect = workspaceEl.getBoundingClientRect();
+      const newDetailWidth = rect.right - e.clientX;
+      const minDetail = 260;
+      const maxDetail = rect.width - 340;
+      const clamped = Math.max(minDetail, Math.min(maxDetail, newDetailWidth));
+      detailPaneEl.style.width = `${clamped}px`;
+    });
+
+    window.addEventListener("mouseup", () => {
+      if (!isDraggingSplit) return;
+      isDraggingSplit = false;
+      resizerEl.classList.remove("dragging");
+      workspaceEl.classList.remove("resizing");
+    });
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function createSvgEl(tag, attrs = {}) {
+      const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+      Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+      return el;
+    }
+
+    function clipToNodeBox(cx, cy, tx, ty, pad) {
+      const dx = tx - cx;
+      const dy = ty - cy;
+      if (dx === 0 && dy === 0) return { x: cx, y: cy };
+      const hw = NODE_W / 2 + pad;
+      const hh = NODE_H / 2 + pad;
+      const scaleX = dx !== 0 ? hw / Math.abs(dx) : Infinity;
+      const scaleY = dy !== 0 ? hh / Math.abs(dy) : Infinity;
+      const t = Math.min(scaleX, scaleY);
+      return { x: cx + dx * t, y: cy + dy * t };
+    }
+
+    function computeEdgeGeometry(edge) {
+      const s = nodeMap.get(edge.source);
+      const t = nodeMap.get(edge.target);
+      const dx = t.x - s.x;
+      const dy = t.y - s.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const curve = edge.curve || 0;
+      const mx = (s.x + t.x) / 2;
+      const my = (s.y + t.y) / 2;
+      const nx = -dy / len;
+      const ny = dx / len;
+      const cx = mx + nx * curve;
+      const cy = my + ny * curve;
+
+      const start = clipToNodeBox(s.x, s.y, curve === 0 ? t.x : cx, curve === 0 ? t.y : cy, 2);
+      const end = clipToNodeBox(t.x, t.y, curve === 0 ? s.x : cx, curve === 0 ? s.y : cy, 7);
+
+      const d = curve === 0
+        ? `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} L ${end.x.toFixed(1)} ${end.y.toFixed(1)}`
+        : `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${end.x.toFixed(1)} ${end.y.toFixed(1)}`;
+
+      const u = typeof edge.labelT === "number" ? edge.labelT : 0.5;
+      let lx, ly;
+      if (curve === 0) {
+        lx = start.x + (end.x - start.x) * u;
+        ly = start.y + (end.y - start.y) * u;
+      } else {
+        const inv = 1 - u;
+        lx = inv * inv * start.x + 2 * inv * u * cx + u * u * end.x;
+        ly = inv * inv * start.y + 2 * inv * u * cy + u * u * end.y;
+      }
+
+      return { d, lx, ly };
+    }
+
+    function getActiveSets() {
+      const activeNodes = new Set();
+      const activeEdges = new Set();
+
+      if (state.stepIndex >= 0) {
+        const step = MAP_DATA.steps[state.stepIndex];
+        step.activeNodes.forEach(id => activeNodes.add(id));
+        step.activeEdges.forEach(id => activeEdges.add(id));
+        return { activeNodes, activeEdges, filtering: true };
+      }
+
+      if (state.selectedNodeId) {
+        activeNodes.add(state.selectedNodeId);
+        MAP_DATA.edges.forEach(e => {
+          if (e.source === state.selectedNodeId || e.target === state.selectedNodeId) {
+            if (isEdgeInPerspective(e)) {
+              activeEdges.add(e.id);
+              activeNodes.add(e.source);
+              activeNodes.add(e.target);
+            }
+          }
+        });
+        return { activeNodes, activeEdges, filtering: true };
+      }
+
+      if (state.selectedEdgeId) {
+        const edge = edgeMap.get(state.selectedEdgeId);
+        if (edge) {
+          activeEdges.add(edge.id);
+          activeNodes.add(edge.source);
+          activeNodes.add(edge.target);
+        }
+        return { activeNodes, activeEdges, filtering: true };
+      }
+
+      if (state.perspective !== "all") {
+        MAP_DATA.edges.forEach(e => {
+          if (isEdgeInPerspective(e)) {
+            activeEdges.add(e.id);
+            activeNodes.add(e.source);
+            activeNodes.add(e.target);
+          }
+        });
+        return { activeNodes, activeEdges, filtering: true };
+      }
+
+      MAP_DATA.nodes.forEach(n => activeNodes.add(n.id));
+      MAP_DATA.edges.forEach(e => activeEdges.add(e.id));
+      return { activeNodes, activeEdges, filtering: false };
+    }
+
+    function isEdgeInPerspective(edge) {
+      if (state.perspective === "all") return true;
+      return edge.perspective === "both" || edge.perspective === state.perspective;
+    }
+
+    function getEdgeStyle(edge, isHighlighted, isDimmed) {
+      let stroke = "#595959";
+      let dash = "";
+      let marker = "url(#arrow-grey)";
+
+      if (edge.perspective === "weber") {
+        stroke = "#1F4E3D";
+        marker = "url(#arrow-green)";
+      } else if (edge.perspective === "althusser") {
+        stroke = "#4A7C62";
+        dash = "6 4";
+        marker = "url(#arrow-midgreen)";
+      }
+
+      if (isDimmed) {
+        stroke = "#BFC5BF";
+        marker = "url(#arrow-muted)";
+      } else if (isHighlighted && (state.stepIndex >= 0 || state.selectedNodeId || state.selectedEdgeId)) {
+        stroke = "#1F4E3D";
+        marker = "url(#arrow-green)";
+      }
+
+      const width = isHighlighted && (state.stepIndex >= 0 || state.selectedNodeId || state.selectedEdgeId) ? 2.2 : 1.5;
+      return { stroke, dash, marker, width };
+    }
+
+    function renderHeaderAndLegend() {
+      document.title = MAP_DATA.meta.title;
+      document.getElementById("pageTitle").textContent = MAP_DATA.meta.title;
+      document.getElementById("pageSubtitle").textContent = MAP_DATA.meta.subtitle;
+
+      perspectiveGroupEl.innerHTML = "";
+      MAP_DATA.perspectives.forEach(p => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "ctrl-btn" + (state.perspective === p.id && state.stepIndex === -1 ? " active" : "");
+        btn.textContent = p.label;
+        btn.addEventListener("click", () => {
+          state.perspective = p.id;
+          state.stepIndex = -1;
+          state.selectedNodeId = null;
+          state.selectedEdgeId = null;
+          renderAll();
+        });
+        perspectiveGroupEl.appendChild(btn);
+      });
+
+      legendItemsEl.innerHTML = MAP_DATA.perspectives
+        .map(p => `
+          <span class="legend-item">
+            <span class="legend-line ${p.lineClass}"></span>
+            <span>${escapeHtml(p.legendLabel)}</span>
+          </span>
+        `)
+        .join("");
+    }
+
+    function renderSvg() {
+      svgEl.innerHTML = "";
+
+      const defs = createSvgEl("defs");
+      const markers = [
+        { id: "arrow-grey", color: "#595959" },
+        { id: "arrow-green", color: "#1F4E3D" },
+        { id: "arrow-midgreen", color: "#4A7C62" },
+        { id: "arrow-muted", color: "#BFC5BF" }
+      ];
+
+      markers.forEach(m => {
+        const marker = createSvgEl("marker", {
+          id: m.id,
+          viewBox: "0 0 10 10",
+          refX: "8.5",
+          refY: "5",
+          markerWidth: "6",
+          markerHeight: "6",
+          orient: "auto-start-reverse"
+        });
+        marker.appendChild(createSvgEl("path", {
+          d: "M 0 1.2 L 9 5 L 0 8.8 z",
+          fill: m.color
+        }));
+        defs.appendChild(marker);
+      });
+      svgEl.appendChild(defs);
+
+      const { activeNodes, activeEdges, filtering } = getActiveSets();
+
+      const edgeLayer = createSvgEl("g");
+      const labelLayer = createSvgEl("g");
+      const nodeLayer = createSvgEl("g");
+
+      MAP_DATA.edges.forEach(edge => {
+        const geom = computeEdgeGeometry(edge);
+        const isActive = activeEdges.has(edge.id);
+        const isDimmed = filtering && !isActive;
+        const style = getEdgeStyle(edge, isActive, isDimmed);
+
+        const gEdge = createSvgEl("g", { class: isDimmed ? "dimmed" : "" });
+
+        const path = createSvgEl("path", {
+          d: geom.d,
+          class: "edge-path",
+          stroke: style.stroke,
+          "stroke-width": style.width,
+          "marker-end": style.marker
+        });
+        if (style.dash) path.setAttribute("stroke-dasharray", style.dash);
+
+        const hit = createSvgEl("path", { d: geom.d, class: "edge-hit" });
+
+        /* 点击连线高亮，再次点击同一条连线取消选中恢复原状 */
+        const onToggleEdge = () => {
+          if (state.selectedEdgeId === edge.id) {
+            state.selectedEdgeId = null;
+          } else {
+            state.selectedEdgeId = edge.id;
+            state.selectedNodeId = null;
+            state.stepIndex = -1;
+          }
+          renderAll();
+        };
+
+        hit.addEventListener("click", onToggleEdge);
+        path.addEventListener("click", onToggleEdge);
+
+        gEdge.appendChild(path);
+        gEdge.appendChild(hit);
+        edgeLayer.appendChild(gEdge);
+
+        const labelText = edge.label;
+        const boxW = Math.max(84, labelText.length * 11.5 + 16);
+        const boxH = 22;
+
+        const gLabel = createSvgEl("g", {
+          class: "edge-label-group"
+            + (isDimmed ? " dimmed" : "")
+            + ((state.selectedEdgeId === edge.id || (filtering && isActive)) ? " highlighted" : "")
+        });
+        gLabel.addEventListener("click", onToggleEdge);
+
+        gLabel.appendChild(createSvgEl("rect", {
+          x: (geom.lx - boxW / 2).toFixed(1),
+          y: (geom.ly - boxH / 2).toFixed(1),
+          width: boxW,
+          height: boxH,
+          rx: 2,
+          class: "edge-label-bg"
+        }));
+
+        const txt = createSvgEl("text", {
+          x: geom.lx.toFixed(1),
+          y: geom.ly.toFixed(1),
+          class: "edge-label-text"
+        });
+        txt.textContent = labelText;
+        gLabel.appendChild(txt);
+        labelLayer.appendChild(gLabel);
+      });
+
+      MAP_DATA.nodes.forEach(node => {
+        const isActive = activeNodes.has(node.id);
+        const isDimmed = filtering && !isActive;
+        const isSelected = state.selectedNodeId === node.id;
+
+        const gNode = createSvgEl("g", {
+          class: "node-group"
+            + (isDimmed ? " dimmed" : "")
+            + (filtering && isActive ? " highlighted" : "")
+            + (isSelected ? " selected" : "")
+        });
+
+        /* 点击节点高亮，再次点击同一个节点取消选中恢复原状 */
+        gNode.addEventListener("click", () => {
+          if (state.selectedNodeId === node.id) {
+            state.selectedNodeId = null;
+          } else {
+            state.selectedNodeId = node.id;
+            state.selectedEdgeId = null;
+            state.stepIndex = -1;
+          }
+          renderAll();
+        });
+
+        const x0 = node.x - NODE_W / 2;
+        const y0 = node.y - NODE_H / 2;
+
+        gNode.appendChild(createSvgEl("rect", {
+          x: x0,
+          y: y0,
+          width: NODE_W,
+          height: NODE_H,
+          rx: 2,
+          class: "node-rect"
+        }));
+
+        gNode.appendChild(createSvgEl("rect", {
+          x: x0,
+          y: y0,
+          width: NODE_W,
+          height: 3.5,
+          class: "node-accent-bar"
+        }));
+
+        /* 方块内三行文字统一以节点水平中心 node.x 对齐居中 */
+        const catText = createSvgEl("text", {
+          x: node.x,
+          y: y0 + 24,
+          class: "node-cat"
+        });
+        catText.textContent = node.category;
+        gNode.appendChild(catText);
+
+        const titleText = createSvgEl("text", {
+          x: node.x,
+          y: y0 + 49,
+          class: "node-title"
+        });
+        titleText.textContent = node.title;
+        gNode.appendChild(titleText);
+
+        const briefText = createSvgEl("text", {
+          x: node.x,
+          y: y0 + 73,
+          class: "node-brief"
+        });
+        briefText.textContent = node.brief;
+        gNode.appendChild(briefText);
+
+        nodeLayer.appendChild(gNode);
+      });
+
+      svgEl.appendChild(edgeLayer);
+      svgEl.appendChild(nodeLayer);
+      svgEl.appendChild(labelLayer);
+    }
+
+    function renderStepper() {
+      if (state.stepIndex >= 0) {
+        const step = MAP_DATA.steps[state.stepIndex];
+        stepTagEl.textContent = step.title;
+        stepDescEl.textContent = step.description;
+      } else {
+        const pObj = MAP_DATA.perspectives.find(p => p.id === state.perspective);
+        stepTagEl.textContent = `当前模式：${pObj ? pObj.label : "全景"}`;
+        stepDescEl.textContent = "点击“下一步”可按因果顺序分步浏览整本书的核心逻辑链条。";
+      }
+
+      prevStepBtn.disabled = state.stepIndex <= 0;
+      nextStepBtn.disabled = state.stepIndex >= MAP_DATA.steps.length - 1;
+    }
+
+    function renderDetailPane() {
+      if (state.selectedNodeId) {
+        const node = nodeMap.get(state.selectedNodeId);
+        const incoming = MAP_DATA.edges.filter(e => e.target === node.id);
+        const outgoing = MAP_DATA.edges.filter(e => e.source === node.id);
+
+        const subPointsHtml = node.subPoints
+          .map(sp => `<li><strong>${escapeHtml(sp.label)}：</strong>${escapeHtml(sp.text)}</li>`)
+          .join("");
+
+        const pNotesHtml = (node.perspectivesNote || [])
+          .map(pn => `<div class="perspective-note"><strong>${escapeHtml(pn.label)}</strong>${escapeHtml(pn.text)}</div>`)
+          .join("");
+
+        const renderRelButtons = (edges, dir) => {
+          if (edges.length === 0) return `<p style="font-size:12.5px;color:#7A7F7A;">无直接连线</p>`;
+          return edges.map(e => {
+            const peer = nodeMap.get(dir === "in" ? e.source : e.target);
+            const arrowText = dir === "in"
+              ? `${escapeHtml(peer.title)} → 本模块`
+              : `本模块 → ${escapeHtml(peer.title)}`;
+            return `
+              <button class="rel-item" type="button" data-jump-node="${peer.id}">
+                <div class="rel-head">
+                  <span>${arrowText}</span>
+                  <span>${escapeHtml(e.label)}</span>
+                </div>
+                <div class="rel-body">${escapeHtml(e.detail)}</div>
+              </button>
+            `;
+          }).join("");
+        };
+
+        detailPaneEl.innerHTML = `
+          <div class="detail-kicker">${escapeHtml(node.category)}</div>
+          <h2 class="detail-title">${escapeHtml(node.title)}</h2>
+          <p class="detail-summary">${escapeHtml(node.summary)}</p>
+
+          <div class="detail-section">
+            <h3>核心要点</h3>
+            <ul class="point-list">${subPointsHtml}</ul>
+          </div>
+
+          ${pNotesHtml ? `<div class="detail-section"><h3>理论定位</h3>${pNotesHtml}</div>` : ""}
+
+          <div class="detail-section">
+            <h3>上游输入机制</h3>
+            <div class="rel-list">${renderRelButtons(incoming, "in")}</div>
+          </div>
+
+          <div class="detail-section">
+            <h3>下游输出机制</h3>
+            <div class="rel-list">${renderRelButtons(outgoing, "out")}</div>
+          </div>
+        `;
+
+        detailPaneEl.querySelectorAll("[data-jump-node]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            state.selectedNodeId = btn.getAttribute("data-jump-node");
+            state.selectedEdgeId = null;
+            renderAll();
+            detailPaneEl.scrollTop = 0;
+          });
+        });
+        return;
+      }
+
+      if (state.selectedEdgeId) {
+        const edge = edgeMap.get(state.selectedEdgeId);
+        const s = nodeMap.get(edge.source);
+        const t = nodeMap.get(edge.target);
+        const pObj = MAP_DATA.perspectives.find(p => p.id === edge.perspective) || MAP_DATA.perspectives[0];
+
+        detailPaneEl.innerHTML = `
+          <div class="detail-kicker">因果与作用机制 · ${escapeHtml(pObj.legendLabel)}</div>
+          <h2 class="detail-title">${escapeHtml(edge.label)}</h2>
+          <p class="detail-summary">${escapeHtml(edge.detail)}</p>
+
+          <div class="detail-section">
+            <h3>关联模块</h3>
+            <button class="node-index-btn" type="button" data-jump-node="${s.id}">
+              <span>起点：${escapeHtml(s.title)}</span>
+              <span>查看详情 →</span>
+            </button>
+            <button class="node-index-btn" type="button" data-jump-node="${t.id}">
+              <span>终点：${escapeHtml(t.title)}</span>
+              <span>查看详情 →</span>
+            </button>
+          </div>
+        `;
+
+        detailPaneEl.querySelectorAll("[data-jump-node]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            state.selectedNodeId = btn.getAttribute("data-jump-node");
+            state.selectedEdgeId = null;
+            renderAll();
+          });
+        });
+        return;
+      }
+
+      const indexButtonsHtml = MAP_DATA.nodes
+        .map(n => `
+          <button class="node-index-btn" type="button" data-jump-node="${n.id}">
+            <span>${escapeHtml(n.title)}</span>
+            <span>${escapeHtml(n.category)}</span>
+          </button>
+        `)
+        .join("");
+
+      detailPaneEl.innerHTML = `
+        <div class="detail-kicker">图谱导览</div>
+        <h2 class="detail-title">模块与机制索引</h2>
+        <p class="detail-summary">${escapeHtml(MAP_DATA.meta.overview)}</p>
+        <div class="detail-section">
+          <h3>选择模块查看笔记细节</h3>
+          ${indexButtonsHtml}
+        </div>
+      `;
+
+      detailPaneEl.querySelectorAll("[data-jump-node]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.selectedNodeId = btn.getAttribute("data-jump-node");
+          state.selectedEdgeId = null;
+          renderAll();
+        });
+      });
+    }
+
+    function renderAll() {
+      renderHeaderAndLegend();
+      renderSvg();
+      renderStepper();
+      renderDetailPane();
+    }
+
+    prevStepBtn.addEventListener("click", () => {
+      if (state.stepIndex > 0) {
+        state.stepIndex -= 1;
+        state.selectedNodeId = null;
+        state.selectedEdgeId = null;
+        renderAll();
+      }
+    });
+
+    nextStepBtn.addEventListener("click", () => {
+      if (state.stepIndex < MAP_DATA.steps.length - 1) {
+        state.stepIndex += 1;
+        state.selectedNodeId = null;
+        state.selectedEdgeId = null;
+        renderAll();
+      }
+    });
+
+    resetBtn.addEventListener("click", () => {
+      state.perspective = "all";
+      state.stepIndex = -1;
+      state.selectedNodeId = null;
+      state.selectedEdgeId = null;
+      renderAll();
+    });
+
+    renderAll();
+  </script>
+</body>
+</html>

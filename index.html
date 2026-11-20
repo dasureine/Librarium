@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>阅读图谱与笔记</title>
+  <style>
+    :root {
+      --bg-page: #F7F8F7;
+      --bg-card: #FFFFFF;
+      --bg-subtle: #F2F4F2;
+      --bg-green-soft: #EBF2EE;
+      --text-main: #1A1A1A;
+      --text-secondary: #595959;
+      --text-muted: #7A7F7A;
+      --border-light: #D8DDD8;
+      --border-strong: #BFC5BF;
+      --green-main: #1F4E3D;
+      --green-mid: #4A7C62;
+      --font-serif: "Noto Serif SC", "Songti SC", "STSong", Georgia, serif;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 56px 24px 80px;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border-light);
+      padding-bottom: 28px;
+      margin-bottom: 32px;
+    }
+
+    .site-kicker {
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      color: var(--green-main);
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: 30px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 10px;
+    }
+
+    .site-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      max-width: 640px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .filter-btn {
+      appearance: none;
+      background-color: var(--bg-card);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-light);
+      padding: 6px 14px;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+
+    .filter-btn:hover {
+      border-color: var(--green-mid);
+      color: var(--green-main);
+    }
+
+    .filter-btn.active {
+      background-color: var(--green-main);
+      border-color: var(--green-main);
+      color: #FFFFFF;
+    }
+
+    .book-count {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .book-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .book-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-light);
+      padding: 24px;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .book-card:hover {
+      border-color: var(--green-main);
+      background-color: #FFFFFF;
+    }
+
+    .book-card:hover .card-action {
+      color: var(--green-main);
+    }
+
+    .card-meta-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .card-title {
+      font-family: var(--font-serif);
+      font-size: 21px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+
+    .card-subtitle {
+      font-size: 13px;
+      color: var(--green-main);
+      margin-bottom: 8px;
+    }
+
+    .card-author {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--bg-subtle);
+    }
+
+    .card-summary {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.75;
+      margin-bottom: 20px;
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding-top: 14px;
+      border-top: 1px solid var(--bg-subtle);
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag-item {
+      font-size: 11.5px;
+      color: var(--green-main);
+      background-color: var(--bg-green-soft);
+      padding: 2px 8px;
+    }
+
+    .card-action {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      transition: color 0.15s ease;
+    }
+
+    .status-box {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-light);
+      padding: 24px;
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.8;
+    }
+
+    .status-box strong {
+      color: var(--text-main);
+    }
+
+    .status-box code {
+      background-color: var(--bg-subtle);
+      padding: 2px 6px;
+      font-family: Consolas, Menlo, monospace;
+      font-size: 12.5px;
+      color: var(--green-main);
+    }
+
+    footer {
+      margin-top: 56px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-light);
+      font-size: 12.5px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="site-kicker">READING ARCHIVE &amp; CONCEPT MAPS</div>
+      <h1>阅读图谱与笔记</h1>
+      <p class="site-desc">收录社会学、哲学与经典著作的结构化读书笔记与交互式知识地图，点击任意书目进入对应的概念拓扑与逻辑演进视图。</p>
+    </header>
+
+    <div class="toolbar">
+      <div id="filterGroup" class="filter-group"></div>
+      <div id="bookCount" class="book-count"></div>
+    </div>
+
+    <main id="bookGrid" class="book-grid"></main>
+
+    <footer>
+      <span>纯静态本地知识库</span>
+      <span>数据索引：books.json</span>
+    </footer>
+  </div>
+
+  <script>
+    let allBooks = [];
+    let activeTag = "全部";
+
+    const filterGroupEl = document.getElementById("filterGroup");
+    const bookCountEl = document.getElementById("bookCount");
+    const bookGridEl = document.getElementById("bookGrid");
+
+    function renderFilters() {
+      const tagSet = new Set(["全部"]);
+      allBooks.forEach(book => {
+        if (Array.isArray(book.tags)) {
+          book.tags.forEach(tag => tagSet.add(tag));
+        }
+      });
+
+      filterGroupEl.innerHTML = "";
+      tagSet.forEach(tag => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "filter-btn" + (tag === activeTag ? " active" : "");
+        btn.textContent = tag;
+        btn.addEventListener("click", () => {
+          activeTag = tag;
+          renderFilters();
+          renderBooks();
+        });
+        filterGroupEl.appendChild(btn);
+      });
+    }
+
+    function renderBooks() {
+      const filtered = activeTag === "全部"
+        ? allBooks
+        : allBooks.filter(book => Array.isArray(book.tags) && book.tags.includes(activeTag));
+
+      bookCountEl.textContent = `共收录 ${filtered.length} 本`;
+      bookGridEl.innerHTML = "";
+
+      if (filtered.length === 0) {
+        bookGridEl.innerHTML = `<div class="status-box">当前分类下暂无书目记录。</div>`;
+        return;
+      }
+
+      filtered.forEach(book => {
+        const card = document.createElement("a");
+        card.className = "book-card";
+        card.href = book.url;
+
+        const tagsHtml = (book.tags || [])
+          .map(t => `<span class="tag-item">${escapeHtml(t)}</span>`)
+          .join("");
+
+        card.innerHTML = `
+          <div>
+            <div class="card-meta-top">
+              <span>${escapeHtml(book.date || "")}</span>
+              <span>知识地图</span>
+            </div>
+            <h2 class="card-title">${escapeHtml(book.title)}</h2>
+            ${book.subtitle ? `<div class="card-subtitle">${escapeHtml(book.subtitle)}</div>` : ""}
+            <div class="card-author">${escapeHtml(book.author)}</div>
+            <p class="card-summary">${escapeHtml(book.summary)}</p>
+          </div>
+          <div class="card-footer">
+            <div class="tag-list">${tagsHtml}</div>
+            <span class="card-action">查看图谱 →</span>
+          </div>
+        `;
+        bookGridEl.appendChild(card);
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    async function init() {
+      try {
+        const res = await fetch("./books.json");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        allBooks = await res.json();
+        renderFilters();
+        renderBooks();
+      } catch (err) {
+        bookCountEl.textContent = "加载中断";
+        bookGridEl.innerHTML = `
+          <div class="status-box">
+            <strong>无法读取 books.json 文件。</strong><br>
+            如果直接在本地资源管理器中双击打开此文件，浏览器安全策略会阻止读取本地 JSON。<br>
+            请在 VS Code 中使用 <code>Live Server</code> 打开，或在项目根目录运行 <code>python -m http.server 8000</code> 后通过 Chrome 访问 <code>http://localhost:8000</code>。
+          </div>
+        `;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
