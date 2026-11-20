@@ -1,1 +1,6 @@
 .env
+
+raw_books/
+workspace/
+__pycache__/
+*.pyc

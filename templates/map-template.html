@@ -3,23 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>儒教与道教 · 知识地图</title>
+  <title>儒教与道教 — Librarium</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231c2422'/%3E%3Cg fill='none' stroke='%23ede9df' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 25 C16 21 16 18 16 15'/%3E%3Cpath d='M16 15 C12 15 9 12 8 8 C12 9.5 14.5 12 16 15'/%3E%3Cpath d='M16 15 C20 15 23 12 24 8 C20 9.5 17.5 12 16 15'/%3E%3Cpath d='M16 15 C16 12 16 10 16 8'/%3E%3C/g%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pinyon+Script&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-page: #F7F8F7;
-      --bg-card: #FFFFFF;
-      --bg-subtle: #F2F4F2;
-      --bg-green-soft: #EBF2EE;
-      --text-main: #1A1A1A;
-      --text-secondary: #595959;
-      --text-muted: #7A7F7A;
-      --border-light: #D8DDD8;
-      --border-strong: #BFC5BF;
-      --green-main: #1F4E3D;
-      --green-dark: #2D5A43;
-      --green-mid: #4A7C62;
-      --font-serif: "Noto Serif SC", "Songti SC", "STSong", Georgia, serif;
+      --bg-page: #141c1a;
+      --bg-card: #18211f;
+      --bg-subtle: #202c28;
+      --bg-green-soft: rgba(133,168,151,0.12);
+      --text-main: #ede9df;
+      --text-secondary: #ced7d1;
+      --text-muted: #8aa097;
+      --border-light: rgba(176,196,186,0.16);
+      --border-strong: rgba(176,196,186,0.28);
+      --green-main: #85a897;
+      --green-dark: #1d2724;
+      --green-mid: #85a897;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+      --font-serif: "Source Han Serif SC", "Noto Serif SC", "Songti SC", "STSong", Georgia, serif;
       --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      --font-display: "Pinyon Script", "Snell Roundhand", "Edwardian Script ITC", "Vivaldi", "French Script MT", "Gabriola", "Apple Chancery", cursive;
+      --font-aux: "Cormorant Garamond", "Gabriola", "Palatino Linotype", "Source Han Serif SC", "Noto Serif SC", "Songti SC", Georgia, serif;
     }
 
     * {
@@ -58,18 +65,21 @@
     }
 
     .back-link {
-      font-size: 13px;
+      font-family: var(--font-display);
+      font-size: 26px;
       color: var(--green-main);
       text-decoration: none;
-      border: 1px solid var(--border-light);
-      padding: 5px 12px;
-      background-color: var(--bg-page);
-      transition: border-color 0.15s ease, background-color 0.15s ease;
+      border: none;
+      padding: 4px 0;
+      background: transparent;
+      letter-spacing: 0.02em;
+      transition: color 0.3s var(--ease), transform 0.3s var(--ease), text-shadow 0.3s var(--ease);
     }
 
     .back-link:hover {
-      border-color: var(--green-main);
-      background-color: var(--bg-green-soft);
+      color: var(--text-main);
+      transform: translateX(-4px);
+      text-shadow: 0 0 16px rgba(133,168,151,0.55);
     }
 
     .title-block h1 {
@@ -134,11 +144,14 @@
 
     /* 左侧图谱区 */
     .canvas-pane {
+      position: relative;
       flex: 1;
       min-width: 340px;
       display: flex;
       flex-direction: column;
-      background-color: var(--bg-page);
+      background:
+        radial-gradient(900px 600px at 30% 18%, rgba(28,39,36,0.9) 0%, transparent 60%),
+        linear-gradient(160deg, #141c1a 0%, #1c2724 100%);
     }
 
     /* 中间可拖动分隔条 */
@@ -148,7 +161,7 @@
       background-color: var(--border-light);
       cursor: col-resize;
       position: relative;
-      transition: background-color 0.15s ease;
+      transition: background-color 0.6s var(--ease), box-shadow 0.6s var(--ease);
     }
 
     .resizer::after {
@@ -159,19 +172,23 @@
       transform: translate(-50%, -50%);
       width: 2px;
       height: 28px;
-      background-color: var(--text-muted);
-      opacity: 0.45;
+      border-radius: 2px;
+      background-color: var(--green-main);
+      opacity: 0.4;
+      transition: opacity 0.6s var(--ease), height 0.6s var(--ease), box-shadow 0.6s var(--ease);
     }
 
     .resizer:hover,
     .resizer.dragging {
-      background-color: var(--green-mid);
+      background-color: var(--green-main);
+      box-shadow: 0 0 14px rgba(132,166,150,0.4);
     }
 
     .resizer:hover::after,
     .resizer.dragging::after {
-      background-color: #FFFFFF;
-      opacity: 0.9;
+      opacity: 1;
+      height: 40px;
+      box-shadow: 0 0 10px rgba(132,166,150,0.55);
     }
 
     .legend-bar {
@@ -209,15 +226,15 @@
     }
 
     .legend-line.both {
-      border-top-color: #595959;
+      border-top-color: #8aa097;
     }
 
     .legend-line.primary {
-      border-top-color: #1F4E3D;
+      border-top-color: #85a897;
     }
 
     .legend-line.secondary {
-      border-top-color: #4A7C62;
+      border-top-color: #85a897;
       border-top-style: dashed;
     }
 
@@ -241,8 +258,12 @@
     /* SVG 内部样式 */
     .edge-path {
       fill: none;
-      transition: opacity 0.2s ease, stroke 0.2s ease, stroke-width 0.2s ease;
+      transition: opacity 0.45s ease, stroke 0.45s ease, stroke-width 0.45s ease;
       cursor: pointer;
+    }
+    .edge-path.highlighted {
+      stroke-dasharray: 6 10;
+      animation: dashFlow 1.8s linear infinite;
     }
 
     .edge-hit {
@@ -254,74 +275,84 @@
 
     .edge-label-group {
       cursor: pointer;
-      transition: opacity 0.2s ease;
+      transition: opacity 0.45s ease;
     }
 
     .edge-label-bg {
-      fill: #FFFFFF;
-      stroke: #D8DDD8;
+      fill: rgba(34, 46, 42, 0.9);
+      stroke: rgba(178, 198, 188, 0.22);
       stroke-width: 1;
     }
 
     .edge-label-group.highlighted .edge-label-bg {
-      fill: #EBF2EE;
-      stroke: #1F4E3D;
+      fill: rgba(44, 58, 52, 0.95);
+      stroke: #85a897;
     }
 
     .edge-label-text {
       font-size: 11px;
-      fill: #595959;
+      fill: #cdd6d0;
       text-anchor: middle;
       dominant-baseline: central;
     }
 
     .edge-label-group.highlighted .edge-label-text {
-      fill: #1F4E3D;
+      fill: #85a897;
       font-weight: 600;
     }
 
     .node-group {
       cursor: pointer;
-      transition: opacity 0.2s ease;
+      transform-box: fill-box;
+      transform-origin: center;
+      transition: opacity 0.45s ease, transform 0.38s var(--ease);
     }
 
     .node-rect {
-      fill: #FFFFFF;
-      stroke: #BFC5BF;
+      fill: rgba(34, 46, 42, 0.82);
+      stroke: rgba(178, 198, 188, 0.22);
       stroke-width: 1.25;
-      transition: fill 0.15s ease, stroke 0.15s ease, stroke-width 0.15s ease;
+      transition: fill 0.38s ease, stroke 0.38s ease, stroke-width 0.38s ease, filter 0.38s ease;
     }
 
+    .node-group:hover {
+      transform: scale(1.045);
+    }
     .node-group:hover .node-rect {
-      fill: #EBF2EE;
-      stroke: #1F4E3D;
+      fill: rgba(44, 58, 52, 0.9);
+      stroke: #85a897;
+      filter: drop-shadow(0 6px 16px rgba(132,166,150,0.35));
     }
 
     .node-group.highlighted .node-rect {
-      stroke: #1F4E3D;
+      stroke: #85a897;
       stroke-width: 1.8;
     }
 
+    .node-group.selected {
+      transform: scale(1.045);
+    }
     .node-group.selected .node-rect {
-      fill: #EBF2EE;
-      stroke: #1F4E3D;
+      fill: rgba(44, 58, 52, 0.9);
+      stroke: #85a897;
       stroke-width: 2.2;
+      filter: drop-shadow(0 0 18px rgba(132,166,150,0.5));
     }
 
     .node-accent-bar {
-      fill: #D8DDD8;
-      transition: fill 0.15s ease;
+      fill: rgba(178, 198, 188, 0.3);
+      transition: fill 0.38s ease;
     }
 
     .node-group.highlighted .node-accent-bar,
     .node-group.selected .node-accent-bar,
     .node-group:hover .node-accent-bar {
-      fill: #1F4E3D;
+      fill: #85a897;
     }
 
     .node-cat {
       font-size: 10.5px;
-      fill: #4A7C62;
+      fill: #85a897;
       letter-spacing: 0.04em;
       text-anchor: middle;
     }
@@ -330,18 +361,18 @@
       font-family: var(--font-serif);
       font-size: 14px;
       font-weight: 600;
-      fill: #1A1A1A;
+      fill: #ece8de;
       text-anchor: middle;
     }
 
     .node-brief {
       font-size: 11px;
-      fill: #595959;
+      fill: #cdd6d0;
       text-anchor: middle;
     }
 
     .dimmed {
-      opacity: 0.2;
+      opacity: 0.22;
     }
 
     /* 底部步进条 */
@@ -385,7 +416,10 @@
       min-width: 260px;
       max-width: 72vw;
       flex-shrink: 0;
-      background-color: var(--bg-card);
+      background-color: rgba(24, 33, 31, 0.6);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-left: 1px solid rgba(235, 232, 224, 0.10);
       padding: 24px;
       overflow-y: auto;
       max-height: calc(100vh - 68px);
@@ -552,12 +586,140 @@
         max-height: none;
       }
     }
+    /* —— 纸纹噪点 —— */
+    .noise {
+      position: fixed;
+      inset: 0;
+      z-index: 9997;
+      pointer-events: none;
+      opacity: 0.06;
+      mix-blend-mode: soft-light;
+    }
+
+    /* —— 雾幕转场（纯 GPU 合成层：动画期间仅过渡 opacity 与 transform） —— */
+    .curtain {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 45%, #1d2925 0%, #141c1a 78%);
+      opacity: 1;
+      visibility: visible;
+      will-change: opacity, transform;
+      transform: translateZ(0);
+    }
+
+    /* 竖线：静态宽柔光层（水平 + 垂直渐变模拟中心明亮、边缘羽化，不依赖 filter） */
+    .curtain::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 16px;
+      transform: translateX(-50%) translateZ(0) scaleY(1) scaleX(1);
+      background:
+        linear-gradient(to bottom, transparent 0%, rgba(235, 232, 224, 0.10) 20%, rgba(240, 237, 228, 0.55) 50%, rgba(235, 232, 224, 0.10) 80%, transparent 100%),
+        linear-gradient(90deg, transparent 0%, rgba(235, 232, 224, 0.10) 30%, rgba(240, 237, 228, 0.28) 50%, rgba(235, 232, 224, 0.10) 70%, transparent 100%);
+      opacity: 0.72;
+      will-change: opacity, transform;
+      pointer-events: none;
+    }
+
+    /* 外页 → 竖线：离开当前页（650ms 后跳转） */
+    .curtain.covering {
+      animation: curtainCover 580ms cubic-bezier(0.25, 0.1, 0.25, 1) 0ms both;
+    }
+    .curtain.covering::after {
+      animation: lineCover 400ms cubic-bezier(0.22, 1, 0.36, 1) 180ms both;
+    }
+
+    /* 竖线 → 内页：进入目标页揭幕（pointer-events 放行，避免遮挡阅读交互） */
+    .curtain.revealing {
+      pointer-events: none;
+      animation: curtainReveal 850ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
+    }
+    .curtain.revealing::after {
+      animation: lineReveal 340ms cubic-bezier(0.22, 1, 0.36, 1) 0ms both;
+    }
+
+    /* 揭幕完成后的静默隐藏态 */
+    .curtain.settled {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .curtain.settled::after {
+      opacity: 0;
+    }
+
+    @keyframes curtainCover {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes lineCover {
+      from { opacity: 0; transform: translateX(-50%) translateZ(0) scaleY(0.45) scaleX(1); }
+      to { opacity: 0.72; transform: translateX(-50%) translateZ(0) scaleY(1) scaleX(1); }
+    }
+    @keyframes curtainReveal {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+    @keyframes lineReveal {
+      from { opacity: 0.72; transform: translateX(-50%) translateZ(0) scaleY(1) scaleX(1); }
+      to { opacity: 0; transform: translateX(-50%) translateZ(0) scaleY(1.06) scaleX(2.4); }
+    }
+
+    /* —— 右侧详情切换动效 —— */
+    .detail-pane.pane-refresh {
+      animation: detailIn 0.42s var(--ease);
+    }
+
+    @keyframes dashFlow {
+      to { stroke-dashoffset: -32; }
+    }
+    @keyframes detailIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* 内页克制版微光浮尘与鼠标追光 */
+    .map-dust {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .map-glow {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      mix-blend-mode: soft-light;
+      background: radial-gradient(420px circle at var(--mx, 40%) var(--my, 40%), rgba(132,166,150,0.12), transparent 65%);
+    }
+    .legend-bar,
+    .svg-wrapper,
+    .stepper-bar {
+      position: relative;
+      z-index: 1;
+    }
   </style>
 </head>
 <body>
+  <svg class="noise" aria-hidden="true">
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch" />
+      <feColorMatrix type="saturate" values="0" />
+    </filter>
+    <rect width="100%" height="100%" filter="url(#grain)" />
+  </svg>
+  <div class="curtain" id="curtain"></div>
+
   <header class="topbar">
     <div class="topbar-left">
-      <a class="back-link" href="../index.html">← 返回总目录</a>
+      <a class="back-link" href="../index.html?settled=1">← Librarium</a>
       <div class="title-block">
         <h1 id="pageTitle"></h1>
         <p id="pageSubtitle"></p>
@@ -568,6 +730,8 @@
 
   <div id="workspace" class="workspace">
     <section class="canvas-pane">
+      <canvas class="map-dust" id="mapDust"></canvas>
+      <div class="map-glow" id="mapGlow"></div>
       <div class="legend-bar">
         <div id="legendItems" class="legend-items"></div>
         <span>点击节点或连线查看详情，再次点击取消选中</span>
@@ -1046,24 +1210,24 @@
     }
 
     function getEdgeStyle(edge, isHighlighted, isDimmed) {
-      let stroke = "#595959";
+      let stroke = "#8aa097";
       let dash = "";
       let marker = "url(#arrow-grey)";
 
       if (edge.perspective === "weber") {
-        stroke = "#1F4E3D";
+        stroke = "#85a897";
         marker = "url(#arrow-green)";
       } else if (edge.perspective === "althusser") {
-        stroke = "#4A7C62";
+        stroke = "#6d8679";
         dash = "6 4";
         marker = "url(#arrow-midgreen)";
       }
 
       if (isDimmed) {
-        stroke = "#BFC5BF";
+        stroke = "#3f4f48";
         marker = "url(#arrow-muted)";
       } else if (isHighlighted && (state.stepIndex >= 0 || state.selectedNodeId || state.selectedEdgeId)) {
-        stroke = "#1F4E3D";
+        stroke = "#85a897";
         marker = "url(#arrow-green)";
       }
 
@@ -1072,7 +1236,7 @@
     }
 
     function renderHeaderAndLegend() {
-      document.title = MAP_DATA.meta.title;
+      document.title = MAP_DATA.meta.title.split("：")[0] + " — Librarium";
       document.getElementById("pageTitle").textContent = MAP_DATA.meta.title;
       document.getElementById("pageSubtitle").textContent = MAP_DATA.meta.subtitle;
 
@@ -1107,10 +1271,10 @@
 
       const defs = createSvgEl("defs");
       const markers = [
-        { id: "arrow-grey", color: "#595959" },
-        { id: "arrow-green", color: "#1F4E3D" },
-        { id: "arrow-midgreen", color: "#4A7C62" },
-        { id: "arrow-muted", color: "#BFC5BF" }
+        { id: "arrow-grey", color: "#8aa097" },
+        { id: "arrow-green", color: "#85a897" },
+        { id: "arrow-midgreen", color: "#6d8679" },
+        { id: "arrow-muted", color: "#3f4f48" }
       ];
 
       markers.forEach(m => {
@@ -1147,7 +1311,7 @@
 
         const path = createSvgEl("path", {
           d: geom.d,
-          class: "edge-path",
+          class: "edge-path" + (isActive && filtering ? " highlighted" : ""),
           stroke: style.stroke,
           "stroke-width": style.width,
           "marker-end": style.marker
@@ -1431,6 +1595,9 @@
       renderSvg();
       renderStepper();
       renderDetailPane();
+      detailPaneEl.classList.remove("pane-refresh");
+      void detailPaneEl.offsetWidth;
+      detailPaneEl.classList.add("pane-refresh");
     }
 
     prevStepBtn.addEventListener("click", () => {
@@ -1460,6 +1627,118 @@
     });
 
     renderAll();
+  </script>
+
+  <script>
+    (function () {
+      var curtain = document.getElementById("curtain");
+
+      function settleCurtain() {
+        curtain.classList.remove("revealing", "covering");
+        curtain.classList.add("settled");
+      }
+
+      /* 进入页：首帧静态绘制完成后，双层 rAF 平滑启动揭幕 */
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          curtain.classList.add("revealing");
+          curtain.addEventListener("animationend", function onRevealEnd(e) {
+            if (e.target === curtain && e.animationName === "curtainReveal") {
+              curtain.removeEventListener("animationend", onRevealEnd);
+              settleCurtain();
+            }
+          });
+        });
+      });
+
+      document.addEventListener("click", function (e) {
+        var a = e.target && e.target.closest ? e.target.closest("a") : null;
+        if (!a) return;
+        var href = a.getAttribute("href");
+        if (!href || href.charAt(0) === "#" || /^[a-z][a-z0-9+.-]*:/i.test(href) || a.target === "_blank") return;
+        if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        e.preventDefault();
+        curtain.classList.remove("settled", "revealing");
+        curtain.classList.add("covering");
+        setTimeout(function () { window.location.href = href; }, 650);
+      });
+
+      window.addEventListener("pageshow", function (e) {
+        /* 后退 / 前进恢复时，若仍停留在雾幕，则直接落定 */
+        if (e.persisted) {
+          settleCurtain();
+        }
+      });
+    })();
+  </script>
+
+  <script>
+    (function () {
+      /* 内页克制版微光浮尘 + 鼠标追光（严格位于节点与正文之下，不干扰阅读点击） */
+      var canvas = document.getElementById("mapDust");
+      var glow = document.getElementById("mapGlow");
+      if (!canvas) return;
+      var ctx = canvas.getContext("2d");
+      var W = 0, H = 0, dpr = 1;
+      function resize() {
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        W = canvas.clientWidth || canvas.parentElement.clientWidth;
+        H = canvas.clientHeight || canvas.parentElement.clientHeight;
+        canvas.width = W * dpr; canvas.height = H * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      resize();
+      window.addEventListener("resize", resize);
+
+      var N = 16;
+      var parts = [];
+      for (var i = 0; i < N; i++) {
+        parts.push({
+          x: Math.random(), y: Math.random(),
+          r: 0.5 + Math.random() * 1.1,
+          vx: (Math.random() - 0.5) * 0.08,
+          vy: (Math.random() - 0.5) * 0.08,
+          base: 0.10 + Math.random() * 0.10,
+          phase: Math.random() * Math.PI * 2
+        });
+      }
+      var mx = -9999, my = -9999;
+      window.addEventListener("mousemove", function (e) {
+        var rect = canvas.getBoundingClientRect();
+        mx = e.clientX - rect.left; my = e.clientY - rect.top;
+        if (glow && W > 0 && H > 0) {
+          glow.style.setProperty("--mx", (mx / W * 100) + "%");
+          glow.style.setProperty("--my", (my / H * 100) + "%");
+        }
+      });
+
+      function tick() {
+        ctx.clearRect(0, 0, W, H);
+        var t = Date.now() * 0.0008;
+        for (var i = 0; i < parts.length; i++) {
+          var p = parts[i];
+          p.x += p.vx / Math.max(W, 1); p.y += p.vy / Math.max(H, 1);
+          if (p.x < 0) p.x = 1; else if (p.x > 1) p.x = 0;
+          if (p.y < 0) p.y = 1; else if (p.y > 1) p.y = 0;
+          var px = p.x * W, py = p.y * H;
+          var breathe = 0.5 + 0.5 * Math.sin(t * 3 + p.phase);
+          var alpha = p.base * (0.4 + 0.6 * breathe);
+          var dx = px - mx, dy = py - my;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 140 && dist > 0.5) { var b = 1 - dist / 140; alpha += b * 0.12; }
+          if (alpha > 0.30) alpha = 0.30;
+          var g = ctx.createRadialGradient(px, py, 0, px, py, p.r * 3.5);
+          g.addColorStop(0, "rgba(200,222,212," + alpha.toFixed(3) + ")");
+          g.addColorStop(1, "rgba(200,222,212,0)");
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(px, py, p.r * 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        requestAnimationFrame(tick);
+      }
+      tick();
+    })();
   </script>
 </body>
 </html>
