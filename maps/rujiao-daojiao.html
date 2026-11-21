@@ -240,65 +240,80 @@
 
     .svg-wrapper {
       flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      overflow: auto;
+      position: relative;
+      overflow: hidden;
     }
 
     svg#mapSvg {
       width: 100%;
-      max-width: 1000px;
-      height: auto;
+      height: 100%;
       display: block;
       user-select: none;
+      touch-action: none;
+      cursor: grab;
     }
 
-    /* SVG 内部样式 */
+    svg#mapSvg.panning {
+      cursor: grabbing;
+    }
+
+    /* SVG 内部样式：连线层永远位于节点层下方，标签按需浮现在最上层 */
+    .edge {
+      opacity: 0.26;
+      transition: opacity 0.45s var(--ease);
+    }
+    .edge.edge-strong {
+      opacity: 0.95;
+    }
+    .edge.edge-dim {
+      opacity: 0.10;
+    }
+
     .edge-path {
       fill: none;
-      transition: opacity 0.45s ease, stroke 0.45s ease, stroke-width 0.45s ease;
+      stroke-width: 1.5;
+      transition: stroke 0.45s var(--ease), stroke-width 0.45s var(--ease);
       cursor: pointer;
     }
-    .edge-path.highlighted {
+    .edge.edge-strong .edge-path {
+      stroke-width: 2.2;
       stroke-dasharray: 6 10;
       animation: dashFlow 1.8s linear infinite;
+    }
+    .edge-arrow {
+      transition: fill 0.45s var(--ease);
     }
 
     .edge-hit {
       fill: none;
       stroke: transparent;
-      stroke-width: 16;
+      stroke-width: 18;
+      pointer-events: stroke;
       cursor: pointer;
     }
 
     .edge-label-group {
       cursor: pointer;
-      transition: opacity 0.45s ease;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.45s var(--ease);
+    }
+    .edge-label-group.visible {
+      opacity: 1;
     }
 
     .edge-label-bg {
-      fill: rgba(34, 46, 42, 0.9);
-      stroke: rgba(178, 198, 188, 0.22);
-      stroke-width: 1;
-    }
-
-    .edge-label-group.highlighted .edge-label-bg {
-      fill: rgba(44, 58, 52, 0.95);
-      stroke: #85a897;
+      fill: rgba(15, 22, 19, 0.90);
+      stroke: rgba(210, 224, 217, 0.22);
+      stroke-width: 0.75;
     }
 
     .edge-label-text {
-      font-size: 11px;
-      fill: #cdd6d0;
+      font-size: 11.5px;
+      fill: #d8dfda;
       text-anchor: middle;
       dominant-baseline: central;
-    }
-
-    .edge-label-group.highlighted .edge-label-text {
-      fill: #85a897;
-      font-weight: 600;
+      letter-spacing: 0.02em;
     }
 
     .node-group {
@@ -309,9 +324,9 @@
     }
 
     .node-rect {
-      fill: rgba(34, 46, 42, 0.82);
-      stroke: rgba(178, 198, 188, 0.22);
-      stroke-width: 1.25;
+      fill: rgba(32, 44, 40, 0.80);
+      stroke: rgba(182, 206, 196, 0.28);
+      stroke-width: 1;
       transition: fill 0.38s ease, stroke 0.38s ease, stroke-width 0.38s ease, filter 0.38s ease;
     }
 
@@ -320,13 +335,13 @@
     }
     .node-group:hover .node-rect {
       fill: rgba(44, 58, 52, 0.9);
-      stroke: #85a897;
+      stroke: rgba(133, 168, 151, 0.72);
       filter: drop-shadow(0 6px 16px rgba(132,166,150,0.35));
     }
 
     .node-group.highlighted .node-rect {
       stroke: #85a897;
-      stroke-width: 1.8;
+      stroke-width: 1.6;
     }
 
     .node-group.selected {
@@ -334,41 +349,85 @@
     }
     .node-group.selected .node-rect {
       fill: rgba(44, 58, 52, 0.9);
-      stroke: #85a897;
-      stroke-width: 2.2;
-      filter: drop-shadow(0 0 18px rgba(132,166,150,0.5));
+      stroke: rgba(236, 232, 224, 0.85);
+      stroke-width: 1.6;
+      filter: drop-shadow(0 0 18px rgba(236,232,224,0.28));
     }
 
-    .node-accent-bar {
-      fill: rgba(178, 198, 188, 0.3);
-      transition: fill 0.38s ease;
+    /* 节点卡片（foreignObject 内嵌 HTML，自动折行，严格限制在卡片内边距内） */
+    .node-card {
+      width: 100%;
+      height: 100%;
+      padding: 12px 16px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      pointer-events: none;
+      font-family: var(--font-sans);
     }
 
-    .node-group.highlighted .node-accent-bar,
-    .node-group.selected .node-accent-bar,
-    .node-group:hover .node-accent-bar {
-      fill: #85a897;
+    .node-card-top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
     }
 
-    .node-cat {
-      font-size: 10.5px;
-      fill: #85a897;
-      letter-spacing: 0.04em;
-      text-anchor: middle;
-    }
-
-    .node-title {
-      font-family: var(--font-serif);
-      font-size: 14px;
+    .node-card-cat {
+      font-size: 12px;
+      line-height: 1.2;
+      color: #85a897;
+      letter-spacing: 0.05em;
       font-weight: 600;
-      fill: #ece8de;
-      text-anchor: middle;
     }
 
-    .node-brief {
-      font-size: 11px;
-      fill: #cdd6d0;
-      text-anchor: middle;
+    .node-card-badge {
+      flex-shrink: 0;
+      font-size: 10.5px;
+      line-height: 1.25;
+      color: #b7cdc0;
+      background: rgba(133, 168, 151, 0.10);
+      border: 1px solid rgba(133, 168, 151, 0.28);
+      border-radius: 999px;
+      padding: 2px 9px;
+      white-space: nowrap;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      box-shadow: 0 0 10px rgba(132, 166, 150, 0.18);
+    }
+
+    .node-card-title {
+      font-family: var(--font-serif);
+      font-size: 16px;
+      font-weight: 600;
+      color: #ece8de;
+      line-height: 1.32;
+      margin-top: 6px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      max-height: 2.7em;
+    }
+
+    .node-card-brief {
+      font-size: 13px;
+      color: #cdd6d0;
+      line-height: 1.45;
+      margin-top: 5px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      max-height: 3em;
+    }
+
+    /* 起点节点微光描边 */
+    .node-group.start-node .node-rect {
+      stroke: #85a897;
+      stroke-width: 1.4;
+      filter: drop-shadow(0 0 10px rgba(132, 166, 150, 0.5));
     }
 
     .dimmed {
@@ -412,39 +471,75 @@
 
     /* 右侧详情面板 */
     .detail-pane {
-      width: 400px;
-      min-width: 260px;
+      width: 420px;
+      min-width: 280px;
       max-width: 72vw;
       flex-shrink: 0;
       background-color: rgba(24, 33, 31, 0.6);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border-left: 1px solid rgba(235, 232, 224, 0.10);
-      padding: 24px;
+      padding: 28px 26px;
       overflow-y: auto;
       max-height: calc(100vh - 68px);
+      font-size: 16.5px;
+      line-height: 1.9;
+      color: rgba(238, 235, 226, 0.92);
     }
 
     .detail-kicker {
-      font-size: 11.5px;
+      font-size: 12px;
       color: var(--green-main);
       letter-spacing: 0.08em;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
+    }
+
+    .detail-badges {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .detail-badge {
+      font-size: 11.5px;
+      color: var(--green-main);
+      background-color: var(--bg-green-soft);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: 2px 10px;
+      letter-spacing: 0.04em;
+    }
+
+    .detail-badge-num {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
     }
 
     .detail-title {
       font-family: var(--font-serif);
-      font-size: 20px;
+      font-size: 22px;
       font-weight: 600;
       color: var(--text-main);
-      margin-bottom: 12px;
-      padding-bottom: 12px;
+      margin-bottom: 14px;
+      padding-bottom: 14px;
       border-bottom: 1px solid var(--border-light);
     }
 
+    .detail-core {
+      font-size: 15.5px;
+      line-height: 1.8;
+      color: rgba(238, 235, 226, 0.95);
+      background-color: var(--bg-green-soft);
+      border-left: 3px solid var(--green-main);
+      padding: 12px 16px;
+      margin: 0 0 22px;
+    }
+
     .detail-summary {
-      font-size: 13.5px;
-      color: var(--text-secondary);
+      font-size: 15px;
+      color: rgba(238, 235, 226, 0.82);
       margin-bottom: 20px;
     }
 
@@ -453,10 +548,10 @@
     }
 
     .detail-section h3 {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 600;
       color: var(--text-main);
-      margin-bottom: 10px;
+      margin-bottom: 12px;
       padding-left: 8px;
       border-left: 2px solid var(--green-main);
     }
@@ -469,12 +564,12 @@
     }
 
     .point-list li {
-      font-size: 13px;
+      font-size: 14.5px;
       color: var(--text-secondary);
-      padding: 8px 10px;
+      padding: 10px 12px;
       background-color: var(--bg-page);
       border: 1px solid var(--bg-subtle);
-      line-height: 1.65;
+      line-height: 1.85;
     }
 
     .point-list li strong {
@@ -483,12 +578,13 @@
     }
 
     .perspective-note {
-      font-size: 13px;
+      font-size: 14px;
       color: var(--text-secondary);
-      padding: 10px 12px;
+      padding: 12px 14px;
       background-color: var(--bg-green-soft);
       border: 1px solid var(--border-light);
-      margin-bottom: 8px;
+      margin-bottom: 10px;
+      line-height: 1.8;
     }
 
     .perspective-note strong {
@@ -524,16 +620,16 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 12px;
+      font-size: 13px;
       color: var(--green-main);
       font-weight: 600;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
 
     .rel-body {
-      font-size: 12.5px;
+      font-size: 13.5px;
       color: var(--text-secondary);
-      line-height: 1.55;
+      line-height: 1.75;
     }
 
     .node-index-btn {
@@ -557,14 +653,102 @@
     }
 
     .node-index-btn span:first-child {
-      font-size: 13.5px;
+      font-size: 14.5px;
       font-weight: 600;
       color: var(--text-main);
     }
 
     .node-index-btn span:last-child {
-      font-size: 11.5px;
+      font-size: 12px;
       color: var(--green-mid);
+    }
+
+    /* 新手导览：推荐阅读路线 */
+    .guide-path {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+    }
+
+    .guide-step-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      text-align: left;
+      padding: 12px 14px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-light);
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color 0.2s var(--ease), background-color 0.2s var(--ease), transform 0.2s var(--ease);
+    }
+
+    .guide-step-btn:hover {
+      border-color: var(--green-main);
+      background-color: var(--bg-green-soft);
+      transform: translateX(3px);
+    }
+
+    .guide-num {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--green-main);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.04em;
+    }
+
+    .guide-label {
+      flex: 1;
+      font-size: 14.5px;
+      color: var(--text-main);
+    }
+
+    .guide-arrow {
+      font-size: 16px;
+      color: var(--green-mid);
+    }
+
+    .guide-hint {
+      margin-top: 18px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+      text-align: center;
+    }
+
+    .legend-hint {
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+
+    /* 右上角：适应全屏 / 重置视野 */
+    .fit-btn {
+      position: absolute;
+      top: 52px;
+      right: 16px;
+      z-index: 2;
+      appearance: none;
+      background-color: rgba(24, 33, 31, 0.85);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-light);
+      border-radius: 16px;
+      padding: 5px 14px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s var(--ease);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .fit-btn:hover {
+      border-color: var(--green-main);
+      color: var(--green-main);
+      box-shadow: 0 0 12px rgba(132, 166, 150, 0.35);
     }
 
     @media (max-width: 900px) {
@@ -584,6 +768,7 @@
         width: 100% !important;
         max-width: 100%;
         max-height: none;
+        font-size: 15.5px;
       }
     }
     /* —— 纸纹噪点 —— */
@@ -734,11 +919,12 @@
       <div class="map-glow" id="mapGlow"></div>
       <div class="legend-bar">
         <div id="legendItems" class="legend-items"></div>
-        <span>点击节点或连线查看详情，再次点击取消选中</span>
+        <span class="legend-hint">点击节点阅读精解 · 滚轮缩放 · 拖拽移动画布</span>
       </div>
       <div class="svg-wrapper">
-        <svg id="mapSvg" viewBox="0 0 980 560" xmlns="http://www.w3.org/2000/svg"></svg>
+        <svg id="mapSvg" xmlns="http://www.w3.org/2000/svg"></svg>
       </div>
+      <button id="fitBtn" class="fit-btn" type="button" title="适应全屏 / 重置视野">适应全屏</button>
       <div class="stepper-bar">
         <div class="step-info">
           <div id="stepTag" class="step-tag"></div>
@@ -762,296 +948,518 @@
      * MAP_DATA：本书专属数据区（新增书籍时仅需替换本对象内容）
      * ============================================================ */
     const MAP_DATA = {
-      meta: {
-        title: "儒教与道教：制度、伦理与生产关系",
-        subtitle: "马克斯·韦伯原著梳理与阿尔都塞唯物主义视角重读",
-        overview: "本图谱整合了《儒教与道教》的经济基础、国家体制、基层宗族、科举士人、儒道信仰、西欧清教对照以及阿尔都塞的唯物主义重读六个模块。可通过顶部切换分析视角，通过底部按逻辑步骤追踪因果链条，点击任意节点或连线查看详情，再次点击同一项即可恢复原状。"
-      },
-      perspectives: [
-        { id: "all", label: "全景互锁", legendLabel: "双重视角共用结构", lineClass: "both" },
-        { id: "weber", label: "韦伯视角", legendLabel: "韦伯伦理与制度路径", lineClass: "primary" },
-        { id: "althusser", label: "阿尔都塞重读", legendLabel: "阿尔都塞唯物倒置路径", lineClass: "secondary" }
-      ],
-      nodes: [
+  "meta": {
+    "title": "儒教与道教：制度、伦理与生产关系",
+    "subtitle": "马克斯·韦伯原著梳理与阿尔都塞唯物主义视角重读",
+    "overview": "本图谱整合了《儒教与道教》的经济基础、国家体制、基层宗族、科举士人、儒道信仰、西欧清教对照以及阿尔都塞的唯物主义重读六个模块。可通过顶部切换分析视角，通过底部按逻辑步骤追踪因果链条，点击任意节点或连线查看详情，再次点击同一项即可恢复原状。"
+  },
+  "perspectives": [
+    {
+      "id": "all",
+      "label": "全景互锁",
+      "legendLabel": "双重视角共用结构",
+      "lineClass": "both"
+    },
+    {
+      "id": "weber",
+      "label": "韦伯视角",
+      "legendLabel": "韦伯伦理与制度路径",
+      "lineClass": "primary"
+    },
+    {
+      "id": "althusser",
+      "label": "阿尔都塞重读",
+      "legendLabel": "阿尔都塞唯物倒置路径",
+      "lineClass": "secondary"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "category": "物质与政治基础",
+      "title": "经济条件与国家体制",
+      "brief": "货币、俸禄与小农结构",
+      "summary": "传统中国拥有国内和平、庞大人口、美洲白银流入、自由迁徙与国内贸易发达等有利条件，且缺乏印度式种姓隔离，但货币、城市、俸禄财政与小农结构共同限制了理性资本主义的自发生长。",
+      "subPoints": [
         {
-          id: "n1",
-          x: 150,
-          y: 175,
-          category: "物质与政治基础",
-          title: "经济条件与国家体制",
-          brief: "货币城市 · 俸禄官僚 · 小农治理",
-          summary: "传统中国拥有国内和平、庞大人口、美洲白银流入、自由迁徙与国内贸易发达等有利条件，且缺乏印度式种姓隔离，但货币、城市、俸禄财政与小农结构共同限制了理性资本主义的自发生长。",
-          subPoints: [
-            { label: "货币紊乱", text: "铜钱与白银双轨并行，私铸频发且比价每日波动；朝廷缺乏国家银行与信用票据体系，资本转向土地购置和放贷。" },
-            { label: "行政型城市", text: "城市主要承担行政中心与军事据点职能，缺乏西欧城市的自治特许状和独立市民身份；进城商民户籍与祭祀隶属乡村宗族，行会缺乏武装力量。" },
-            { label: "家产官僚制与俸禄", text: "由西周血缘分封制和战车贵族，经春秋战国郡县制、游士与文书行政，演变为秦以后的中央集权帝国。法定薪俸微薄，朝廷默许地方官征收附加费与规费形成包税财政。" },
-            { label: "任期回避与胥吏", text: "三年调任与本籍回避维护了中央集权，却削弱了地方长期建设动力，官员高度依赖本地世袭胥吏；北宋王安石的财政理性化改革在官僚抵制下失败。" },
-            { label: "农业与基层治理", text: "行政力量止于县衙，乡村由乡绅、族长和保甲自治；跨流域治水强化早期中央权威；私有小农随王朝更替周期性恢复，明代一条鞭法与清代摊丁入亩定额化赋税，精耕细作降低了对机械和资本的需求。" }
-          ],
-          perspectivesNote: [
-            { label: "韦伯视角定位", text: "作为阻碍近代工业资本形成与理性核算的制度约束背景。" },
-            { label: "阿尔都塞视角定位", text: "构成决定上层意识形态形态的物质生产方式、阶级利益基础与镇压性国家机器（军队、衙门、刑律）。" }
-          ]
+          "label": "货币紊乱",
+          "text": "铜钱与白银双轨并行，私铸频发且比价每日波动；朝廷缺乏国家银行与信用票据体系，资本转向土地购置和放贷。"
         },
         {
-          id: "n2",
-          x: 150,
-          y: 435,
-          category: "基层组织与司法",
-          title: "宗族、行会与司法形态",
-          brief: "血缘共同体 · 行会限竞 · 伦理司法",
-          summary: "宗族构成了传统社会最稳固的基层单位，与城市行会及实质伦理司法结合，维系了基层秩序与传统工匠生计，同时阻碍了现代企业制度和长期工业固定资本投资。",
-          subPoints: [
-            { label: "宗族自治与公产", text: "同姓家族聚族而居，修建祠堂、编修族谱、祭祀祖先，利用公田族产救济族人并资助子弟参加科举；族长与长老掌握内部裁决权，在乡村的实际权威往往超过县官。" },
-            { label: "家族商业的局限", text: "商号普遍采取家族合伙与血缘雇佣，家庭开支与企业资金混杂，缺乏独立法人地位和精确复式簿记；诸子均分继承制阻碍商业资本跨代集中。" },
-            { label: "商帮与行会控制", text: "商帮按籍贯建会馆排斥外来竞争；手工业行会统一规定学徒年限、工资、产品规格和价格，禁止降价与技术革新，并以罢市抵制官府额外摊派。" },
-            { label: "实质伦理司法", text: "知县兼任行政与审判官，缺乏专门法学训练，审理民事商事纠纷时优先考量儒家伦理、人情、宗族尊卑与地方习惯，缺乏可预测的形式理性法与独立商事法庭。" },
-            { label: "特许资本流向", text: "面对高昂的产权与契约不确定性，商业资本投向盐业、典当、茶政等依托官府特许权的领域。" }
-          ],
-          perspectivesNote: [
-            { label: "韦伯视角定位", text: "血缘纽带与实质司法取代形式理性法，直接压制了自由竞争、技术革新与匿名法人企业的诞生。" },
-            { label: "阿尔都塞视角定位", text: "宗族祠堂、乡约与祭祖守丧实践构成基层意识形态国家机器，与县衙镇压机器配合把农民固定在耕地上。" }
-          ]
+          "label": "行政型城市",
+          "text": "城市主要承担行政中心与军事据点职能，缺乏西欧城市的自治特许状和独立市民身份；进城商民户籍与祭祀隶属乡村宗族，行会缺乏武装力量。"
         },
         {
-          id: "n3",
-          x: 490,
-          y: 175,
-          category: "统治身份等级",
-          title: "士人阶层与科举体制",
-          brief: "古典通才 · 文字垄断 · 依附与约束",
-          summary: "士人阶层依靠古典文化教养和官僚职位主导传统中国两千余年，通过科举与文言文垄断文化与政治权力，将全社会智力与财富持续吸引到功名仕途上。",
-          subPoints: [
-            { label: "通才选拔机制", text: "科举在形式上向男性平民开放，打破血统世袭垄断，但考试范围严格限定在儒家经典、经义注疏、诗赋与八股文，排斥技术、财政、军事与法律等专业训练。" },
-            { label: "文字读写垄断", text: "文言文与日常口语分离，掌握汉字需要十数年脱产学习，普通农工无力承担教育成本；大量社会人力与财富消耗在备考中，未能转化为自然科学与商业技术革新。" },
-            { label: "官僚经济依附", text: "士人享有免徭役和免刑罚特权，入仕依赖俸禄，未仕则以乡绅身份收取学田收入、代写诉状和调解纠纷，从未建立独立于皇权的教会组织。" },
-            { label: "对皇权的有限约束", text: "士人掌握经典解释权与史官记录权，通过谏议制度、礼法传统和祖宗家法对皇帝个人专断形成一定制约。" }
-          ],
-          perspectivesNote: [
-            { label: "韦伯视角定位", text: "作为儒教伦理的核心担纲者，确立了重道德通才、轻专业技术与商业逐利的社会价值取向。" },
-            { label: "阿尔都塞视角定位", text: "通过漫长文言教育制度严格区分脑力劳动者与体力劳动者，把文化权力集中在依赖农业俸禄和地租的统治阶层手中。" }
-          ]
+          "label": "家产官僚制与俸禄",
+          "text": "由西周血缘分封制和战车贵族，经春秋战国郡县制、游士与文书行政，演变为秦以后的中央集权帝国。法定薪俸微薄，朝廷默许地方官征收附加费与规费形成包税财政。"
         },
         {
-          id: "n4",
-          x: 490,
-          y: 435,
-          category: "伦理与信仰体系",
-          title: "儒教、道教与异端运动",
-          brief: "礼孝秩序 · 风水巫术 · 秘密教派",
-          summary: "正统儒教构建了适应现世的等级伦理，汉代以后组织化的道教与风水禁忌支配着民间日常决策，秘密教派在危机时刻爆发反抗但未能动摇社会根基。",
-          subPoints: [
-            { label: "儒教宇宙观与德行", text: "儒教缺乏创世人格神，视天为和谐的自然与道德秩序，主张天人感应。核心德行“礼”要求端庄克制，“孝”确立家族服从并延伸为政治上的“忠”，压制基于个人良知反抗权威的冲动。" },
-            { label: "儒教财富观与祭祀", text: "儒教认可适度富贵，但警惕商业逐利破坏等级秩序，促使富裕商人购地捐纳功名、抽离工商业资本。国家垄断祭天与高阶祭祀，士大夫在治理层面对民间鬼神巫术采取实用宽容态度。" },
-            { label: "道教的哲学与世俗化", text: "先秦老庄哲学属于少数隐居士人的无为与退隐方案；汉代以后道教演变为收费法术行会，聚焦肉体长生、炼丹、房中、导引、符咒与斋醮科仪。" },
-            { label: "风水禁忌阻碍革新", text: "风水学说把山川地形与家族兴衰挂钩，在近代铁路、修路与开矿引入初期引发周边宗族激烈反抗，使民众对改造自然与采用新技术保持高度戒备。" },
-            { label: "民间异端起义", text: "太平道、白莲教与太平天国融合道术、弥勒信仰与救世预言，在饥荒苛政下动员武装起义，但绝大多数教派依赖巫术灵验、缺乏理性日常伦理，最终遭到朝廷军事镇压。" }
-          ],
-          perspectivesNote: [
-            { label: "韦伯视角定位", text: "儒教的入世适应取向与民间巫术的完整保留，共同消解了彻底改造现世的内在心理张力。" },
-            { label: "阿尔都塞视角定位", text: "儒家礼孝执行主体询唤；大众道教平复底层焦虑获官府容忍，异端武装起义威胁生产关系则由军队镇压。" }
-          ]
+          "label": "任期回避与胥吏",
+          "text": "三年调任与本籍回避维护了中央集权，却削弱了地方长期建设动力，官员高度依赖本地世袭胥吏；北宋王安石的财政理性化改革在官僚抵制下失败。"
         },
         {
-          id: "n5",
-          x: 830,
-          y: 435,
-          category: "跨文化横向对照",
-          title: "西欧清教与理性资本主义",
-          brief: "支配现世 · 彻底祛魅 · 普遍信任",
-          summary: "儒教与清教同属强调自我克制的理性伦理，但两者在理性化方向、救赎张力、祛魅程度与社会信任结构上走向了截然相反的道路。",
-          subPoints: [
-            { label: "适应世界与支配世界", text: "儒教致力于理性地适应既有和谐秩序；清教信仰超越尘世的全能上帝，视现世充满罪恶，致力于理性地支配和改造世界。" },
-            { label: "预定论与职业天职", text: "儒教缺乏原罪意识与终极救赎压力；清教徒在加尔文宗预定论驱动下将世俗劳动视为神圣天职，节制消费同时高效组织生产、计算成本与积累资本，以职业成功印证恩宠。" },
-            { label: "彻底祛魅与巫术留存", text: "清教将一切巫术、圣像崇拜和繁琐仪式视为亵渎神明并彻底清除，迫使信徒依靠理性规划与精确计算行事；儒教则在基层完整保留了占卜、祖先崇拜与风水信仰。" },
-            { label: "普遍契约与特殊信任", text: "儒教将道德义务限定在血缘和熟人圈子内（特殊主义），圈外充满猜忌；清教打破血缘界限，要求在普遍交往中出于对上帝的敬畏而恪守契约（普遍主义），大幅降低陌生人交易成本，支撑起信用金融与匿名合资企业。" }
-          ],
-          perspectivesNote: [
-            { label: "韦伯视角定位", text: "作为理解近代西欧资本主义精神兴起的正面参照系，凸显伦理张力与祛魅的决定性作用。" },
-            { label: "阿尔都塞视角定位", text: "新兴资产阶级对抗封建领主与天主教会时的阶级实践；清教教会、家庭读经与工场规章构成服务资本扩张的意识形态机器，天职观念询唤资产者持续投资与雇佣工人服从纪律。" }
-          ]
-        },
-        {
-          id: "n6",
-          x: 830,
-          y: 175,
-          category: "唯物主义理论重读",
-          title: "阿尔都塞：国家机器与生产关系",
-          brief: "物质实践 · 主体询唤 · 因果倒置",
-          summary: "借助《写给非哲学家的哲学入门》中的实践、国家机器、主体询唤与阶级斗争框架，把韦伯考察的伦理观念放回物质生产方式与阶级利益结构中重新检验。",
-          subPoints: [
-            { label: "意识形态的物质形态", text: "观念必须依托具体场所、制度与行动才能生效。书院、科举考场、宗族祠堂与婚丧祭祀礼仪构成了帝国的意识形态国家机器（ISA），民众在跪拜、守丧与乡约实践中持续使儒家观念生效。" },
-            { label: "主体询唤机制", text: "孝道、礼法与忠君原则执行询唤职能，使个体在成长过程中接受明确的身份与义务，主动认同自己在等级秩序中的位置。" },
-            { label: "两类国家机器的分工", text: "军队、衙门和律法构成镇压性国家机器（RSA），直接处理抗税与武装反抗；乡村宗族、乡绅和私塾负责日常意识形态教化，双方协作实现小农经济与俸禄官僚制生产关系的再生产。" },
-            { label: "唯物主义因果检验", text: "韦伯侧重论证儒教伦理对资本主义的抑制，唯物主义分析则指出物质生产方式和阶级关系决定主流意识形态：士大夫依靠农业俸禄和地租维持生计，因此排斥商业逐利，维护小农与官僚体制。" },
-            { label: "清教兴起的阶级逻辑", text: "西欧商品经济扩张与新兴资产阶级的现实利益支撑着清教占据主导地位，清教日常实践把普通人转化为适应雇佣劳动的主体，保障了资本主义生产关系的再生产。" }
-          ],
-          perspectivesNote: [
-            { label: "与韦伯的关系", text: "将韦伯“伦理取向决定经济路径”的解释方向倒置，揭示支撑观念长期存续的物质条件与阶级再生产机制。" }
-          ]
+          "label": "农业与基层治理",
+          "text": "行政力量止于县衙，乡村由乡绅、族长和保甲自治；跨流域治水强化早期中央权威；私有小农随王朝更替周期性恢复，明代一条鞭法与清代摊丁入亩定额化赋税，精耕细作降低了对机械和资本的需求。"
         }
       ],
-      edges: [
+      "perspectivesNote": [
         {
-          id: "e1",
-          source: "n1",
-          target: "n2",
-          perspective: "both",
-          label: "基层委任与法制缺位",
-          curve: 0,
-          labelT: 0.5,
-          detail: "中央行政止于县级衙门，帝国将乡村治安与税收摊派委托给宗族和乡绅；货币紊乱与形式理性法缺位，促使商业组织依赖家族血缘、行会保护与官府特许权。"
+          "label": "韦伯视角定位",
+          "text": "作为阻碍近代工业资本形成与理性核算的制度约束背景。"
         },
         {
-          id: "e2",
-          source: "n2",
-          target: "n3",
-          perspective: "both",
-          label: "族产资助与财富入仕",
-          curve: 46,
-          labelT: 0.28,
-          detail: "宗族动用公田族产资助子弟脱产备考，富裕商人赚取资金后购置土地和捐纳功名，持续推动后代向士大夫阶层转化。"
-        },
-        {
-          id: "e3",
-          source: "n3",
-          target: "n2",
-          perspective: "both",
-          label: "功名庇护与免税特权",
-          curve: 46,
-          labelT: 0.28,
-          detail: "族中子弟考中进士、出任官职后，整个宗族获得免税特权和政治庇护，未入仕士人也以乡绅身份巩固乡村宗族权威。"
-        },
-        {
-          id: "e4",
-          source: "n3",
-          target: "n1",
-          perspective: "both",
-          label: "通才输送与礼法约束",
-          curve: 0,
-          labelT: 0.5,
-          detail: "科举向帝国持续输送非世袭古典通才官僚，维系中央集权与俸禄体制；同时士人借助经典解释权、史官记录与谏议制度有限约束皇权专断。"
-        },
-        {
-          id: "e5",
-          source: "n3",
-          target: "n4",
-          perspective: "weber",
-          label: "确立正统并宽容巫术",
-          curve: 0,
-          labelT: 0.5,
-          detail: "士人阶层垄断儒家经典解释权，把适应现世、重视礼孝与警惕逐利的伦理塑造成社会正统，并在治理层面对民间占卜与鬼神巫术采取实用宽容态度。"
-        },
-        {
-          id: "e6",
-          source: "n4",
-          target: "n1",
-          perspective: "weber",
-          label: "抑制逐利与阻挠革新",
-          curve: -24,
-          labelT: 0.76,
-          detail: "儒教贬抑商业牟利促使工商业资本不断流向土地与官职；道教风水禁忌引发民众抵制开矿、修路与铁路工程，共同阻碍近代工业资本主义形成。"
-        },
-        {
-          id: "e7",
-          source: "n4",
-          target: "n5",
-          perspective: "weber",
-          label: "四维理性化横向对照",
-          curve: 0,
-          labelT: 0.5,
-          detail: "韦伯在理性方向（适应与支配）、救赎张力（无原罪与预定论天职）、祛魅程度（保留巫术与彻底清除）以及信任结构（血缘特殊主义与契约普遍主义）四个维度对照儒教与清教。"
-        },
-        {
-          id: "e8",
-          source: "n1",
-          target: "n6",
-          perspective: "althusser",
-          label: "物质生产与阶级基础",
-          curve: -135,
-          labelT: 0.5,
-          detail: "小农经济、农业田赋与官僚俸禄地租构成了传统中国的物质生产方式和统治阶层利益基础，决定了儒教伦理得以长期主导社会的现实条件。"
-        },
-        {
-          id: "e9",
-          source: "n6",
-          target: "n3",
-          perspective: "althusser",
-          label: "固化脑力体力分工",
-          curve: 0,
-          labelT: 0.5,
-          detail: "书院与科举考场作为核心意识形态国家机器，依托高门槛的文言文学习严格区分脑力劳动者与体力劳动者，稳固官僚与乡绅对文化权力的占有。"
-        },
-        {
-          id: "e10",
-          source: "n6",
-          target: "n4",
-          perspective: "althusser",
-          label: "主体询唤与阶级镇压",
-          curve: -16,
-          labelT: 0.48,
-          detail: "祠堂、礼法与孝道执行询唤职能把人转化为顺从秩序的主体；道教法术安抚底层焦虑，当异端教派结合饥荒发动起义时，朝廷动用镇压性机器强行恢复原有生产关系。"
-        },
-        {
-          id: "e11",
-          source: "n6",
-          target: "n5",
-          perspective: "althusser",
-          label: "资产阶级机器对照",
-          curve: 0,
-          labelT: 0.5,
-          detail: "以唯物主义视角重读清教：西欧新兴资产阶级依托清教教会、家庭读经和工场规章建构意识形态机器，借天职观念询唤资产者投资与雇佣工人守纪，保障资本主义生产关系再生产。"
+          "label": "阿尔都塞视角定位",
+          "text": "构成决定上层意识形态形态的物质生产方式、阶级利益基础与镇压性国家机器（军队、衙门、刑律）。"
         }
       ],
-      steps: [
+      "coreIdea": "货币、俸禄财政与小农结构共同限制了理性资本主义的自发生长。",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "id": "n2",
+      "category": "基层组织与司法",
+      "title": "宗族、行会与司法形态",
+      "brief": "血缘、行会与伦理司法",
+      "summary": "宗族构成了传统社会最稳固的基层单位，与城市行会及实质伦理司法结合，维系了基层秩序与传统工匠生计，同时阻碍了现代企业制度和长期工业固定资本投资。",
+      "subPoints": [
         {
-          title: "步骤 1 / 5：物质约束与基层结构",
-          description: "从经济与政治起点出发，观察双轨货币、行政型城市、俸禄官僚制与小农经济如何委托宗族自治，并与实质伦理司法共同限制资本工业化。",
-          activeNodes: ["n1", "n2"],
-          activeEdges: ["e1"]
+          "label": "宗族自治与公产",
+          "text": "同姓家族聚族而居，修建祠堂、编修族谱、祭祀祖先，利用公田族产救济族人并资助子弟参加科举；族长与长老掌握内部裁决权，在乡村的实际权威往往超过县官。"
         },
         {
-          title: "步骤 2 / 5：宗族、科举与俸禄帝国的闭环",
-          description: "追踪宗族公产资助子弟备考、科举垄断文字与通才仕途、功名免税反哺宗族以及士人维持官僚体制的双向利益循环。",
-          activeNodes: ["n1", "n2", "n3"],
-          activeEdges: ["e1", "e2", "e3", "e4"]
+          "label": "家族商业的局限",
+          "text": "商号普遍采取家族合伙与血缘雇佣，家庭开支与企业资金混杂，缺乏独立法人地位和精确复式簿记；诸子均分继承制阻碍商业资本跨代集中。"
         },
         {
-          title: "步骤 3 / 5：儒道信仰与现世秩序的稳定",
-          description: "进入韦伯的宗教伦理分析：士人确立适应现世的儒教礼孝秩序并宽容民间巫术，风水禁忌与重官轻商共同抽离工商业资本并阻挠技术改造。",
-          activeNodes: ["n1", "n3", "n4"],
-          activeEdges: ["e5", "e6"]
+          "label": "商帮与行会控制",
+          "text": "商帮按籍贯建会馆排斥外来竞争；手工业行会统一规定学徒年限、工资、产品规格和价格，禁止降价与技术革新，并以罢市抵制官府额外摊派。"
         },
         {
-          title: "步骤 4 / 5：儒教与西欧清教的四维对照",
-          description: "横向对比两种理性伦理的分叉点：适应现世与支配现世、无救赎张力与预定论天职、保留巫术与彻底祛魅、血缘特殊信任与普遍契约信任。",
-          activeNodes: ["n4", "n5"],
-          activeEdges: ["e7"]
+          "label": "实质伦理司法",
+          "text": "知县兼任行政与审判官，缺乏专门法学训练，审理民事商事纠纷时优先考量儒家伦理、人情、宗族尊卑与地方习惯，缺乏可预测的形式理性法与独立商事法庭。"
         },
         {
-          title: "步骤 5 / 5：阿尔都塞的唯物重读与因果倒置",
-          description: "以物质生产方式和阶级关系重审全书：ISA 与 RSA 协作完成生产关系再生产，主体询唤塑造顺从身份，并对照西欧新兴资产阶级如何借助清教机器服务资本扩张。",
-          activeNodes: ["n1", "n3", "n4", "n5", "n6"],
-          activeEdges: ["e8", "e9", "e10", "e11"]
+          "label": "特许资本流向",
+          "text": "面对高昂的产权与契约不确定性，商业资本投向盐业、典当、茶政等依托官府特许权的领域。"
         }
+      ],
+      "perspectivesNote": [
+        {
+          "label": "韦伯视角定位",
+          "text": "血缘纽带与实质司法取代形式理性法，直接压制了自由竞争、技术革新与匿名法人企业的诞生。"
+        },
+        {
+          "label": "阿尔都塞视角定位",
+          "text": "宗族祠堂、乡约与祭祖守丧实践构成基层意识形态国家机器，与县衙镇压机器配合把农民固定在耕地上。"
+        }
+      ],
+      "coreIdea": "宗族、行会与伦理司法维系基层秩序，却阻碍现代企业制度。",
+      "x": 440,
+      "y": 0
+    },
+    {
+      "id": "n3",
+      "category": "统治身份等级",
+      "title": "士人阶层与科举体制",
+      "brief": "通才、文字与依附",
+      "summary": "士人阶层依靠古典文化教养和官僚职位主导传统中国两千余年，通过科举与文言文垄断文化与政治权力，将全社会智力与财富持续吸引到功名仕途上。",
+      "subPoints": [
+        {
+          "label": "通才选拔机制",
+          "text": "科举在形式上向男性平民开放，打破血统世袭垄断，但考试范围严格限定在儒家经典、经义注疏、诗赋与八股文，排斥技术、财政、军事与法律等专业训练。"
+        },
+        {
+          "label": "文字读写垄断",
+          "text": "文言文与日常口语分离，掌握汉字需要十数年脱产学习，普通农工无力承担教育成本；大量社会人力与财富消耗在备考中，未能转化为自然科学与商业技术革新。"
+        },
+        {
+          "label": "官僚经济依附",
+          "text": "士人享有免徭役和免刑罚特权，入仕依赖俸禄，未仕则以乡绅身份收取学田收入、代写诉状和调解纠纷，从未建立独立于皇权的教会组织。"
+        },
+        {
+          "label": "对皇权的有限约束",
+          "text": "士人掌握经典解释权与史官记录权，通过谏议制度、礼法传统和祖宗家法对皇帝个人专断形成一定制约。"
+        }
+      ],
+      "perspectivesNote": [
+        {
+          "label": "韦伯视角定位",
+          "text": "作为儒教伦理的核心担纲者，确立了重道德通才、轻专业技术与商业逐利的社会价值取向。"
+        },
+        {
+          "label": "阿尔都塞视角定位",
+          "text": "通过漫长文言教育制度严格区分脑力劳动者与体力劳动者，把文化权力集中在依赖农业俸禄和地租的统治阶层手中。"
+        }
+      ],
+      "coreIdea": "士人凭科举垄断文化政治权力，把社会智力财富引向功名仕途。",
+      "x": 880,
+      "y": 0
+    },
+    {
+      "id": "n4",
+      "category": "伦理与信仰体系",
+      "title": "儒教、道教与异端运动",
+      "brief": "礼孝、风水与异端",
+      "summary": "正统儒教构建了适应现世的等级伦理，汉代以后组织化的道教与风水禁忌支配着民间日常决策，秘密教派在危机时刻爆发反抗但未能动摇社会根基。",
+      "subPoints": [
+        {
+          "label": "儒教宇宙观与德行",
+          "text": "儒教缺乏创世人格神，视天为和谐的自然与道德秩序，主张天人感应。核心德行“礼”要求端庄克制，“孝”确立家族服从并延伸为政治上的“忠”，压制基于个人良知反抗权威的冲动。"
+        },
+        {
+          "label": "儒教财富观与祭祀",
+          "text": "儒教认可适度富贵，但警惕商业逐利破坏等级秩序，促使富裕商人购地捐纳功名、抽离工商业资本。国家垄断祭天与高阶祭祀，士大夫在治理层面对民间鬼神巫术采取实用宽容态度。"
+        },
+        {
+          "label": "道教的哲学与世俗化",
+          "text": "先秦老庄哲学属于少数隐居士人的无为与退隐方案；汉代以后道教演变为收费法术行会，聚焦肉体长生、炼丹、房中、导引、符咒与斋醮科仪。"
+        },
+        {
+          "label": "风水禁忌阻碍革新",
+          "text": "风水学说把山川地形与家族兴衰挂钩，在近代铁路、修路与开矿引入初期引发周边宗族激烈反抗，使民众对改造自然与采用新技术保持高度戒备。"
+        },
+        {
+          "label": "民间异端起义",
+          "text": "太平道、白莲教与太平天国融合道术、弥勒信仰与救世预言，在饥荒苛政下动员武装起义，但绝大多数教派依赖巫术灵验、缺乏理性日常伦理，最终遭到朝廷军事镇压。"
+        }
+      ],
+      "perspectivesNote": [
+        {
+          "label": "韦伯视角定位",
+          "text": "儒教的入世适应取向与民间巫术的完整保留，共同消解了彻底改造现世的内在心理张力。"
+        },
+        {
+          "label": "阿尔都塞视角定位",
+          "text": "儒家礼孝执行主体询唤；大众道教平复底层焦虑获官府容忍，异端武装起义威胁生产关系则由军队镇压。"
+        }
+      ],
+      "coreIdea": "儒教礼孝秩序与民间巫术共同消解改造现世的内在心理张力。",
+      "x": 880,
+      "y": 260
+    },
+    {
+      "id": "n5",
+      "category": "跨文化横向对照",
+      "title": "西欧清教与理性资本主义",
+      "brief": "支配、祛魅与普遍信任",
+      "summary": "儒教与清教同属强调自我克制的理性伦理，但两者在理性化方向、救赎张力、祛魅程度与社会信任结构上走向了截然相反的道路。",
+      "subPoints": [
+        {
+          "label": "适应世界与支配世界",
+          "text": "儒教致力于理性地适应既有和谐秩序；清教信仰超越尘世的全能上帝，视现世充满罪恶，致力于理性地支配和改造世界。"
+        },
+        {
+          "label": "预定论与职业天职",
+          "text": "儒教缺乏原罪意识与终极救赎压力；清教徒在加尔文宗预定论驱动下将世俗劳动视为神圣天职，节制消费同时高效组织生产、计算成本与积累资本，以职业成功印证恩宠。"
+        },
+        {
+          "label": "彻底祛魅与巫术留存",
+          "text": "清教将一切巫术、圣像崇拜和繁琐仪式视为亵渎神明并彻底清除，迫使信徒依靠理性规划与精确计算行事；儒教则在基层完整保留了占卜、祖先崇拜与风水信仰。"
+        },
+        {
+          "label": "普遍契约与特殊信任",
+          "text": "儒教将道德义务限定在血缘和熟人圈子内（特殊主义），圈外充满猜忌；清教打破血缘界限，要求在普遍交往中出于对上帝的敬畏而恪守契约（普遍主义），大幅降低陌生人交易成本，支撑起信用金融与匿名合资企业。"
+        }
+      ],
+      "perspectivesNote": [
+        {
+          "label": "韦伯视角定位",
+          "text": "作为理解近代西欧资本主义精神兴起的正面参照系，凸显伦理张力与祛魅的决定性作用。"
+        },
+        {
+          "label": "阿尔都塞视角定位",
+          "text": "新兴资产阶级对抗封建领主与天主教会时的阶级实践；清教教会、家庭读经与工场规章构成服务资本扩张的意识形态机器，天职观念询唤资产者持续投资与雇佣工人服从纪律。"
+        }
+      ],
+      "coreIdea": "清教以预定论天职与普遍契约信任催生了理性资本主义精神。",
+      "x": 440,
+      "y": 260
+    },
+    {
+      "id": "n6",
+      "category": "唯物主义理论重读",
+      "title": "阿尔都塞：国家机器论",
+      "brief": "实践、询唤与因果倒置",
+      "summary": "借助《写给非哲学家的哲学入门》中的实践、国家机器、主体询唤与阶级斗争框架，把韦伯考察的伦理观念放回物质生产方式与阶级利益结构中重新检验。",
+      "subPoints": [
+        {
+          "label": "意识形态的物质形态",
+          "text": "观念必须依托具体场所、制度与行动才能生效。书院、科举考场、宗族祠堂与婚丧祭祀礼仪构成了帝国的意识形态国家机器（ISA），民众在跪拜、守丧与乡约实践中持续使儒家观念生效。"
+        },
+        {
+          "label": "主体询唤机制",
+          "text": "孝道、礼法与忠君原则执行询唤职能，使个体在成长过程中接受明确的身份与义务，主动认同自己在等级秩序中的位置。"
+        },
+        {
+          "label": "两类国家机器的分工",
+          "text": "军队、衙门和律法构成镇压性国家机器（RSA），直接处理抗税与武装反抗；乡村宗族、乡绅和私塾负责日常意识形态教化，双方协作实现小农经济与俸禄官僚制生产关系的再生产。"
+        },
+        {
+          "label": "唯物主义因果检验",
+          "text": "韦伯侧重论证儒教伦理对资本主义的抑制，唯物主义分析则指出物质生产方式和阶级关系决定主流意识形态：士大夫依靠农业俸禄和地租维持生计，因此排斥商业逐利，维护小农与官僚体制。"
+        },
+        {
+          "label": "清教兴起的阶级逻辑",
+          "text": "西欧商品经济扩张与新兴资产阶级的现实利益支撑着清教占据主导地位，清教日常实践把普通人转化为适应雇佣劳动的主体，保障了资本主义生产关系的再生产。"
+        }
+      ],
+      "perspectivesNote": [
+        {
+          "label": "与韦伯的关系",
+          "text": "将韦伯“伦理取向决定经济路径”的解释方向倒置，揭示支撑观念长期存续的物质条件与阶级再生产机制。"
+        }
+      ],
+      "coreIdea": "物质生产方式与阶级关系决定意识形态，倒置韦伯的伦理解释方向。",
+      "x": 0,
+      "y": 260
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "n1",
+      "target": "n2",
+      "perspective": "both",
+      "label": "基层委任与法制缺位",
+      "curve": 0,
+      "labelT": 0.5,
+      "detail": "中央行政止于县级衙门，帝国将乡村治安与税收摊派委托给宗族和乡绅；货币紊乱与形式理性法缺位，促使商业组织依赖家族血缘、行会保护与官府特许权。"
+    },
+    {
+      "id": "e2",
+      "source": "n2",
+      "target": "n3",
+      "perspective": "both",
+      "label": "族产资助与财富入仕",
+      "curve": 46,
+      "labelT": 0.28,
+      "detail": "宗族动用公田族产资助子弟脱产备考，富裕商人赚取资金后购置土地和捐纳功名，持续推动后代向士大夫阶层转化。"
+    },
+    {
+      "id": "e3",
+      "source": "n3",
+      "target": "n2",
+      "perspective": "both",
+      "label": "功名庇护与免税特权",
+      "curve": 46,
+      "labelT": 0.28,
+      "detail": "族中子弟考中进士、出任官职后，整个宗族获得免税特权和政治庇护，未入仕士人也以乡绅身份巩固乡村宗族权威。"
+    },
+    {
+      "id": "e4",
+      "source": "n3",
+      "target": "n1",
+      "perspective": "both",
+      "label": "通才输送与礼法约束",
+      "curve": 0,
+      "labelT": 0.5,
+      "detail": "科举向帝国持续输送非世袭古典通才官僚，维系中央集权与俸禄体制；同时士人借助经典解释权、史官记录与谏议制度有限约束皇权专断。"
+    },
+    {
+      "id": "e5",
+      "source": "n3",
+      "target": "n4",
+      "perspective": "weber",
+      "label": "确立正统并宽容巫术",
+      "curve": 0,
+      "labelT": 0.5,
+      "detail": "士人阶层垄断儒家经典解释权，把适应现世、重视礼孝与警惕逐利的伦理塑造成社会正统，并在治理层面对民间占卜与鬼神巫术采取实用宽容态度。"
+    },
+    {
+      "id": "e6",
+      "source": "n4",
+      "target": "n1",
+      "perspective": "weber",
+      "label": "抑制逐利与阻挠革新",
+      "curve": -24,
+      "labelT": 0.76,
+      "detail": "儒教贬抑商业牟利促使工商业资本不断流向土地与官职；道教风水禁忌引发民众抵制开矿、修路与铁路工程，共同阻碍近代工业资本主义形成。"
+    },
+    {
+      "id": "e7",
+      "source": "n4",
+      "target": "n5",
+      "perspective": "weber",
+      "label": "四维理性化横向对照",
+      "curve": 0,
+      "labelT": 0.5,
+      "detail": "韦伯在理性方向（适应与支配）、救赎张力（无原罪与预定论天职）、祛魅程度（保留巫术与彻底清除）以及信任结构（血缘特殊主义与契约普遍主义）四个维度对照儒教与清教。"
+    },
+    {
+      "id": "e8",
+      "source": "n1",
+      "target": "n6",
+      "perspective": "althusser",
+      "label": "物质生产与阶级基础",
+      "curve": -135,
+      "labelT": 0.5,
+      "detail": "小农经济、农业田赋与官僚俸禄地租构成了传统中国的物质生产方式和统治阶层利益基础，决定了儒教伦理得以长期主导社会的现实条件。"
+    },
+    {
+      "id": "e9",
+      "source": "n6",
+      "target": "n3",
+      "perspective": "althusser",
+      "label": "固化脑力体力分工",
+      "curve": 0,
+      "labelT": 0.5,
+      "detail": "书院与科举考场作为核心意识形态国家机器，依托高门槛的文言文学习严格区分脑力劳动者与体力劳动者，稳固官僚与乡绅对文化权力的占有。"
+    },
+    {
+      "id": "e10",
+      "source": "n6",
+      "target": "n4",
+      "perspective": "althusser",
+      "label": "主体询唤与阶级镇压",
+      "curve": -16,
+      "labelT": 0.48,
+      "detail": "祠堂、礼法与孝道执行询唤职能把人转化为顺从秩序的主体；道教法术安抚底层焦虑，当异端教派结合饥荒发动起义时，朝廷动用镇压性机器强行恢复原有生产关系。"
+    },
+    {
+      "id": "e11",
+      "source": "n6",
+      "target": "n5",
+      "perspective": "althusser",
+      "label": "资产阶级机器对照",
+      "curve": 0,
+      "labelT": 0.5,
+      "detail": "以唯物主义视角重读清教：西欧新兴资产阶级依托清教教会、家庭读经和工场规章建构意识形态机器，借天职观念询唤资产者投资与雇佣工人守纪，保障资本主义生产关系再生产。"
+    }
+  ],
+  "steps": [
+    {
+      "title": "步骤 1 / 5：物质约束与基层结构",
+      "description": "从经济与政治起点出发，观察双轨货币、行政型城市、俸禄官僚制与小农经济如何委托宗族自治，并与实质伦理司法共同限制资本工业化。",
+      "activeNodes": [
+        "n1",
+        "n2"
+      ],
+      "activeEdges": [
+        "e1"
       ]
-    };
+    },
+    {
+      "title": "步骤 2 / 5：宗族、科举与俸禄帝国的闭环",
+      "description": "追踪宗族公产资助子弟备考、科举垄断文字与通才仕途、功名免税反哺宗族以及士人维持官僚体制的双向利益循环。",
+      "activeNodes": [
+        "n1",
+        "n2",
+        "n3"
+      ],
+      "activeEdges": [
+        "e1",
+        "e2",
+        "e3",
+        "e4"
+      ]
+    },
+    {
+      "title": "步骤 3 / 5：儒道信仰与现世秩序的稳定",
+      "description": "进入韦伯的宗教伦理分析：士人确立适应现世的儒教礼孝秩序并宽容民间巫术，风水禁忌与重官轻商共同抽离工商业资本并阻挠技术改造。",
+      "activeNodes": [
+        "n1",
+        "n3",
+        "n4"
+      ],
+      "activeEdges": [
+        "e5",
+        "e6"
+      ]
+    },
+    {
+      "title": "步骤 4 / 5：儒教与西欧清教的四维对照",
+      "description": "横向对比两种理性伦理的分叉点：适应现世与支配现世、无救赎张力与预定论天职、保留巫术与彻底祛魅、血缘特殊信任与普遍契约信任。",
+      "activeNodes": [
+        "n4",
+        "n5"
+      ],
+      "activeEdges": [
+        "e7"
+      ]
+    },
+    {
+      "title": "步骤 5 / 5：阿尔都塞的唯物重读与因果倒置",
+      "description": "以物质生产方式和阶级关系重审全书：ISA 与 RSA 协作完成生产关系再生产，主体询唤塑造顺从身份，并对照西欧新兴资产阶级如何借助清教机器服务资本扩张。",
+      "activeNodes": [
+        "n1",
+        "n3",
+        "n4",
+        "n5",
+        "n6"
+      ],
+      "activeEdges": [
+        "e8",
+        "e9",
+        "e10",
+        "e11"
+      ]
+    }
+  ],
+  "readingGuide": {
+    "coreQuestion": "本书的核心问题是：传统中国具备国内和平、庞大人口、白银流入、自由迁徙与发达国内贸易等有利条件，却未能自发产生理性资本主义。韦伯从宗教伦理与制度结构给出解释，阿尔都塞则从物质生产方式与阶级关系出发，倒置这一伦理决定经济的因果方向。",
+    "startNodeId": "n1",
+    "recommendedPath": [
+      {
+        "id": "n1",
+        "label": "经济条件与国家体制"
+      },
+      {
+        "id": "n2",
+        "label": "宗族、行会与司法形态"
+      },
+      {
+        "id": "n3",
+        "label": "士人阶层与科举体制"
+      },
+      {
+        "id": "n4",
+        "label": "儒教、道教与异端运动"
+      },
+      {
+        "id": "n5",
+        "label": "西欧清教与理性资本主义"
+      },
+      {
+        "id": "n6",
+        "label": "阿尔都塞：国家机器论"
+      }
+    ]
+  }
+};
 
     /* ============================================================
      * 渲染与交互引擎（母版通用逻辑，无需针对具体书籍修改）
      * ============================================================ */
-    const NODE_W = 236;
-    const NODE_H = 92;
+    const NODE_W = 272;
+    const NODE_H = 120;
+    const SAFE_MARGIN = 140;
+    const BIDIR_OFFSET = 30;
 
     const state = {
       perspective: "all",
       stepIndex: -1,
       selectedNodeId: null,
-      selectedEdgeId: null
+      selectedEdgeId: null,
+      hoveredNodeId: null,
+      hoveredEdgeId: null,
+      view: null
     };
 
     const nodeMap = new Map(MAP_DATA.nodes.map(n => [n.id, n]));
     const edgeMap = new Map(MAP_DATA.edges.map(e => [e.id, e]));
+
+    /* 双向连线对：同一组无序节点间存在两条方向相反的边 */
+    const bidirMap = new Map();
+    MAP_DATA.edges.forEach(e => {
+      const key = [e.source, e.target].sort().join("|");
+      if (!bidirMap.has(key)) bidirMap.set(key, []);
+      bidirMap.get(key).push(e);
+    });
+
+    /* 渲染后的连线 / 节点元素引用，供悬停高亮无重建地更新 */
+    let edgeElements = [];
+    let nodeElements = [];
 
     const workspaceEl = document.getElementById("workspace");
     const resizerEl = document.getElementById("resizer");
@@ -1064,6 +1472,7 @@
     const prevStepBtn = document.getElementById("prevStepBtn");
     const nextStepBtn = document.getElementById("nextStepBtn");
     const resetBtn = document.getElementById("resetBtn");
+    const fitBtnEl = document.getElementById("fitBtn");
 
     /* 左右分屏拖动逻辑 */
     let isDraggingSplit = false;
@@ -1092,6 +1501,42 @@
       workspaceEl.classList.remove("resizing");
     });
 
+    /* —— 滚轮缩放与拖拽平移 —— */
+    svgEl.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const rect = svgEl.getBoundingClientRect();
+      const fx = rect.width ? (e.clientX - rect.left) / rect.width : 0.5;
+      const fy = rect.height ? (e.clientY - rect.top) / rect.height : 0.5;
+      const factor = e.deltaY < 0 ? 0.9 : 1.1;
+      zoomAt(factor, fx, fy);
+    }, { passive: false });
+
+    let panning = false;
+    let panStart = null;
+    svgEl.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return;
+      if (e.target !== svgEl) return;
+      panning = true;
+      panStart = { cx: e.clientX, cy: e.clientY, vx: state.view ? state.view.x : 0, vy: state.view ? state.view.y : 0 };
+      svgEl.classList.add("panning");
+      e.preventDefault();
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!panning || !panStart) return;
+      fitIfNeeded();
+      const rect = svgEl.getBoundingClientRect();
+      const dx = (e.clientX - panStart.cx) * (state.view.w / (rect.width || 1));
+      const dy = (e.clientY - panStart.cy) * (state.view.h / (rect.height || 1));
+      state.view.x = panStart.vx - dx;
+      state.view.y = panStart.vy - dy;
+      applyView();
+    });
+    window.addEventListener("mouseup", () => {
+      panning = false;
+      panStart = null;
+      svgEl.classList.remove("panning");
+    });
+
     function escapeHtml(str) {
       return String(str)
         .replace(/&/g, "&amp;")
@@ -1118,28 +1563,231 @@
       return { x: cx + dx * t, y: cy + dy * t };
     }
 
+    /* —— 视野计算 / 缩放 / 平移 —— */
+    function computeBounds() {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      const expand = (x, y) => {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      };
+      MAP_DATA.nodes.forEach(n => {
+        expand(n.x - NODE_W / 2, n.y - NODE_H / 2);
+        expand(n.x + NODE_W / 2, n.y + NODE_H / 2);
+      });
+      /* 把外拱弧线的控制点纳入边界，防止顶部 / 底部绕行弧线被 viewBox 裁切 */
+      MAP_DATA.edges.forEach(e => {
+        const g = computeEdgeGeometry(e);
+        if (g.cx != null) expand(g.cx, g.cy);
+      });
+      if (!isFinite(minX)) { minX = 0; minY = 0; maxX = 1000; maxY = 700; }
+      return { minX, minY, maxX, maxY };
+    }
+
+    function fitView() {
+      const b = computeBounds();
+      state.view = {
+        x: b.minX - SAFE_MARGIN,
+        y: b.minY - SAFE_MARGIN,
+        w: (b.maxX - b.minX) + SAFE_MARGIN * 2,
+        h: (b.maxY - b.minY) + SAFE_MARGIN * 2
+      };
+    }
+
+    function fitIfNeeded() {
+      if (!state.view) fitView();
+    }
+
+    function applyView() {
+      fitIfNeeded();
+      svgEl.setAttribute("viewBox", `${state.view.x} ${state.view.y} ${state.view.w} ${state.view.h}`);
+    }
+
+    function zoomAt(factor, cxFrac, cyFrac) {
+      fitIfNeeded();
+      const v = state.view;
+      const sx = v.x + cxFrac * v.w;
+      const sy = v.y + cyFrac * v.h;
+      const newW = Math.max(220, Math.min(4200, v.w * factor));
+      const newH = Math.max(160, Math.min(3200, v.h * factor));
+      v.x = sx - cxFrac * newW;
+      v.y = sy - cyFrac * newH;
+      v.w = newW;
+      v.h = newH;
+      applyView();
+    }
+
+    function animateView(toX, toY, toW, toH, dur = 520) {
+      fitIfNeeded();
+      const from = { x: state.view.x, y: state.view.y, w: state.view.w, h: state.view.h };
+      const t0 = performance.now();
+      function step(now) {
+        const t = Math.min(1, (now - t0) / dur);
+        const e = 1 - Math.pow(1 - t, 3);
+        state.view = {
+          x: from.x + (toX - from.x) * e,
+          y: from.y + (toY - from.y) * e,
+          w: from.w + (toW - from.w) * e,
+          h: from.h + (toH - from.h) * e
+        };
+        applyView();
+        if (t < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    function centerOnNode(id) {
+      const node = nodeMap.get(id);
+      if (!node) return;
+      const w = 760, h = 480;
+      animateView(node.x - w / 2, node.y - h / 2, w, h);
+    }
+
+    function focusNode(id) {
+      state.selectedNodeId = id;
+      state.selectedEdgeId = null;
+      state.stepIndex = -1;
+      renderAll();
+      centerOnNode(id);
+    }
+
+    function nodeBox(id) {
+      const n = nodeMap.get(id);
+      return { x: n.x - NODE_W / 2, y: n.y - NODE_H / 2, w: NODE_W, h: NODE_H };
+    }
+
+    function segmentIntersectsRect(x1, y1, x2, y2, rx, ry, rw, rh) {
+      /* Liang-Barsky：线段是否与矩形（含边界）相交 */
+      let t0 = 0, t1 = 1;
+      const dx = x2 - x1, dy = y2 - y1;
+      const p = [-dx, dx, -dy, dy];
+      const q = [x1 - rx, rx + rw - x1, y1 - ry, ry + rh - y1];
+      for (let i = 0; i < 4; i++) {
+        if (p[i] === 0) {
+          if (q[i] < 0) return false;
+        } else {
+          const r = q[i] / p[i];
+          if (p[i] < 0) {
+            if (r > t1) return false;
+            else if (r > t0) t0 = r;
+          } else {
+            if (r < t0) return false;
+            else if (r < t1) t1 = r;
+          }
+        }
+      }
+      return true;
+    }
+
+    function straightCrossesThirdCard(s, t) {
+      for (const n of MAP_DATA.nodes) {
+        if (n.id === s.id || n.id === t.id) continue;
+        const b = nodeBox(n.id);
+        if (segmentIntersectsRect(s.x, s.y, t.x, t.y, b.x, b.y, b.w, b.h)) return true;
+      }
+      return false;
+    }
+
+    function bezierCrossesAnyCard(s, t, nx, ny, curve) {
+      const mx = (s.x + t.x) / 2, my = (s.y + t.y) / 2;
+      const cx = mx + nx * curve, cy = my + ny * curve;
+      const STEPS = 26;
+      let px = s.x, py = s.y;
+      for (let i = 1; i <= STEPS; i++) {
+        const u = i / STEPS;
+        const inv = 1 - u;
+        const x = inv * inv * s.x + 2 * inv * u * cx + u * u * t.x;
+        const y = inv * inv * s.y + 2 * inv * u * cy + u * u * t.y;
+        for (const n of MAP_DATA.nodes) {
+          if (n.id === s.id || n.id === t.id) continue;
+          const b = nodeBox(n.id);
+          if (segmentIntersectsRect(px, py, x, y, b.x, b.y, b.w, b.h)) return true;
+        }
+        px = x; py = y;
+      }
+      return false;
+    }
+
+    function chooseArcCurve(s, t, nx, ny) {
+      /* 大弧度绕行：优先向上外拱（首行）、向下外拱（末行），中间行绕空隙 */
+      const rows = [...new Set(MAP_DATA.nodes.map(n => n.y))].sort((a, b) => a - b);
+      const topRow = rows[0], bottomRow = rows[rows.length - 1];
+      const bothTop = s.y === topRow && t.y === topRow;
+      const bothBottom = s.y === bottomRow && t.y === bottomRow;
+
+      const up = { x: 0, y: -1 };
+      const down = { x: 0, y: 1 };
+      const left = { x: -1, y: 0 };
+      const right = { x: 1, y: 0 };
+
+      let sideOrder;
+      if (bothTop) sideOrder = [up, left, right, down];
+      else if (bothBottom) sideOrder = [down, left, right, up];
+      else if (s.y === topRow || t.y === topRow) sideOrder = [up, down, left, right];
+      else sideOrder = [down, up, left, right];
+
+      const mags = [180, 260, 360, 460, 580];
+      for (const mag of mags) {
+        for (const dir of sideOrder) {
+          const dot = nx * dir.x + ny * dir.y;
+          const sign = dot >= 0 ? 1 : -1;
+          const curve = sign * mag;
+          if (!bezierCrossesAnyCard(s, t, nx, ny, curve)) return curve;
+        }
+      }
+      const dir = sideOrder[0];
+      const dot = nx * dir.x + ny * dir.y;
+      return (dot >= 0 ? 1 : -1) * mags[mags.length - 1];
+    }
+
+    function arrowPathAt(x, y, dirX, dirY, size) {
+      const len = Math.hypot(dirX, dirY) || 1;
+      const ux = dirX / len, uy = dirY / len;
+      const px = -uy, py = ux;
+      const baseX = x - ux * size, baseY = y - uy * size;
+      const w = size * 0.5;
+      return `M ${x.toFixed(1)} ${y.toFixed(1)} L ${(baseX + px * w).toFixed(1)} ${(baseY + py * w).toFixed(1)} L ${(baseX - px * w).toFixed(1)} ${(baseY - py * w).toFixed(1)} Z`;
+    }
+
     function computeEdgeGeometry(edge) {
       const s = nodeMap.get(edge.source);
       const t = nodeMap.get(edge.target);
       const dx = t.x - s.x;
       const dy = t.y - s.y;
       const len = Math.hypot(dx, dy) || 1;
-      const curve = edge.curve || 0;
-      const mx = (s.x + t.x) / 2;
-      const my = (s.y + t.y) / 2;
       const nx = -dy / len;
       const ny = dx / len;
-      const cx = mx + nx * curve;
-      const cy = my + ny * curve;
 
-      const start = clipToNodeBox(s.x, s.y, curve === 0 ? t.x : cx, curve === 0 ? t.y : cy, 2);
-      const end = clipToNodeBox(t.x, t.y, curve === 0 ? s.x : cx, curve === 0 ? s.y : cy, 7);
+      let curve = 0;
+      const key = [edge.source, edge.target].sort().join("|");
+      const pair = bidirMap.get(key) || [];
+      const isBidir = pair.length > 1;
+
+      if (isBidir) {
+        /* 双向连线：同一符号沿各自法线弯曲，自然形成对称双弧 */
+        curve = BIDIR_OFFSET;
+      } else if (straightCrossesThirdCard(s, t)) {
+        curve = chooseArcCurve(s, t, nx, ny);
+      }
+
+      let cx = null, cy = null;
+      let start, end;
+      if (curve === 0) {
+        start = clipToNodeBox(s.x, s.y, t.x, t.y, 2);
+        end = clipToNodeBox(t.x, t.y, s.x, s.y, 7);
+      } else {
+        cx = (s.x + t.x) / 2 + nx * curve;
+        cy = (s.y + t.y) / 2 + ny * curve;
+        start = clipToNodeBox(s.x, s.y, cx, cy, 2);
+        end = clipToNodeBox(t.x, t.y, cx, cy, 7);
+      }
 
       const d = curve === 0
         ? `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} L ${end.x.toFixed(1)} ${end.y.toFixed(1)}`
         : `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${end.x.toFixed(1)} ${end.y.toFixed(1)}`;
 
-      const u = typeof edge.labelT === "number" ? edge.labelT : 0.5;
+      const u = curve === 0 ? (typeof edge.labelT === "number" ? edge.labelT : 0.5) : 0.5;
       let lx, ly;
       if (curve === 0) {
         lx = start.x + (end.x - start.x) * u;
@@ -1150,7 +1798,11 @@
         ly = inv * inv * start.y + 2 * inv * u * cy + u * u * end.y;
       }
 
-      return { d, lx, ly };
+      const dirX = curve === 0 ? end.x - start.x : end.x - cx;
+      const dirY = curve === 0 ? end.y - start.y : end.y - cy;
+      const arrowD = arrowPathAt(end.x, end.y, dirX, dirY, 7);
+
+      return { d, lx, ly, cx, cy, arrowD };
     }
 
     function getActiveSets() {
@@ -1209,30 +1861,16 @@
       return edge.perspective === "both" || edge.perspective === state.perspective;
     }
 
-    function getEdgeStyle(edge, isHighlighted, isDimmed) {
+    function getEdgeStyle(edge) {
       let stroke = "#8aa097";
       let dash = "";
-      let marker = "url(#arrow-grey)";
-
       if (edge.perspective === "weber") {
         stroke = "#85a897";
-        marker = "url(#arrow-green)";
       } else if (edge.perspective === "althusser") {
         stroke = "#6d8679";
         dash = "6 4";
-        marker = "url(#arrow-midgreen)";
       }
-
-      if (isDimmed) {
-        stroke = "#3f4f48";
-        marker = "url(#arrow-muted)";
-      } else if (isHighlighted && (state.stepIndex >= 0 || state.selectedNodeId || state.selectedEdgeId)) {
-        stroke = "#85a897";
-        marker = "url(#arrow-green)";
-      }
-
-      const width = isHighlighted && (state.stepIndex >= 0 || state.selectedNodeId || state.selectedEdgeId) ? 2.2 : 1.5;
-      return { stroke, dash, marker, width };
+      return { stroke, dash };
     }
 
     function renderHeaderAndLegend() {
@@ -1266,57 +1904,109 @@
         .join("");
     }
 
+    function findReverseEdge(edge) {
+      const key = [edge.source, edge.target].sort().join("|");
+      const pair = bidirMap.get(key) || [];
+      return pair.find(e => e.id !== edge.id) || null;
+    }
+
+    function computeEdgeStates() {
+      const result = new Map();
+      const hasStep = state.stepIndex >= 0;
+
+      let focusEdgeIds = new Set();
+      let strongEdgeIds = new Set();
+      let hasFocus = false;
+
+      if (hasStep) {
+        MAP_DATA.steps[state.stepIndex].activeEdges.forEach(id => {
+          focusEdgeIds.add(id);
+          strongEdgeIds.add(id);
+        });
+        hasFocus = true;
+      } else if (state.selectedNodeId || state.hoveredNodeId) {
+        const nid = state.selectedNodeId || state.hoveredNodeId;
+        MAP_DATA.edges.forEach(e => {
+          if (e.source === nid || e.target === nid) {
+            focusEdgeIds.add(e.id);
+            strongEdgeIds.add(e.id);
+          }
+        });
+        hasFocus = true;
+      } else if (state.selectedEdgeId || state.hoveredEdgeId) {
+        const eid = state.selectedEdgeId || state.hoveredEdgeId;
+        const e = edgeMap.get(eid);
+        if (e) {
+          focusEdgeIds.add(e.id);
+          strongEdgeIds.add(e.id);
+          const rev = findReverseEdge(e);
+          if (rev) {
+            focusEdgeIds.add(rev.id);
+            strongEdgeIds.add(rev.id);
+          }
+        }
+        hasFocus = true;
+      }
+
+      const perspectiveFiltered = !hasFocus && state.perspective !== "all";
+
+      MAP_DATA.edges.forEach(e => {
+        let cls = "";
+        let showLabel = false;
+        if (hasFocus) {
+          if (strongEdgeIds.has(e.id)) {
+            cls = "edge-strong";
+            showLabel = focusEdgeIds.has(e.id);
+          } else {
+            cls = "edge-dim";
+          }
+        } else if (perspectiveFiltered && !isEdgeInPerspective(e)) {
+          cls = "edge-dim";
+        }
+        result.set(e.id, { cls, showLabel });
+      });
+      return result;
+    }
+
+    function applyInteraction() {
+      const states = computeEdgeStates();
+      edgeElements.forEach(rec => {
+        const st = states.get(rec.id) || { cls: "", showLabel: false };
+        rec.g.classList.remove("edge-strong", "edge-dim");
+        if (st.cls) rec.g.classList.add(st.cls);
+        rec.gLabel.classList.toggle("visible", st.showLabel);
+      });
+    }
+
     function renderSvg() {
       svgEl.innerHTML = "";
+      edgeElements = [];
+      nodeElements = [];
 
-      const defs = createSvgEl("defs");
-      const markers = [
-        { id: "arrow-grey", color: "#8aa097" },
-        { id: "arrow-green", color: "#85a897" },
-        { id: "arrow-midgreen", color: "#6d8679" },
-        { id: "arrow-muted", color: "#3f4f48" }
-      ];
+      const { activeNodes, filtering } = getActiveSets();
 
-      markers.forEach(m => {
-        const marker = createSvgEl("marker", {
-          id: m.id,
-          viewBox: "0 0 10 10",
-          refX: "8.5",
-          refY: "5",
-          markerWidth: "6",
-          markerHeight: "6",
-          orient: "auto-start-reverse"
-        });
-        marker.appendChild(createSvgEl("path", {
-          d: "M 0 1.2 L 9 5 L 0 8.8 z",
-          fill: m.color
-        }));
-        defs.appendChild(marker);
-      });
-      svgEl.appendChild(defs);
-
-      const { activeNodes, activeEdges, filtering } = getActiveSets();
-
-      const edgeLayer = createSvgEl("g");
-      const labelLayer = createSvgEl("g");
-      const nodeLayer = createSvgEl("g");
+      const edgeLayer = createSvgEl("g", { class: "layer-edges" });
+      const nodeLayer = createSvgEl("g", { class: "layer-nodes" });
+      const labelLayer = createSvgEl("g", { class: "layer-labels" });
 
       MAP_DATA.edges.forEach(edge => {
         const geom = computeEdgeGeometry(edge);
-        const isActive = activeEdges.has(edge.id);
-        const isDimmed = filtering && !isActive;
-        const style = getEdgeStyle(edge, isActive, isDimmed);
+        const style = getEdgeStyle(edge);
 
-        const gEdge = createSvgEl("g", { class: isDimmed ? "dimmed" : "" });
+        const gEdge = createSvgEl("g", { class: "edge" });
 
         const path = createSvgEl("path", {
           d: geom.d,
-          class: "edge-path" + (isActive && filtering ? " highlighted" : ""),
-          stroke: style.stroke,
-          "stroke-width": style.width,
-          "marker-end": style.marker
+          class: "edge-path",
+          stroke: style.stroke
         });
         if (style.dash) path.setAttribute("stroke-dasharray", style.dash);
+
+        const arrow = createSvgEl("path", {
+          d: geom.arrowD,
+          class: "edge-arrow",
+          fill: style.stroke
+        });
 
         const hit = createSvgEl("path", { d: geom.d, class: "edge-hit" });
 
@@ -1334,20 +2024,19 @@
 
         hit.addEventListener("click", onToggleEdge);
         path.addEventListener("click", onToggleEdge);
+        gEdge.addEventListener("mouseenter", () => { state.hoveredEdgeId = edge.id; applyInteraction(); });
+        gEdge.addEventListener("mouseleave", () => { state.hoveredEdgeId = null; applyInteraction(); });
 
         gEdge.appendChild(path);
+        gEdge.appendChild(arrow);
         gEdge.appendChild(hit);
         edgeLayer.appendChild(gEdge);
 
         const labelText = edge.label;
-        const boxW = Math.max(84, labelText.length * 11.5 + 16);
-        const boxH = 22;
+        const boxW = Math.max(88, labelText.length * 11.5 + 28);
+        const boxH = 24;
 
-        const gLabel = createSvgEl("g", {
-          class: "edge-label-group"
-            + (isDimmed ? " dimmed" : "")
-            + ((state.selectedEdgeId === edge.id || (filtering && isActive)) ? " highlighted" : "")
-        });
+        const gLabel = createSvgEl("g", { class: "edge-label-group" });
         gLabel.addEventListener("click", onToggleEdge);
 
         gLabel.appendChild(createSvgEl("rect", {
@@ -1355,7 +2044,7 @@
           y: (geom.ly - boxH / 2).toFixed(1),
           width: boxW,
           height: boxH,
-          rx: 2,
+          rx: 999,
           class: "edge-label-bg"
         }));
 
@@ -1367,21 +2056,26 @@
         txt.textContent = labelText;
         gLabel.appendChild(txt);
         labelLayer.appendChild(gLabel);
+
+        edgeElements.push({ id: edge.id, g: gEdge, gLabel });
       });
+
+      const startNodeId = (MAP_DATA.readingGuide && MAP_DATA.readingGuide.startNodeId) || null;
 
       MAP_DATA.nodes.forEach(node => {
         const isActive = activeNodes.has(node.id);
         const isDimmed = filtering && !isActive;
         const isSelected = state.selectedNodeId === node.id;
+        const isStart = node.id === startNodeId;
 
         const gNode = createSvgEl("g", {
           class: "node-group"
             + (isDimmed ? " dimmed" : "")
             + (filtering && isActive ? " highlighted" : "")
             + (isSelected ? " selected" : "")
+            + (isStart ? " start-node" : "")
         });
 
-        /* 点击节点高亮，再次点击同一个节点取消选中恢复原状 */
         gNode.addEventListener("click", () => {
           if (state.selectedNodeId === node.id) {
             state.selectedNodeId = null;
@@ -1392,6 +2086,8 @@
           }
           renderAll();
         });
+        gNode.addEventListener("mouseenter", () => { state.hoveredNodeId = node.id; applyInteraction(); });
+        gNode.addEventListener("mouseleave", () => { state.hoveredNodeId = null; applyInteraction(); });
 
         const x0 = node.x - NODE_W / 2;
         const y0 = node.y - NODE_H / 2;
@@ -1405,38 +2101,25 @@
           class: "node-rect"
         }));
 
-        gNode.appendChild(createSvgEl("rect", {
+        /* 卡片内文字：foreignObject 内嵌 HTML，自动折行，绝不溢出卡片 */
+        const fo = createSvgEl("foreignObject", {
           x: x0,
           y: y0,
           width: NODE_W,
-          height: 3.5,
-          class: "node-accent-bar"
-        }));
-
-        /* 方块内三行文字统一以节点水平中心 node.x 对齐居中 */
-        const catText = createSvgEl("text", {
-          x: node.x,
-          y: y0 + 24,
-          class: "node-cat"
+          height: NODE_H
         });
-        catText.textContent = node.category;
-        gNode.appendChild(catText);
-
-        const titleText = createSvgEl("text", {
-          x: node.x,
-          y: y0 + 49,
-          class: "node-title"
-        });
-        titleText.textContent = node.title;
-        gNode.appendChild(titleText);
-
-        const briefText = createSvgEl("text", {
-          x: node.x,
-          y: y0 + 73,
-          class: "node-brief"
-        });
-        briefText.textContent = node.brief;
-        gNode.appendChild(briefText);
+        const card = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
+        card.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+        card.className = "node-card";
+        card.innerHTML =
+          `<div class="node-card-top">` +
+            `<div class="node-card-cat">${escapeHtml(node.category)}</div>` +
+            (isStart ? `<div class="node-card-badge">01 · 起点</div>` : "") +
+          `</div>` +
+          `<div class="node-card-title">${escapeHtml(node.title)}</div>` +
+          `<div class="node-card-brief">${escapeHtml(node.brief)}</div>`;
+        fo.appendChild(card);
+        gNode.appendChild(fo);
 
         nodeLayer.appendChild(gNode);
       });
@@ -1444,6 +2127,9 @@
       svgEl.appendChild(edgeLayer);
       svgEl.appendChild(nodeLayer);
       svgEl.appendChild(labelLayer);
+      applyInteraction();
+      fitIfNeeded();
+      applyView();
     }
 
     function renderStepper() {
@@ -1494,34 +2180,38 @@
           }).join("");
         };
 
+        const nodeIndex = MAP_DATA.nodes.findIndex(n => n.id === node.id) + 1;
+        const coreIdea = node.coreIdea || node.summary || "";
+
         detailPaneEl.innerHTML = `
-          <div class="detail-kicker">${escapeHtml(node.category)}</div>
+          <div class="detail-badges">
+            <span class="detail-badge">${escapeHtml(node.category)}</span>
+            <span class="detail-badge-num">节点 ${String(nodeIndex).padStart(2, "0")}</span>
+          </div>
           <h2 class="detail-title">${escapeHtml(node.title)}</h2>
-          <p class="detail-summary">${escapeHtml(node.summary)}</p>
+          <blockquote class="detail-core">${escapeHtml(coreIdea)}</blockquote>
 
           <div class="detail-section">
-            <h3>核心要点</h3>
+            <h3>详细展开</h3>
             <ul class="point-list">${subPointsHtml}</ul>
           </div>
 
           ${pNotesHtml ? `<div class="detail-section"><h3>理论定位</h3>${pNotesHtml}</div>` : ""}
 
           <div class="detail-section">
-            <h3>上游输入机制</h3>
+            <h3>上游来源</h3>
             <div class="rel-list">${renderRelButtons(incoming, "in")}</div>
           </div>
 
           <div class="detail-section">
-            <h3>下游输出机制</h3>
+            <h3>下游去向</h3>
             <div class="rel-list">${renderRelButtons(outgoing, "out")}</div>
           </div>
         `;
 
         detailPaneEl.querySelectorAll("[data-jump-node]").forEach(btn => {
           btn.addEventListener("click", () => {
-            state.selectedNodeId = btn.getAttribute("data-jump-node");
-            state.selectedEdgeId = null;
-            renderAll();
+            focusNode(btn.getAttribute("data-jump-node"));
             detailPaneEl.scrollTop = 0;
           });
         });
@@ -1571,21 +2261,49 @@
         `)
         .join("");
 
+      const guide = MAP_DATA.readingGuide || null;
+      let guideHtml = "";
+      if (guide && guide.recommendedPath && guide.recommendedPath.length) {
+        const stepsHtml = guide.recommendedPath.map((rp, i) => {
+          const node = nodeMap.get(rp.id);
+          const label = rp.label || (node ? node.title : rp.id);
+          const num = String(i + 1).padStart(2, "0");
+          return `
+            <li>
+              <button class="guide-step-btn" type="button" data-jump-node="${escapeHtml(rp.id)}">
+                <span class="guide-num">${num}</span>
+                <span class="guide-label">${escapeHtml(label)}</span>
+                <span class="guide-arrow">→</span>
+              </button>
+            </li>
+          `;
+        }).join("");
+        guideHtml = `
+          <div class="detail-section">
+            <h3>推荐阅读路线</h3>
+            <ol class="guide-path">${stepsHtml}</ol>
+          </div>
+        `;
+      }
+
+      const guideTitle = (guide && guide.startNodeId) ? "从这里开始阅读" : "知识地图导览";
+      const guideQuestion = (guide && guide.coreQuestion) ? guide.coreQuestion : MAP_DATA.meta.overview;
+
       detailPaneEl.innerHTML = `
-        <div class="detail-kicker">图谱导览</div>
-        <h2 class="detail-title">模块与机制索引</h2>
-        <p class="detail-summary">${escapeHtml(MAP_DATA.meta.overview)}</p>
+        <div class="detail-kicker">新手导览</div>
+        <h2 class="detail-title">${escapeHtml(guideTitle)}</h2>
+        <blockquote class="detail-core">${escapeHtml(guideQuestion)}</blockquote>
+        ${guideHtml}
         <div class="detail-section">
-          <h3>选择模块查看笔记细节</h3>
+          <h3>全部节点索引</h3>
           ${indexButtonsHtml}
         </div>
+        <p class="guide-hint">点击节点阅读精解 · 滚轮缩放 · 拖拽移动画布</p>
       `;
 
       detailPaneEl.querySelectorAll("[data-jump-node]").forEach(btn => {
         btn.addEventListener("click", () => {
-          state.selectedNodeId = btn.getAttribute("data-jump-node");
-          state.selectedEdgeId = null;
-          renderAll();
+          focusNode(btn.getAttribute("data-jump-node"));
         });
       });
     }
@@ -1623,7 +2341,14 @@
       state.stepIndex = -1;
       state.selectedNodeId = null;
       state.selectedEdgeId = null;
+      fitView();
+      applyView();
       renderAll();
+    });
+
+    fitBtnEl.addEventListener("click", () => {
+      fitView();
+      applyView();
     });
 
     renderAll();
