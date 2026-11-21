@@ -8,15 +8,20 @@
 启动后访问 http://localhost:8000 展示主页与地图页。
 """
 
+import os
 import shutil
+import subprocess
 import sys
+import threading
+import time
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import pipeline
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.staticfiles import StaticFiles
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -106,6 +111,131 @@ def cancel(job_id: str):
 @app.get("/api/books")
 def list_books():
     return pipeline.list_jobs()
+
+
+# ---------- 本机专用：一键同步 GitHub 与休眠服务 ----------
+
+_CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0
+
+
+def _is_local(request: Request) -> bool:
+    client = getattr(request, "client", None)
+    host = (client.host if client else "") or ""
+    return host in ("127.0.0.1", "::1", "localhost")
+
+
+def _run_git(cmd, cwd, timeout=None):
+    kwargs = dict(cwd=str(cwd), encoding="utf-8", errors="replace",
+                  capture_output=True, timeout=timeout)
+    if os.name == "nt":
+        kwargs["creationflags"] = _CREATE_NO_WINDOW
+    return subprocess.run(cmd, **kwargs)
+
+
+def _git_status_files():
+    proc = _run_git(["git", "-c", "core.quotepath=false", "status", "--porcelain"], ROOT)
+    files = []
+    for line in proc.stdout.splitlines():
+        if len(line) < 3:
+            continue
+        entry = line[2:].strip()
+        if entry:
+            files.append(entry.split(" -> ")[-1])
+    return files
+
+
+def _is_sensitive(path):
+    p = path.replace("\\", "/").lstrip("./").lower()
+    if p == ".env" or p.endswith("/.env"):
+        return True
+    return p == "raw_books" or p.startswith("raw_books/") or p == "workspace" or p.startswith("workspace/")
+
+
+def _explain_push_error(err):
+    e = (err or "").lower()
+    tail = (err or "").strip()[:180]
+    if any(k in e for k in ("could not resolve", "unable to access", "timed out", "connection", "network", "early eof", "couldn't connect", "operation timed out")):
+        return "网络超时或无法访问远程仓库，请检查网络 / 代理后重试。" + ("（" + tail + "）" if tail else "")
+    if any(k in e for k in ("non-fast-forward", "rejected", "fetch first", "conflict", "would be overwritten")):
+        return "远程仓库有新的提交，推送被拒绝：请先拉取远程更新（git pull）后再同步。" + ("（" + tail + "）" if tail else "")
+    if any(k in e for k in ("authentication", "permission", "credentials", "403", "401", "not authorized")):
+        return "远程仓库鉴权失败，请检查 Git 凭据 / token 后重试。" + ("（" + tail + "）" if tail else "")
+    return "git push 失败：" + tail
+
+
+@app.get("/api/git/status")
+def git_status(request: Request):
+    if not _is_local(request):
+        raise HTTPException(status_code=403, detail="仅允许本机访问")
+    files = _git_status_files()
+    return {"has_changes": bool(files), "count": len(files), "files": files}
+
+
+@app.post("/api/git/sync")
+def git_sync(request: Request):
+    if not _is_local(request):
+        raise HTTPException(status_code=403, detail="仅允许本机访问")
+
+    # 1) 检查 .gitignore（用于判断敏感路径是否被忽略）
+    gi_text = ""
+    try:
+        gi_text = (ROOT / ".gitignore").read_text(encoding="utf-8", errors="replace").lower()
+    except OSError:
+        gi_text = ""
+
+    # 2) 扫描待提交变更（git status 已遵循 .gitignore），硬拦截敏感文件 / 目录
+    sensitive_hits = []
+    for f in _git_status_files():
+        if not _is_sensitive(f):
+            continue
+        base = f.replace("\\", "/").split("/")[0].lower()
+        if base not in gi_text and f.lower() not in gi_text:
+            sensitive_hits.append(f + "（未在 .gitignore 中忽略）")
+        else:
+            sensitive_hits.append(f)
+    if sensitive_hits:
+        raise HTTPException(
+            status_code=400,
+            detail="检测到敏感文件将被提交（.env / raw_books/ / workspace/），已中止同步："
+            + "、".join(sensitive_hits[:6]),
+        )
+
+    proc = _run_git(["git", "add", "-A"], ROOT)
+    if proc.returncode != 0:
+        raise HTTPException(status_code=400, detail="git add 失败：" + (proc.stderr or proc.stdout).strip()[:200])
+
+    if _run_git(["git", "diff", "--cached", "--quiet"], ROOT).returncode == 0:
+        return {"status": "clean", "message": "线上与本地已是最新，无需同步"}
+
+    msg = "sync: update Librarium (" + datetime.now().strftime("%Y-%m-%d %H:%M") + ")"
+    try:
+        proc = _run_git(["git", "commit", "-m", msg], ROOT, timeout=45)
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=400, detail="提交超时（45 秒），请稍后重试或检查网络 / 代理。")
+    if proc.returncode != 0:
+        raise HTTPException(status_code=400, detail="git commit 失败：" + (proc.stderr or proc.stdout).strip()[:300])
+
+    try:
+        proc = _run_git(["git", "push"], ROOT, timeout=45)
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=400, detail="推送超时（45 秒），请检查网络 / 代理后重试。")
+    if proc.returncode != 0:
+        raise HTTPException(status_code=400, detail=_explain_push_error(proc.stderr or proc.stdout))
+
+    return {"status": "ok", "message": "已同步至 GitHub，线上网页约 1–2 分钟后更新"}
+
+
+@app.post("/api/shutdown")
+def shutdown(request: Request):
+    if not _is_local(request):
+        raise HTTPException(status_code=403, detail="仅允许本机访问")
+
+    def _stop():
+        time.sleep(0.3)
+        os._exit(0)
+
+    threading.Thread(target=_stop, daemon=True).start()
+    return {"status": "ok", "message": "本地服务已休眠，下次双击桌面图标即可唤醒"}
 
 
 # 静态站点服务（挂载项目根目录，须在 API 路由之后注册）

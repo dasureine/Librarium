@@ -9,7 +9,10 @@
     resplit: '/api/books/resplit',
     start: '/api/books/start',
     status: function (id) { return '/api/books/status/' + encodeURIComponent(id); },
-    cancel: function (id) { return '/api/books/cancel/' + encodeURIComponent(id); }
+    cancel: function (id) { return '/api/books/cancel/' + encodeURIComponent(id); },
+    gitStatus: '/api/git/status',
+    gitSync: '/api/git/sync',
+    shutdown: '/api/shutdown'
   };
 
   var STAGES = [
@@ -829,8 +832,10 @@
         '</div>';
       footEl.innerHTML =
         '<button class="lr-btn lr-btn-ghost" type="button" data-act="close">关闭</button>' +
+        '<button class="lr-btn lr-btn-ghost" type="button" data-act="git">同步至 GitHub</button>' +
         '<a class="lr-btn lr-btn-primary" href="' + escapeHtml(data.result.map_url) + '">查看新书地图</a>';
       footEl.querySelector('[data-act="close"]').addEventListener('click', closeModal);
+      footEl.querySelector('[data-act="git"]').addEventListener('click', syncToGit);
       renderStepsDone();
     } else if (data.status === 'cancelled') {
       bodyEl.innerHTML =
@@ -846,6 +851,102 @@
       footEl.querySelector('[data-act="back"]').addEventListener('click', function () { goStep(2); });
     }
   }
+
+  /* ---------- 同步 / 休眠控制（GitHub 一键同步 + 本地服务休眠） ---------- */
+
+  function getFoot() {
+    return footEl || document.querySelector('.lr-foot');
+  }
+
+  function showSyncNotice(msg) {
+    var foot = getFoot();
+    if (!foot) return;
+    var bar = foot.querySelector('.lr-notice-bar');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.className = 'lr-notice-bar';
+      foot.insertBefore(bar, foot.firstChild);
+    }
+    bar.textContent = msg;
+  }
+
+  function refreshGitStatus() {
+    apiFetch(API.gitStatus, { cache: 'no-store' })
+      .then(function (data) {
+        var foot = getFoot();
+        if (!foot) return;
+        var dotEl = foot.querySelector('#lrGitDot');
+        if (dotEl) dotEl.hidden = !(data && data.has_changes);
+      })
+      .catch(function () { /* 后端未就绪 / 无 git 时静默忽略 */ });
+  }
+
+  function syncToGit() {
+    var foot = getFoot();
+    if (!foot) return;
+    var btn = foot.querySelector('#lrGitBtn') || foot.querySelector('[data-act="git"]');
+    if (!btn || btn.disabled) return;
+    var label = btn.querySelector('.lr-tool-label');
+    btn.disabled = true;
+    if (label) label.textContent = '正在推送…';
+    else btn.textContent = '正在推送…';
+    apiFetch(API.gitSync, { method: 'POST', cache: 'no-store' })
+      .then(function (data) {
+        showSyncNotice((data && data.message) || '已同步至 GitHub');
+      })
+      .catch(function (err) {
+        showSyncNotice('同步失败：' + err.message);
+      })
+      .then(function () {
+        if (label) label.textContent = '同步至 GitHub';
+        else btn.textContent = '同步至 GitHub';
+        btn.disabled = false;
+        refreshGitStatus();
+      });
+  }
+
+  function sleepService() {
+    var foot = getFoot();
+    var btn = foot && foot.querySelector('#lrSleepBtn');
+    if (btn) btn.disabled = true;
+    apiFetch(API.shutdown, { method: 'POST', cache: 'no-store' })
+      .then(function () {
+        showSyncNotice('本地服务已休眠，下次双击桌面图标即可唤醒');
+      })
+      .catch(function (err) {
+        showSyncNotice('休眠失败：' + err.message);
+        if (btn) btn.disabled = false;
+      });
+  }
+
+  function mountSideTools(foot) {
+    if (!foot) return;
+    var host = foot.querySelector('.lr-foot-note');
+    if (!host) return; // 完成 / 取消等界面自带按钮区，不注入左侧工具
+    if (host.querySelector('.lr-side-tools')) return;
+    var bar = document.createElement('span');
+    bar.className = 'lr-side-tools';
+    bar.innerHTML =
+      '<button class="lr-tool" type="button" id="lrGitBtn">' +
+        '<span class="lr-tool-label">同步至 GitHub</span>' +
+        '<span class="lr-git-dot" id="lrGitDot" hidden></span>' +
+      '</button>' +
+      '<button class="lr-tool" type="button" id="lrSleepBtn">休眠服务</button>';
+    host.appendChild(bar);
+    bar.querySelector('#lrGitBtn').addEventListener('click', syncToGit);
+    bar.querySelector('#lrSleepBtn').addEventListener('click', sleepService);
+    refreshGitStatus();
+  }
+
+  // 每个步骤重建 footer 后，自动把「同步 / 休眠」工具挂回左侧状态区
+  (function () {
+    var target = document.body || document.documentElement;
+    if (!target) return;
+    new MutationObserver(function () {
+      var foot = getFoot();
+      if (foot) mountSideTools(foot);
+    }).observe(target, { childList: true, subtree: true });
+  })();
 
   /* ---------- 启动 ---------- */
   detect();

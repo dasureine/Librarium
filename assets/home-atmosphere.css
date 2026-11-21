@@ -1,0 +1,186 @@
+/* =========================================================
+   Librarium 主页 · 动态氛围与文字融合质感
+   （底纹大花光晕 / 全屏雨丝 Canvas / 标题菜单雾化融合）
+
+   约束：
+   - 仅叠加样式，不修改 index.html 既有入场动画、右上角百合
+     与四模块切换逻辑；
+   - 全站仅黑、白、灰、绿四色系；
+   - 花体英文使用 background-clip: text 时以 drop-shadow 替代
+     text-shadow，避免穿帮。
+   ========================================================= */
+
+/* ---- 全屏雨丝 Canvas：置于中央大花之上、标题/子视图/弹窗之下 ---- */
+.home-atmo-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.home-atmo-rain { z-index: 0; }
+
+/* ---- 底纹大花：光晕由 JS 逐帧注入（这里不写死，避免与入场动画冲突） ---- */
+
+/* ---- 主标题：极缓慢光晕呼吸（约 8s 周期） ---- */
+.brand {
+  animation: atmo-brand-breathe 8s ease-in-out infinite;
+}
+@keyframes atmo-brand-breathe {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(235, 232, 224, 0.07)); }
+  50%      { filter: drop-shadow(0 0 22px rgba(235, 232, 224, 0.20)); }
+}
+
+/* ---- 环境暗雾软垫：让旋转大花经过文字后方自然虚化压暗 ---- */
+.masthead,
+.home-menu { position: relative; }
+.masthead::before,
+.home-menu::before {
+  content: "";
+  position: absolute;
+  inset: -48px -64px;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(50% 50% at 50% 50%,
+      rgba(20, 28, 26, 0.52) 0%,
+      rgba(20, 28, 26, 0.26) 52%,
+      transparent 76%);
+}
+
+/* ---- 花体文字：雾化纵向渐变骨白（消除贴图感） ---- */
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .brand > span {
+    display: inline-block;
+    line-height: 1.18;
+    padding: 0.10em 0.10em 0.16em;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    background-image: linear-gradient(180deg,
+        #f5f2e9 0%,
+        #e6e8e0 46%,
+        #aebdb5 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    filter: drop-shadow(0 1px 1px rgba(10, 16, 14, 0.45))
+            drop-shadow(0 0 12px rgba(235, 232, 224, 0.10));
+  }
+
+  .home-menu-item { text-shadow: none; }
+
+  .home-menu-item .hm-label {
+    display: inline-block;
+    line-height: 1.16;
+    padding: 0.12em 0.08em 0.18em;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    background-image: linear-gradient(180deg,
+        #f5f2e9 0%,
+        #e2e6de 48%,
+        #aebdb5 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    filter: drop-shadow(0 1px 1px rgba(10, 16, 14, 0.42))
+            drop-shadow(0 0 10px rgba(235, 232, 224, 0.08));
+    transition: filter 0.4s var(--ease, cubic-bezier(0.22, 1, 0.36, 1));
+  }
+  .home-menu-item:hover .hm-label {
+    background-image: linear-gradient(180deg,
+        #fbf8ef 0%,
+        #f1ecdd 48%,
+        #c4d1c9 100%);
+    filter: brightness(1.12)
+            drop-shadow(0 0 14px rgba(235, 232, 224, 0.30))
+            drop-shadow(0 1px 1px rgba(10, 16, 14, 0.42));
+  }
+}
+/* =========================================================
+   左下角卢克莱修《物性论》题词（方案甲排版）
+   - 固定于视口左下，与右上角几何百合对角平衡
+   - 首字花体下沉 W，正文古典极细斜体，署名小号大写
+   - 窄屏 < 1024px 隐藏，避免与中央四项菜单打架
+   ========================================================= */
+.home-epigraph {
+  position: fixed;
+  left: 44px;
+  bottom: 38px;
+  max-width: 380px;
+  padding-left: 16px;
+  z-index: 1;
+  font-family: var(--font-aux, "Cormorant Garamond", Georgia, serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: #ced7d1;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: auto;
+  transition: opacity 0.6s var(--ease, cubic-bezier(0.22, 1, 0.36, 1)),
+              visibility 0s linear 0.6s;
+}
+
+.home-epigraph.is-visible {
+  opacity: 0.4;
+  visibility: visible;
+  transition: opacity 0.6s var(--ease, cubic-bezier(0.22, 1, 0.36, 1)),
+              visibility 0s linear 0s;
+}
+
+.home-epigraph.is-visible:hover {
+  opacity: 0.86;
+}
+
+.home-epigraph::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(176, 196, 186, 0.46) 22%,
+    rgba(176, 196, 186, 0.46) 78%,
+    transparent 100%
+  );
+}
+
+.home-epigraph p {
+  margin: 0 0 8px;
+  display: flow-root;
+  white-space: nowrap;
+}
+
+.home-epigraph p:last-of-type {
+  margin-bottom: 0;
+}
+
+.home-epigraph .ep-drop {
+  float: left;
+  font-family: var(--font-display, "Pinyon Script", "Snell Roundhand", "Edwardian Script ITC", cursive);
+  font-style: normal;
+  font-weight: 400;
+  font-size: 36px;
+  line-height: 1;
+  overflow: visible;
+  padding: 0.04em 0.20em 0.32em 0.06em;
+  margin: 0 0.12em 0 0;
+  color: #ede9df;
+  text-shadow: 0 0 12px rgba(235, 232, 224, 0.24);
+}
+
+.home-epigraph .ep-sign {
+  margin-top: 8px;
+  font-style: normal;
+  font-variant: small-caps;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: #9bb0a5;
+}
+
+@media (max-width: 1023px) {
+  .home-epigraph {
+    display: none;
+  }
+}

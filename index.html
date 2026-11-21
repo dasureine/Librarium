@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Librarium</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231c2422'/%3E%3Cg fill='none' stroke='%23ede9df' stroke-width='1.5' stroke-linejoin='miter'%3E%3Cpath d='M16 27 L16 17'/%3E%3Cpath d='M16 17 L9 9 L16 5 L23 9 Z'/%3E%3Cpath d='M16 17 L16 7'/%3E%3C/g%3E%3C/svg%3E" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Pinyon+Script&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
@@ -431,6 +432,7 @@
   </style>
   <link rel="stylesheet" href="./assets/uploader.css">
   <link rel="stylesheet" href="./assets/home-views.css">
+  <link rel="stylesheet" href="./assets/home-atmosphere.css">
 </head>
 <body>
   <svg class="noise" aria-hidden="true">
@@ -444,7 +446,6 @@
   <div class="curtain" id="curtain"></div>
   <div class="cursor-glow" id="cursorGlow"></div>
   <div class="light-sweep" id="lightSweep"></div>
-  <canvas class="dust" id="dust"></canvas>
 
   <div class="intro-stage" id="introStage" aria-hidden="true">
     <svg id="introSvg" preserveAspectRatio="none"></svg>
@@ -618,76 +619,8 @@
   </script>
 
   <script>
-    (function () {
-      /* 呼吸感微光光点浮尘（左侧百合区密度略高，鼠标靠近时增亮并轻盈避让） */
-      var canvas = document.getElementById("dust");
-      if (!canvas) return;
-      var ctx = canvas.getContext("2d");
-      var W = 0, H = 0, dpr = 1;
-
-      function resize() {
-        dpr = Math.min(window.devicePixelRatio || 1, 2);
-        W = window.innerWidth; H = window.innerHeight;
-        canvas.width = W * dpr; canvas.height = H * dpr;
-        canvas.style.width = W + "px"; canvas.style.height = H + "px";
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      }
-      resize();
-      window.addEventListener("resize", resize);
-
-      var N = 30;
-      var particles = [];
-      for (var i = 0; i < N; i++) {
-        var x = Math.random() * W * 0.5 + W * 0.18;
-        particles.push({
-          x: x,
-          y: Math.random() * H,
-          r: 0.55 + Math.random() * 1.35,
-          vx: (Math.random() - 0.5) * 0.14,
-          vy: (Math.random() - 0.5) * 0.14,
-          base: 0.16 + Math.random() * 0.28,
-          phase: Math.random() * Math.PI * 2,
-          warm: Math.random() < 0.62
-        });
-      }
-
-      var mx = -9999, my = -9999;
-      window.addEventListener("mousemove", function (e) { mx = e.clientX; my = e.clientY; });
-
-      function tick() {
-        ctx.clearRect(0, 0, W, H);
-        var t = Date.now() * 0.0008;
-        for (var i = 0; i < particles.length; i++) {
-          var p = particles[i];
-          p.x += p.vx; p.y += p.vy;
-          if (p.x < -12) p.x = W + 12; else if (p.x > W + 12) p.x = -12;
-          if (p.y < -12) p.y = H + 12; else if (p.y > H + 12) p.y = -12;
-
-          var breathe = 0.5 + 0.5 * Math.sin(t * 3 + p.phase);
-          var alpha = p.base * (0.45 + 0.55 * breathe);
-
-          var dx = p.x - mx, dy = p.y - my;
-          var dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 180 && dist > 0.5) {
-            var b = 1 - dist / 180;
-            alpha += b * 0.5;
-            p.x += (dx / dist) * 0.5 * b;
-            p.y += (dy / dist) * 0.5 * b;
-          }
-
-          var rgb = p.warm ? "240,236,226" : "132,166,150";
-          var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 4);
-          g.addColorStop(0, "rgba(" + rgb + "," + Math.min(1, alpha).toFixed(3) + ")");
-          g.addColorStop(1, "rgba(" + rgb + ",0)");
-          ctx.fillStyle = g;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.r * 4, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        requestAnimationFrame(tick);
-      }
-      tick();
-    })();
+    /* 原有呼吸感微光光点浮尘已停用：不再创建漂浮圆点、也不再启动动画循环，
+       避免占用 CPU。全屏雨丝改由 assets/home-atmosphere.js 渲染。 */
   </script>
 
   <script>
@@ -1065,5 +998,6 @@
   </script>
   <script src="./assets/uploader.js" defer></script>
   <script src="./assets/home-views.js" defer></script>
+  <script src="./assets/home-atmosphere.js" defer></script>
 </body>
 </html>
