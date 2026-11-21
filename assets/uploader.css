@@ -281,6 +281,51 @@ textarea.lr-input {
   border: 1px solid rgba(124, 74, 58, 0.34);
 }
 
+/* ---------- 入藏方式切换（新书 / 续传） ---------- */
+.lr-mode {
+  display: inline-flex;
+  gap: 0;
+  margin-bottom: 18px;
+  padding: 3px;
+  border: 1px solid rgba(178, 198, 188, 0.18);
+  border-radius: 999px;
+  background: rgba(20, 28, 26, 0.32);
+}
+.lr-mode-btn {
+  appearance: none;
+  padding: 7px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  color: var(--mist, #9bb0a5);
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.35s var(--ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    background 0.35s var(--ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+.lr-mode-btn.is-active {
+  color: var(--paper, #ede9df);
+  background: rgba(133, 168, 151, 0.18);
+}
+
+.lr-resume-field[hidden] {
+  display: none;
+}
+.lr-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--mist, #9bb0a5);
+  opacity: 0.75;
+}
+.lr-input[readonly] {
+  color: var(--mist, #9bb0a5);
+  background: rgba(20, 28, 26, 0.24);
+  border-style: dashed;
+}
+
 /* ---------- 拖拽区 ---------- */
 .lr-dropzone {
   position: relative;
@@ -401,6 +446,42 @@ textarea.lr-input {
   line-height: 1.7;
 }
 
+/* ---------- 章节勾选与已入藏标签（续传模式） ---------- */
+.lr-chapters.has-check .lr-chapters-head,
+.lr-chapters.has-check .lr-chapter {
+  grid-template-columns: 30px 44px 1fr 84px 64px;
+}
+.lr-chapter .c-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.lr-chapter .c-check input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: #85a897;
+  cursor: pointer;
+}
+.lr-chapter .c-title .lr-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: rgba(155, 176, 165, 0.82);
+  border: 1px solid rgba(155, 176, 165, 0.28);
+  border-radius: 999px;
+  vertical-align: middle;
+}
+.lr-chapter.is-existing {
+  opacity: 0.46;
+}
+.lr-chapter.is-existing .c-title,
+.lr-chapter.is-existing .c-chars,
+.lr-chapter.is-existing .c-pages {
+  color: var(--mist, #9bb0a5);
+}
+
 /* ---------- 运行范围 ---------- */
 .lr-range {
   display: flex;
@@ -439,6 +520,59 @@ textarea.lr-input {
 }
 .lr-range input[type="number"]:focus {
   border-color: rgba(133, 168, 151, 0.6);
+}
+
+/* ---------- 章号偏移（续传模式） ---------- */
+.lr-offset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(176, 196, 186, 0.14);
+}
+.lr-offset > span {
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  color: var(--mist, #9bb0a5);
+}
+.lr-offset label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--paper, #ede9df);
+  cursor: pointer;
+}
+.lr-offset input[type="radio"] {
+  accent-color: #85a897;
+}
+.lr-offset .lr-offset-num {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--paper, #ede9df);
+}
+.lr-offset .lr-offset-num input[type="number"] {
+  width: 64px;
+  padding: 6px 8px;
+  color: var(--paper, #ede9df);
+  background: rgba(20, 28, 26, 0.5);
+  border: 1px solid rgba(178, 198, 188, 0.2);
+  border-radius: 8px;
+  outline: none;
+  font-variant-numeric: tabular-nums;
+}
+.lr-offset .lr-offset-num input[type="number"]:focus {
+  border-color: rgba(133, 168, 151, 0.6);
+}
+.lr-offset .lr-offset-num input[type="number"]:disabled {
+  opacity: 0.45;
+}
+.lr-resume-count {
+  margin-top: 12px;
 }
 
 /* ---------- 进度与日志 ---------- */
@@ -723,6 +857,10 @@ textarea.lr-input {
   .lr-chapters-head,
   .lr-chapter {
     grid-template-columns: 34px 1fr 64px;
+  }
+  .lr-chapters.has-check .lr-chapters-head,
+  .lr-chapters.has-check .lr-chapter {
+    grid-template-columns: 30px 34px 1fr 64px;
   }
   .lr-chapters-head > :last-child,
   .lr-chapter > :last-child {

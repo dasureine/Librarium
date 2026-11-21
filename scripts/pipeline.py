@@ -322,7 +322,7 @@ def _sample_page_avg(doc, page_count: int, sample_size: int = 18) -> float:
     return chars / len(pages)
 
 
-def split_precheck(slug: str, book_path: Path, page_map: Optional[str] = None, level: int = 1) -> dict:
+def split_precheck(slug: str, book_path: Path, page_map: Optional[str] = None, level: int = 1, offset: int = 0) -> dict:
     """阶段1：切分电子书为逐章纯文本，并做扫描版/无目录预检。
 
     返回 dict：status 为 ready / needs_page_map / empty，chapters 为章节列表。
@@ -388,10 +388,11 @@ def split_precheck(slug: str, book_path: Path, page_map: Optional[str] = None, l
             text = "\n".join(parts).strip()
             total_pages += end - start
             total_chars += len(text)
-            filename = f"{idx:02d}_{split_book.to_filename(title) or '未命名章节'}.txt"
+            global_idx = idx + max(0, int(offset or 0))
+            filename = f"{global_idx:02d}_{split_book.to_filename(title) or '未命名章节'}.txt"
             (chapters_dir / filename).write_text(text, encoding="utf-8")
             chapters.append({
-                "index": idx,
+                "index": global_idx,
                 "filename": filename,
                 "title": title or "未命名章节",
                 "chars": len(text),
@@ -599,7 +600,7 @@ def stage2_chapters(job: JobState, llm: LLM, chapters: list) -> None:
         # 顺手用母版把本章 JSON 直接固化为独立分章地图，供整书总图下钻。
         try:
             chapter_html = inject_chapter_map(job.slug, ch["index"], cmap, job.title,
-                                              has_parent=not job.chapter_range)
+                                              has_parent=(not job.chapter_range) or (MAPS_DIR / f"{job.slug}.html").exists())
             job.log(f"  分章地图已生成：{chapter_html}")
         except Exception as e:
             job.log(f"  分章地图生成失败：{e}")
@@ -907,8 +908,127 @@ def generate_metadata(job: JobState, llm: LLM, map_data: dict) -> dict:
     return entry
 
 
+def load_books() -> list:
+    """读取 books.json 为列表（缺失或损坏时返回空列表）。"""
+    if not BOOKS_JSON.exists():
+        return []
+    try:
+        data = json.loads(BOOKS_JSON.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    return data if isinstance(data, list) else []
+
+
+def existing_chapters_for_slug(slug: str) -> dict:
+    """返回某 slug 已入藏的分章信息，供续传防重与防撞号。
+
+    同时检查 books.json 的 chapters 列表与 maps/<slug>/ 已有文件。
+    """
+    book = next((b for b in load_books() if isinstance(b, dict) and b.get("id") == slug), None)
+    chapters = [c for c in (book.get("chapters") or []) if isinstance(c, dict)] if book else []
+    max_order = 0
+    for c in chapters:
+        order = c.get("order")
+        if isinstance(order, int) and order > max_order:
+            max_order = order
+    map_files = []
+    sub = MAPS_DIR / slug
+    if sub.is_dir():
+        map_files = [p.name for p in sorted(sub.glob("*.html"), key=natural_key)]
+    return {
+        "slug": slug,
+        "title": (book.get("title") or "") if book else "",
+        "chapters": chapters,
+        "max_order": max_order,
+        "map_files": map_files,
+    }
+
+
+def _chapter_key(chapter: dict):
+    """归一化章节合并键：优先 order，其次 mapPath，最后 id。"""
+    order = chapter.get("order")
+    if isinstance(order, int):
+        return ("order", order)
+    map_path = str(chapter.get("mapPath") or "").strip()
+    if map_path:
+        return ("mapPath", map_path)
+    return ("id", str(chapter.get("id") or "").strip())
+
+
+def _merge_chapter(old_ch: dict, new_ch: dict) -> dict:
+    """合并同一章：以新值为准，但新章未携带标签时保留旧章标签。"""
+    merged = dict(old_ch)
+    for key, val in new_ch.items():
+        if key == "tags" and not val:
+            continue
+        merged[key] = val
+    return merged
+
+
+def merge_chapters(old_chapters: list, new_chapters: list) -> list:
+    """无损合并章节：旧章全部保留；新章仅当章号/路径完全一致时更新对应旧章。"""
+    merged = []
+    index_by_key = {}
+    for ch in old_chapters:
+        if not isinstance(ch, dict):
+            continue
+        key = _chapter_key(ch)
+        if key in index_by_key:
+            continue
+        index_by_key[key] = len(merged)
+        merged.append(dict(ch))
+    for ch in new_chapters:
+        if not isinstance(ch, dict):
+            continue
+        key = _chapter_key(ch)
+        if key in index_by_key:
+            merged[index_by_key[key]] = _merge_chapter(merged[index_by_key[key]], ch)
+        else:
+            index_by_key[key] = len(merged)
+            merged.append(dict(ch))
+
+    def _sort_key(ch):
+        order = ch.get("order")
+        return (0, order) if isinstance(order, int) else (1, 0)
+
+    merged.sort(key=_sort_key)
+    return merged
+
+
+def merge_book_entry(old: dict, new: dict) -> dict:
+    """合并到已有书目：完整保留旧元信息，仅无损合并 chapters。"""
+    merged = dict(old)
+    # 元信息旧值优先，缺项用新值补齐（完整保留原有元信息）
+    for key in ("id", "title", "subtitle", "author", "date", "tags", "summary"):
+        if not merged.get(key) and new.get(key):
+            merged[key] = new[key]
+    # 全书总图链接：优先保留已有链接，缺省时用新生成链接补齐
+    if not str(merged.get("mapPath") or "").strip():
+        new_map = str(new.get("mapPath") or "").strip()
+        if new_map:
+            merged["mapPath"] = new_map
+            merged["url"] = new_map
+    if not str(merged.get("url") or "").strip():
+        new_url = str(new.get("url") or "").strip()
+        if new_url:
+            merged["url"] = new_url
+    # overallStatus：新条目为 complete 且带总图时升级，否则保留旧状态
+    if new.get("overallStatus") == "complete" and str(merged.get("mapPath") or "").strip():
+        merged["overallStatus"] = "complete"
+    elif not merged.get("overallStatus"):
+        merged["overallStatus"] = new.get("overallStatus") or "partial"
+    merged["chapters"] = merge_chapters(old.get("chapters") or [], new.get("chapters") or [])
+    return merged
+
+
 def update_books_json(entry: dict) -> Path:
-    """按 id 去重覆盖 books.json，追加新书条目（不触碰既有书目数据）。"""
+    """按 slug/id 无损合并写入 books.json。
+
+    - 新书：直接追加；
+    - 已有书：完整保留原元信息与旧 chapters，仅把本次新章节合并进去；
+    - 合并后 chapters 按章号升序稳定排序；
+    - 写回后自动同步 data/taxonomy.json。
+    """
     entry = dict(entry)
     map_path = str(entry.pop("mapPath", "") or "").strip()
     entry["mapPath"] = map_path
@@ -916,17 +1036,28 @@ def update_books_json(entry: dict) -> Path:
         entry["url"] = map_path  # 首页 Atlas 读取的是 book.url
     else:
         entry.pop("url", None)  # 整书未完篇：不生成 url，保持 mapPath 为空
-    data = []
-    if BOOKS_JSON.exists():
-        try:
-            data = json.loads(BOOKS_JSON.read_text(encoding="utf-8"))
-        except Exception:
-            data = []
-    if not isinstance(data, list):
-        data = []
-    data = [b for b in data if not (isinstance(b, dict) and b.get("id") == entry.get("id"))]
-    data.append(entry)
+
+    data = load_books()
+    target_id = entry.get("id")
+    merged_any = False
+    for i, b in enumerate(data):
+        if isinstance(b, dict) and b.get("id") == target_id:
+            data[i] = merge_book_entry(b, entry)
+            merged_any = True
+            break
+    if not merged_any:
+        data.append(entry)
+
     BOOKS_JSON.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # 合并写回后自动同步学科分类索引，确保 Atlases 与 Taxonomy 立刻展示最新章节。
+    try:
+        import build_index
+
+        build_index.rebuild_index()
+    except Exception:
+        # 索引同步失败不应阻断制书流程，仅静默降级。
+        pass
     return BOOKS_JSON
 
 
@@ -1119,13 +1250,7 @@ def stage2_partial_finish(job: JobState) -> Path:
         "chapters": chapters,
     }
     out = update_books_json(entry)
-    try:
-        import build_index
-
-        build_index.rebuild_index()
-        job.log("已刷新 data/taxonomy.json")
-    except Exception as e:
-        job.log(f"刷新 data/taxonomy.json 失败：{e}")
+    job.log("已上架 books.json（无损合并）")
     return out
 
 
@@ -1167,14 +1292,7 @@ def stage4_inject(job: JobState, map_data: dict, meta_entry: dict) -> tuple:
     out = inject_map(job.slug, map_data)
     job.log(f"地图已生成：{out}")
     update_books_json(meta_entry)
-    job.log("已上架 books.json")
-    try:
-        import build_index
-
-        build_index.rebuild_index()
-        job.log("已刷新 data/taxonomy.json")
-    except Exception as e:
-        job.log(f"刷新 data/taxonomy.json 失败：{e}")
+    job.log("已上架 books.json（无损合并）")
     return str(out), str(NOTES_DIR / f"{job.slug}.md")
 
 

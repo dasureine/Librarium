@@ -8,6 +8,7 @@
     upload: '/api/books/upload',
     resplit: '/api/books/resplit',
     start: '/api/books/start',
+    existing: function (slug) { return '/api/books/existing/' + encodeURIComponent(slug); },
     status: function (id) { return '/api/books/status/' + encodeURIComponent(id); },
     cancel: function (id) { return '/api/books/cancel/' + encodeURIComponent(id); },
     gitStatus: '/api/git/status',
@@ -36,6 +37,14 @@
   var paused = false;
   var renderedLogs = 0;
   var activeTag = '全部';
+
+  // 续传已有书目相关状态
+  var mode = 'new'; // 'new' | 'resume'
+  var books = []; // books.json 缓存
+  var resumeBook = null; // 续传选中的书目
+  var existing = { chapters: [], max_order: 0, map_files: [] }; // 已入藏信息
+  var offsetMode = 'none'; // 'none' | 'auto' | 'custom'
+  var offsetStart = 1; // 自定义起始章号（1-based）
 
   var btn = null;
   var backdrop = null;
@@ -106,6 +115,150 @@
     if (!footEl) return;
     var bar = footEl.querySelector('.lr-error-bar');
     if (bar) bar.remove();
+  }
+
+  /* ---------- 续传已有书目辅助 ---------- */
+
+  function loadBooks() {
+    return fetch('/books.json', { cache: 'no-store' })
+      .then(function (res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+      .then(function (list) { books = Array.isArray(list) ? list : []; return books; })
+      .catch(function () { books = []; return books; });
+  }
+
+  function loadExisting(slug) {
+    if (!slug) {
+      existing = { chapters: [], max_order: 0, map_files: [] };
+      return Promise.resolve(existing);
+    }
+    return apiFetch(API.existing(slug), { cache: 'no-store' })
+      .then(function (data) {
+        existing = data || { chapters: [], max_order: 0, map_files: [] };
+        return existing;
+      })
+      .catch(function () {
+        existing = { chapters: [], max_order: 0, map_files: [] };
+        return existing;
+      });
+  }
+
+  function isChapterExisting(index) {
+    var seen = {};
+    (existing.chapters || []).forEach(function (c) {
+      if (c && typeof c.order === 'number') seen[c.order] = true;
+    });
+    if (seen[index]) return true;
+    var fname = 'ch' + String(index).padStart(2, '0') + '.html';
+    return (existing.map_files || []).indexOf(fname) !== -1;
+  }
+
+  function currentOffset() {
+    if (mode !== 'resume') return 0;
+    if (offsetMode === 'none') return 0;
+    if (offsetMode === 'custom') return Math.max(0, (parseInt(offsetStart, 10) || 1) - 1);
+    return (existing.max_order || 0);
+  }
+
+  function refreshSlugHint() {
+    var hint = bodyEl && bodyEl.querySelector('#lrSlugHint');
+    if (!hint) return;
+    var slug = slugify(draft.slug);
+    if (mode === 'new' && slug) {
+      var dup = books.some(function (b) { return b && b.id === slug; });
+      if (dup) {
+        hint.hidden = false;
+        hint.textContent = '检测到已有同 slug 书目，提交后将自动追加合并章节，不会覆盖旧章';
+        return;
+      }
+    }
+    hint.hidden = true;
+    hint.textContent = '';
+  }
+
+  function populateResumeBooks() {
+    var sel = bodyEl && bodyEl.querySelector('#lrResumeBook');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">选择书目…</option>' +
+      books.map(function (b) {
+        return '<option value="' + escapeHtml(b.id || '') + '">' + escapeHtml(b.title || b.id || '') + '</option>';
+      }).join('');
+    if (resumeBook) sel.value = resumeBook.id || '';
+  }
+
+  function applyResumeSelection(bookId) {
+    resumeBook = null;
+    for (var i = 0; i < books.length; i++) {
+      if (books[i].id === bookId) { resumeBook = books[i]; break; }
+    }
+    var slugInput = bodyEl && bodyEl.querySelector('#lrSlug');
+    var titleInput = bodyEl && bodyEl.querySelector('#lrTitle');
+    var authorInput = bodyEl && bodyEl.querySelector('#lrAuthor');
+    var hint = bodyEl && bodyEl.querySelector('#lrResumeHint');
+    if (resumeBook) {
+      draft.slug = resumeBook.id || '';
+      draft.title = resumeBook.title || '';
+      draft.author = resumeBook.author || '';
+      if (slugInput) { slugInput.value = draft.slug; slugInput.readOnly = true; }
+      if (titleInput) { titleInput.value = draft.title; titleInput.readOnly = true; }
+      if (authorInput) { authorInput.value = draft.author; authorInput.readOnly = true; }
+      loadExisting(draft.slug).then(function () {
+        if (hint) hint.textContent = '当前已入藏 ' + (existing.chapters || []).length + ' 章';
+      });
+    } else {
+      if (slugInput) slugInput.readOnly = false;
+      if (titleInput) titleInput.readOnly = false;
+      if (authorInput) authorInput.readOnly = false;
+      if (hint) hint.textContent = '';
+    }
+    refreshSlugHint();
+  }
+
+  function setMode(m) {
+    mode = m;
+    var modeEl = bodyEl && bodyEl.querySelector('#lrMode');
+    if (modeEl) {
+      modeEl.querySelectorAll('.lr-mode-btn').forEach(function (btn) {
+        btn.classList.toggle('is-active', btn.getAttribute('data-mode') === m);
+      });
+    }
+    var resumeField = bodyEl && bodyEl.querySelector('#lrResumeField');
+    if (resumeField) resumeField.hidden = (m !== 'resume');
+    var slugInput = bodyEl && bodyEl.querySelector('#lrSlug');
+    var titleInput = bodyEl && bodyEl.querySelector('#lrTitle');
+    var authorInput = bodyEl && bodyEl.querySelector('#lrAuthor');
+    if (m === 'resume') {
+      if (slugInput) slugInput.readOnly = true;
+      if (titleInput) titleInput.readOnly = true;
+      if (authorInput) authorInput.readOnly = true;
+    } else {
+      if (slugInput) slugInput.readOnly = false;
+      if (titleInput) titleInput.readOnly = false;
+      if (authorInput) authorInput.readOnly = false;
+    }
+    refreshSlugHint();
+  }
+
+  function applyOffset() {
+    var slug = slugify(draft.slug) || 'book';
+    var fd = new FormData();
+    fd.append('slug', slug);
+    var mapEl = bodyEl && bodyEl.querySelector('#lrPageMap');
+    fd.append('page_map', mapEl ? mapEl.value : '');
+    fd.append('offset', String(currentOffset()));
+    return apiFetch(API.resplit, { method: 'POST', body: fd, cache: 'no-store' })
+      .then(function (data) {
+        if (data && data.status === 'scanned') {
+          showError(data.message || '切分失败');
+          return;
+        }
+        chapters = Array.isArray(data.chapters) ? data.chapters : [];
+        needsPageMap = data.status === 'needs_page_map';
+        pageCount = data.page_count || 0;
+        renderStepB();
+      })
+      .catch(function (err) {
+        showError('重新切分失败：' + err.message);
+      });
   }
 
   /* ---------- 书架刷新（与 index.html 渲染一致） ---------- */
@@ -298,6 +451,11 @@
     paused = false;
     renderedLogs = 0;
     stopPolling();
+    mode = 'new';
+    resumeBook = null;
+    offsetMode = 'none';
+    offsetStart = 1;
+    existing = { chapters: [], max_order: 0, map_files: [] };
   }
 
   function goStep(n) {
@@ -356,6 +514,15 @@
 
     bodyEl.innerHTML =
       bannerHtml + alertHtml +
+      '<div class="lr-mode" id="lrMode" role="tablist" aria-label="入藏方式">' +
+        '<button type="button" class="lr-mode-btn is-active" data-mode="new">新书入藏</button>' +
+        '<button type="button" class="lr-mode-btn" data-mode="resume">续传已有书目</button>' +
+      '</div>' +
+      '<div class="lr-field lr-resume-field" id="lrResumeField" hidden>' +
+        '<label for="lrResumeBook">选择已有书目</label>' +
+        '<select class="lr-input" id="lrResumeBook"></select>' +
+        '<div class="lr-hint" id="lrResumeHint"></div>' +
+      '</div>' +
       '<div class="lr-field">' +
         '<label>电子书文件（.pdf / .epub）</label>' +
         '<div class="lr-dropzone" id="lrDrop">' +
@@ -366,6 +533,7 @@
       '<div class="lr-field">' +
         '<label>英文短名（slug）</label>' +
         '<input class="lr-input" id="lrSlug" placeholder="如 xinjiao-lunli" autocomplete="off" value="' + escapeHtml(draft.slug) + '">' +
+        '<div class="lr-hint" id="lrSlugHint" hidden></div>' +
       '</div>' +
       '<div class="lr-field">' +
         '<label>书名</label>' +
@@ -442,12 +610,31 @@
       setFile(f);
     });
 
-    slugInput.addEventListener('input', function () { draft.slug = slugInput.value; });
+    slugInput.addEventListener('input', function () { draft.slug = slugInput.value; refreshSlugHint(); });
     titleInput.addEventListener('input', function () { draft.title = titleInput.value; });
     authorInput.addEventListener('input', function () { draft.author = authorInput.value; });
 
+    var modeEl = bodyEl.querySelector('#lrMode');
+    if (modeEl) {
+      modeEl.querySelectorAll('.lr-mode-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () { setMode(btn.getAttribute('data-mode')); });
+      });
+    }
+    var resumeSelect = bodyEl.querySelector('#lrResumeBook');
+    if (resumeSelect) {
+      resumeSelect.addEventListener('change', function () { applyResumeSelection(resumeSelect.value); });
+    }
+
     footEl.querySelector('[data-act="close"]').addEventListener('click', closeModal);
     refreshChip();
+
+    // 载入已有书目列表，并回填当前模式 / 选中状态（含锁定与提示）
+    loadBooks().then(function () {
+      populateResumeBooks();
+      setMode(mode);
+      if (resumeBook) applyResumeSelection(resumeBook.id);
+      refreshSlugHint();
+    });
   }
 
   async function handleUpload() {
@@ -484,6 +671,14 @@
         return;
       }
 
+      if (mode === 'resume' && !resumeBook) {
+        console.warn('[Librarium] handleUpload: 未选择续传书目');
+        showError('请先在「续传已有书目」中选择要追加章节的书目。');
+        return;
+      }
+
+      if (mode === 'resume') await loadExisting(slug);
+
       if (health && health.env_configured === false) {
         console.warn('[Librarium] handleUpload: 未配置 API_KEY');
         showError('未检测到有效 API_KEY，请先在项目根目录的 .env 中配置密钥后再上传生成。');
@@ -493,6 +688,7 @@
       var fd = new FormData();
       fd.append('file', selectedFile, selectedFile.name);
       fd.append('slug', slug);
+      if (mode === 'resume') fd.append('offset', String(currentOffset()));
       console.log(
         '[Librarium] handleUpload: POST ' + API.upload +
         ' slug=' + slug +
@@ -532,6 +728,7 @@
   /* ---------- 步骤 B：目录预检 ---------- */
 
   function renderStepB() {
+    var isResume = mode === 'resume';
     var content = '';
     if (needsPageMap) {
       content =
@@ -542,28 +739,55 @@
         '<div class="lr-empty">提交后将重新切分，并在下方展示章节与字数。</div>';
     } else if (chapters.length) {
       var rows = chapters.map(function (c) {
-        return '<div class="lr-chapter">' +
+        var existed = isResume && isChapterExisting(c.index);
+        var checked = isResume ? !existed : true;
+        var tag = existed ? '<span class="lr-tag">已入藏</span>' : '';
+        var box = isResume
+          ? '<span class="c-check"><input type="checkbox" data-chapter="' + c.index + '"' + (checked ? ' checked' : '') + '></span>'
+          : '';
+        return '<div class="lr-chapter' + (existed ? ' is-existing' : '') + '">' +
+          box +
           '<span class="c-idx">' + String(c.index).padStart(2, '0') + '</span>' +
-          '<span class="c-title">' + escapeHtml(c.title) + '</span>' +
+          '<span class="c-title">' + escapeHtml(c.title) + tag + '</span>' +
           '<span class="c-chars">' + fmt(c.chars) + ' 字</span>' +
           '<span class="c-pages">' + fmt(c.pages) + ' 页</span>' +
         '</div>';
       }).join('');
       content =
-        '<div class="lr-chapters">' +
-          '<div class="lr-chapters-head"><span>编号</span><span>章节</span><span>字数</span><span>页数</span></div>' +
+        '<div class="lr-chapters' + (isResume ? ' has-check' : '') + '">' +
+          '<div class="lr-chapters-head">' +
+            (isResume ? '<span>选</span>' : '') + '<span>编号</span><span>章节</span><span>字数</span><span>页数</span>' +
+          '</div>' +
           '<div class="lr-chapters-list">' + rows + '</div>' +
         '</div>';
     } else {
       content = '<div class="lr-empty">暂无章节信息，请返回上一步重新上传。</div>';
     }
 
-    bodyEl.innerHTML = content +
-      '<div class="lr-range">' +
-        '<span>运行范围</span>' +
-        '<label><input type="radio" name="lrRange" value="full" checked> 运行全书</label>' +
-        '<label><input type="radio" name="lrRange" value="first"> 试跑前 <input type="number" id="lrFirstN" value="3" min="1" max="' + Math.max(chapters.length, 1) + '"> 章</label>' +
-      '</div>';
+    var rangeHtml;
+    if (isResume) {
+      var numVal = (offsetMode === 'custom')
+        ? (parseInt(offsetStart, 10) || 1)
+        : (offsetMode === 'auto' ? ((existing.max_order || 0) + 1) : 1);
+      rangeHtml =
+        '<div class="lr-offset">' +
+          '<span>章号偏移</span>' +
+          '<label><input type="radio" name="lrOffset" value="none"' + (offsetMode === 'none' ? ' checked' : '') + '> 按原目录编号</label>' +
+          '<label><input type="radio" name="lrOffset" value="auto"' + (offsetMode === 'auto' ? ' checked' : '') + '> 接续当前最大章号自动顺延</label>' +
+          '<label><input type="radio" name="lrOffset" value="custom"' + (offsetMode === 'custom' ? ' checked' : '') + '> 自定义起始章号</label>' +
+          '<span class="lr-offset-num">第 <input type="number" id="lrOffsetN" min="1" value="' + numVal + '"' + (offsetMode === 'custom' ? '' : ' disabled') + '> 章</span>' +
+        '</div>' +
+        '<div class="lr-hint lr-resume-count">将生成勾选的新章节，已入藏章节默认跳过（可手动勾选覆盖）。</div>';
+    } else {
+      rangeHtml =
+        '<div class="lr-range">' +
+          '<span>运行范围</span>' +
+          '<label><input type="radio" name="lrRange" value="full" checked> 运行全书</label>' +
+          '<label><input type="radio" name="lrRange" value="first"> 试跑前 <input type="number" id="lrFirstN" value="3" min="1" max="' + Math.max(chapters.length, 1) + '"> 章</label>' +
+        '</div>';
+    }
+
+    bodyEl.innerHTML = content + rangeHtml;
 
     var canStart = chapters.length > 0;
     footEl.innerHTML =
@@ -577,6 +801,33 @@
 
   function wireStepB() {
     footEl.querySelector('[data-act="back"]').addEventListener('click', function () { goStep(1); });
+
+    if (mode === 'resume') {
+      bodyEl.querySelectorAll('input[name="lrOffset"]').forEach(function (r) {
+        r.addEventListener('change', function () {
+          offsetMode = bodyEl.querySelector('input[name="lrOffset"]:checked').value;
+          var numInput = bodyEl.querySelector('#lrOffsetN');
+          if (numInput) {
+            numInput.disabled = (offsetMode !== 'custom');
+            if (offsetMode !== 'custom') {
+              numInput.value = String(offsetMode === 'auto' ? ((existing.max_order || 0) + 1) : 1);
+            }
+          }
+          applyOffset();
+        });
+      });
+      var numInput = bodyEl.querySelector('#lrOffsetN');
+      if (numInput) {
+        numInput.addEventListener('change', function () {
+          offsetStart = parseInt(numInput.value, 10) || 1;
+          applyOffset();
+        });
+      }
+      bodyEl.querySelectorAll('input[data-chapter]').forEach(function (cb) {
+        cb.addEventListener('change', function () { /* 勾选状态由 startJob 即时读取 */ });
+      });
+    }
+
     if (needsPageMap) {
       footEl.querySelector('#lrResplitBtn').addEventListener('click', resplit);
     } else {
@@ -594,6 +845,7 @@
     var fd = new FormData();
     fd.append('slug', slugify(draft.slug) || 'book');
     fd.append('page_map', mapText);
+    if (mode === 'resume') fd.append('offset', String(currentOffset()));
 
     apiFetch(API.resplit, { method: 'POST', body: fd, cache: 'no-store' })
       .then(function (data) {
@@ -618,14 +870,27 @@
   }
 
   function startJob() {
-    var range = 'full';
-    var rangeEl = bodyEl.querySelector('input[name="lrRange"]:checked');
-    if (rangeEl) range = rangeEl.value;
     var chapterRange = null;
-    if (range === 'first') {
-      var n = parseInt(bodyEl.querySelector('#lrFirstN').value, 10);
-      if (!n || n < 1) n = 1;
-      chapterRange = '1-' + n;
+    if (mode === 'resume') {
+      var selected = [];
+      bodyEl.querySelectorAll('input[data-chapter]:checked').forEach(function (cb) {
+        var idx = parseInt(cb.getAttribute('data-chapter'), 10);
+        if (idx > 0) selected.push(idx);
+      });
+      if (!selected.length) {
+        showError('请至少勾选一个待生成 / 覆盖的章节。');
+        return;
+      }
+      chapterRange = selected.join(',');
+    } else {
+      var range = 'full';
+      var rangeEl = bodyEl.querySelector('input[name="lrRange"]:checked');
+      if (rangeEl) range = rangeEl.value;
+      if (range === 'first') {
+        var n = parseInt(bodyEl.querySelector('#lrFirstN').value, 10);
+        if (!n || n < 1) n = 1;
+        chapterRange = '1-' + n;
+      }
     }
     var slug = slugify(draft.slug) || 'book';
     draft.slug = slug;
@@ -650,7 +915,7 @@
       .catch(function (err) {
         btn.disabled = false;
         btn.textContent = '开始生成';
-        var rangeWrap = bodyEl.querySelector('.lr-range');
+        var rangeWrap = bodyEl.querySelector('.lr-range') || bodyEl.querySelector('.lr-offset');
         if (rangeWrap) {
           rangeWrap.insertAdjacentHTML('beforebegin', '<div class="lr-alert">启动失败：' + escapeHtml(err.message) + '</div>');
         }
@@ -834,6 +1099,20 @@
         '<button class="lr-btn lr-btn-ghost" type="button" data-act="close">关闭</button>' +
         '<button class="lr-btn lr-btn-ghost" type="button" data-act="git">同步至 GitHub</button>' +
         '<a class="lr-btn lr-btn-primary" href="' + escapeHtml(data.result.map_url) + '">查看新书地图</a>';
+      footEl.querySelector('[data-act="close"]').addEventListener('click', closeModal);
+      footEl.querySelector('[data-act="git"]').addEventListener('click', syncToGit);
+      renderStepsDone();
+    } else if (data.status === 'done') {
+      // 续传 / 部分章节：无整书总图，仅生成分章地图并无损合并上架
+      bodyEl.innerHTML =
+        '<div class="lr-success">' +
+          '<div class="lr-done-mark">✓</div>' +
+          '<h3>已生成并上架</h3>' +
+          '<p>' + escapeHtml(data.title || '') + ' 的新章节已无损合并入书架。</p>' +
+        '</div>';
+      footEl.innerHTML =
+        '<button class="lr-btn lr-btn-ghost" type="button" data-act="close">关闭</button>' +
+        '<button class="lr-btn lr-btn-ghost" type="button" data-act="git">同步至 GitHub</button>';
       footEl.querySelector('[data-act="close"]').addEventListener('click', closeModal);
       footEl.querySelector('[data-act="git"]').addEventListener('click', syncToGit);
       renderStepsDone();

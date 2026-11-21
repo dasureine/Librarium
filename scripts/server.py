@@ -44,7 +44,7 @@ def health():
 
 
 @app.post("/api/books/upload")
-def upload(file: UploadFile = File(...), slug: str = Form(...)):
+def upload(file: UploadFile = File(...), slug: str = Form(...), offset: int = Form(0)):
     slug = pipeline.sanitize_slug(slug)
     ext = Path(file.filename or "").suffix.lower()
     if ext not in (".pdf", ".epub"):
@@ -54,7 +54,7 @@ def upload(file: UploadFile = File(...), slug: str = Form(...)):
     with dest.open("wb") as f:
         shutil.copyfileobj(file.file, f)
     try:
-        result = pipeline.split_precheck(slug, dest)
+        result = pipeline.split_precheck(slug, dest, offset=offset)
     except pipeline.ScannedBookError as e:
         return {"status": "scanned", "message": str(e), "chapters": []}
     result["saved_to"] = str(dest)
@@ -62,20 +62,28 @@ def upload(file: UploadFile = File(...), slug: str = Form(...)):
 
 
 @app.post("/api/books/resplit")
-def resplit(slug: str = Form(...), page_map: str = Form(...)):
+def resplit(slug: str = Form(...), page_map: str = Form(""), offset: int = Form(0)):
     slug = pipeline.sanitize_slug(slug)
     book = pipeline.find_raw_book(slug)
     if not book:
         raise HTTPException(status_code=404, detail="未找到该 slug 对应的原始电子书，请先上传。")
     workspace = pipeline.WORKSPACE / slug
     workspace.mkdir(parents=True, exist_ok=True)
-    map_file = workspace / "pages_map.txt"
-    map_file.write_text(page_map, encoding="utf-8")
+    map_file = None
+    if page_map:
+        map_file = workspace / "pages_map.txt"
+        map_file.write_text(page_map, encoding="utf-8")
     try:
-        result = pipeline.split_precheck(slug, book, page_map=str(map_file))
+        result = pipeline.split_precheck(slug, book, page_map=str(map_file) if map_file else None, offset=offset)
     except pipeline.ScannedBookError as e:
         return {"status": "scanned", "message": str(e), "chapters": []}
     return result
+
+
+@app.get("/api/books/existing/{slug}")
+def existing(slug: str):
+    slug = pipeline.sanitize_slug(slug)
+    return pipeline.existing_chapters_for_slug(slug)
 
 
 @app.post("/api/books/start")
