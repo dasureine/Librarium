@@ -193,21 +193,7 @@
       .catch(function () { /* 拉取失败时保留现有书架，不打断用户 */ });
   }
 
-  /* ---------- 环境探测与入口按钮 ---------- */
-
-  function mountButton() {
-    if (btn) return;
-    btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'lr-uploader-btn';
-    btn.setAttribute('aria-label', '入藏新书');
-    btn.textContent = '入藏';
-    btn.addEventListener('click', openModal);
-    document.body.appendChild(btn);
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () { btn.classList.add('is-ready'); });
-    });
-  }
+  /* ---------- 环境探测与统一入口（不再自动插入悬浮按钮） ---------- */
 
   function detect() {
     fetch(API.health, { method: 'GET', cache: 'no-store' })
@@ -216,13 +202,32 @@
         return res.json();
       })
       .then(function (data) {
+        if (data && data.online === true) health = data;
+      })
+      .catch(function () { /* 线上 / 纯静态环境：后端不在线 */ });
+  }
+
+  /* 暴露给主页 Scriptorium 菜单调用：在线则唤起弹窗，返回 Promise<boolean> */
+  window.openLibrariumUploader = function () {
+    if (health && health.online === true) {
+      openModal();
+      return Promise.resolve(true);
+    }
+    return fetch(API.health, { method: 'GET', cache: 'no-store' })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (data) {
         if (data && data.online === true) {
           health = data;
-          mountButton();
+          openModal();
+          return true;
         }
+        return false;
       })
-      .catch(function () { /* 线上 / 纯静态环境：不注入任何 UI */ });
-  }
+      .catch(function () { return false; });
+  };
 
   /* ---------- 弹窗骨架 ---------- */
 
@@ -812,7 +817,8 @@
   }
 
   function finalize(data) {
-    refreshShelf();
+    /* 新书上架完成后，通知主页刷新 Atlases 与 Taxonomy 缓存数据 */
+    window.dispatchEvent(new CustomEvent('librarium:library-updated'));
 
     if (data.status === 'done' && data.result && data.result.map_url) {
       bodyEl.innerHTML =

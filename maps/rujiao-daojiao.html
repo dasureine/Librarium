@@ -64,22 +64,44 @@
       flex-wrap: wrap;
     }
 
-    .back-link {
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      color: var(--green-main);
+      border: none;
+      padding: 0;
+      background: transparent;
+      cursor: pointer;
+      transition: color 0.3s var(--ease), transform 0.3s var(--ease), filter 0.3s var(--ease);
+    }
+
+    .back-btn svg { display: block; }
+
+    .back-btn:hover {
+      color: var(--text-main);
+      transform: translateX(-2px);
+      filter: drop-shadow(0 0 6px rgba(133,168,151,0.6));
+    }
+
+    .brand-link {
       font-family: var(--font-display);
       font-size: 26px;
-      color: var(--green-main);
+      color: var(--text-main);
       text-decoration: none;
       border: none;
       padding: 4px 0;
       background: transparent;
       letter-spacing: 0.02em;
-      transition: color 0.3s var(--ease), transform 0.3s var(--ease), text-shadow 0.3s var(--ease);
+      text-shadow: 0 0 18px rgba(237, 233, 223, 0.22);
+      transition: color 0.3s var(--ease), text-shadow 0.3s var(--ease);
     }
 
-    .back-link:hover {
-      color: var(--text-main);
-      transform: translateX(-4px);
-      text-shadow: 0 0 16px rgba(133,168,151,0.55);
+    .brand-link:hover {
+      color: #f4f1ea;
+      text-shadow: 0 0 22px rgba(133, 168, 151, 0.5);
     }
 
     .title-block h1 {
@@ -720,6 +742,65 @@
       text-align: center;
     }
 
+    .submap-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .submap-btn {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      text-align: left;
+      padding: 11px 12px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-light);
+      cursor: pointer;
+      font-family: inherit;
+      text-decoration: none;
+      transition: border-color 0.2s var(--ease), background-color 0.2s var(--ease), transform 0.2s var(--ease);
+    }
+
+    .submap-btn:hover {
+      border-color: var(--green-main);
+      background-color: var(--bg-green-soft);
+      transform: translateX(3px);
+    }
+
+    .submap-btn .submap-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .submap-btn .submap-arrow {
+      font-size: 15px;
+      color: var(--green-mid);
+    }
+
+    .node-submap-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+      padding: 10px 14px;
+      background-color: var(--bg-green-soft);
+      border: 1px solid var(--green-main);
+      color: var(--green-main);
+      cursor: pointer;
+      font-family: inherit;
+      text-decoration: none;
+      font-size: 14px;
+      transition: background-color 0.2s var(--ease), color 0.2s var(--ease);
+    }
+
+    .node-submap-btn:hover {
+      background-color: var(--green-main);
+      color: #141c1a;
+    }
+
     .legend-hint {
       color: var(--text-muted);
       letter-spacing: 0.02em;
@@ -904,7 +985,10 @@
 
   <header class="topbar">
     <div class="topbar-left">
-      <a class="back-link" href="../index.html?settled=1">← Librarium</a>
+      <button class="back-btn" id="backBtn" type="button" aria-label="返回上一级">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"></path><path d="M10 7L5 12l5 5"></path></svg>
+      </button>
+      <a class="brand-link" id="brandLink" href="../index.html?settled=1" aria-label="返回首页">Librarium</a>
       <div class="title-block">
         <h1 id="pageTitle"></h1>
         <p id="pageSubtitle"></p>
@@ -1425,7 +1509,8 @@
         "label": "阿尔都塞：国家机器论"
       }
     ]
-  }
+  },
+  "subMaps": []
 };
 
     /* ============================================================
@@ -1473,6 +1558,47 @@
     const nextStepBtn = document.getElementById("nextStepBtn");
     const resetBtn = document.getElementById("resetBtn");
     const fitBtnEl = document.getElementById("fitBtn");
+    const backBtnEl = document.getElementById("backBtn");
+    const brandLinkEl = document.getElementById("brandLink");
+
+    function computeIndexBase() {
+      return MAP_DATA.parentMap ? "../../index.html" : "../index.html";
+    }
+
+    function computeHomeHref() {
+      return computeIndexBase() + "?settled=1";
+    }
+
+    function stepBack() {
+      const curtain = document.getElementById("curtain");
+      const finish = () => {
+        let sameOrigin = false;
+        try {
+          const ref = document.referrer || "";
+          if (ref) sameOrigin = new URL(ref).origin === window.location.origin;
+        } catch (e) { sameOrigin = false; }
+        if (sameOrigin && window.history.length > 1) {
+          window.history.back();
+        } else if (MAP_DATA.parentMap && MAP_DATA.parentMap.path) {
+          window.location.href = MAP_DATA.parentMap.path;
+        } else {
+          window.location.href = computeIndexBase() + "?settled=1&view=atlases";
+        }
+      };
+      if (curtain) {
+        curtain.classList.remove("settled", "revealing");
+        curtain.classList.add("covering");
+        setTimeout(finish, 650);
+      } else {
+        finish();
+      }
+    }
+
+    function renderTopbarLinks() {
+      if (brandLinkEl) brandLinkEl.setAttribute("href", computeHomeHref());
+    }
+
+    if (backBtnEl) backBtnEl.addEventListener("click", stepBack);
 
     /* 左右分屏拖动逻辑 */
     let isDraggingSplit = false;
@@ -2207,6 +2333,10 @@
             <h3>下游去向</h3>
             <div class="rel-list">${renderRelButtons(outgoing, "out")}</div>
           </div>
+
+          ${node.subMapPath ? `
+            <a class="node-submap-btn" href="${escapeHtml(node.subMapPath)}">深入本章图谱 →</a>
+          ` : ""}
         `;
 
         detailPaneEl.querySelectorAll("[data-jump-node]").forEach(btn => {
@@ -2298,6 +2428,17 @@
           <h3>全部节点索引</h3>
           ${indexButtonsHtml}
         </div>
+        ${(MAP_DATA.subMaps && MAP_DATA.subMaps.length) ? `
+          <div class="detail-section">
+            <h3>分章节图谱入口</h3>
+            <div class="submap-list">${MAP_DATA.subMaps.map(sm => `
+              <a class="submap-btn" href="${escapeHtml(sm.path)}">
+                <span class="submap-title">${escapeHtml(sm.title)}</span>
+                <span class="submap-arrow">深入 →</span>
+              </a>
+            `).join("")}</div>
+          </div>
+        ` : ""}
         <p class="guide-hint">点击节点阅读精解 · 滚轮缩放 · 拖拽移动画布</p>
       `;
 
@@ -2351,7 +2492,21 @@
       applyView();
     });
 
+    renderTopbarLinks();
     renderAll();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialNodeId = urlParams.get("node");
+    if (initialNodeId && nodeMap.has(initialNodeId)) {
+      const settleOnce = () => {
+        window.removeEventListener("librarium:settled", settleOnce);
+        focusNode(initialNodeId);
+      };
+      window.addEventListener("librarium:settled", settleOnce);
+      setTimeout(() => {
+        if (state.selectedNodeId !== initialNodeId) focusNode(initialNodeId);
+      }, 1400);
+    }
   </script>
 
   <script>
@@ -2361,6 +2516,7 @@
       function settleCurtain() {
         curtain.classList.remove("revealing", "covering");
         curtain.classList.add("settled");
+        window.dispatchEvent(new CustomEvent("librarium:settled"));
       }
 
       /* 进入页：首帧静态绘制完成后，双层 rAF 平滑启动揭幕 */

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>希腊哲学理性与本原问题知识地图 — Librarium</title>
+  <title>西方哲学史 · 第一章 — Librarium</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231c2422'/%3E%3Cg fill='none' stroke='%23ede9df' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 25 C16 21 16 18 16 15'/%3E%3Cpath d='M16 15 C12 15 9 12 8 8 C12 9.5 14.5 12 16 15'/%3E%3Cpath d='M16 15 C20 15 23 12 24 8 C20 9.5 17.5 12 16 15'/%3E%3Cpath d='M16 15 C16 12 16 10 16 8'/%3E%3C/g%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -64,22 +64,44 @@
       flex-wrap: wrap;
     }
 
-    .back-link {
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      color: var(--green-main);
+      border: none;
+      padding: 0;
+      background: transparent;
+      cursor: pointer;
+      transition: color 0.3s var(--ease), transform 0.3s var(--ease), filter 0.3s var(--ease);
+    }
+
+    .back-btn svg { display: block; }
+
+    .back-btn:hover {
+      color: var(--text-main);
+      transform: translateX(-2px);
+      filter: drop-shadow(0 0 6px rgba(133,168,151,0.6));
+    }
+
+    .brand-link {
       font-family: var(--font-display);
       font-size: 26px;
-      color: var(--green-main);
+      color: var(--text-main);
       text-decoration: none;
       border: none;
       padding: 4px 0;
       background: transparent;
       letter-spacing: 0.02em;
-      transition: color 0.3s var(--ease), transform 0.3s var(--ease), text-shadow 0.3s var(--ease);
+      text-shadow: 0 0 18px rgba(237, 233, 223, 0.22);
+      transition: color 0.3s var(--ease), text-shadow 0.3s var(--ease);
     }
 
-    .back-link:hover {
-      color: var(--text-main);
-      transform: translateX(-4px);
-      text-shadow: 0 0 16px rgba(133,168,151,0.55);
+    .brand-link:hover {
+      color: #f4f1ea;
+      text-shadow: 0 0 22px rgba(133, 168, 151, 0.5);
     }
 
     .title-block h1 {
@@ -720,6 +742,65 @@
       text-align: center;
     }
 
+    .submap-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .submap-btn {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      text-align: left;
+      padding: 11px 12px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-light);
+      cursor: pointer;
+      font-family: inherit;
+      text-decoration: none;
+      transition: border-color 0.2s var(--ease), background-color 0.2s var(--ease), transform 0.2s var(--ease);
+    }
+
+    .submap-btn:hover {
+      border-color: var(--green-main);
+      background-color: var(--bg-green-soft);
+      transform: translateX(3px);
+    }
+
+    .submap-btn .submap-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .submap-btn .submap-arrow {
+      font-size: 15px;
+      color: var(--green-mid);
+    }
+
+    .node-submap-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+      padding: 10px 14px;
+      background-color: var(--bg-green-soft);
+      border: 1px solid var(--green-main);
+      color: var(--green-main);
+      cursor: pointer;
+      font-family: inherit;
+      text-decoration: none;
+      font-size: 14px;
+      transition: background-color 0.2s var(--ease), color 0.2s var(--ease);
+    }
+
+    .node-submap-btn:hover {
+      background-color: var(--green-main);
+      color: #141c1a;
+    }
+
     .legend-hint {
       color: var(--text-muted);
       letter-spacing: 0.02em;
@@ -904,7 +985,10 @@
 
   <header class="topbar">
     <div class="topbar-left">
-      <a class="back-link" href="../index.html?settled=1">← Librarium</a>
+      <button class="back-btn" id="backBtn" type="button" aria-label="返回上一级">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"></path><path d="M10 7L5 12l5 5"></path></svg>
+      </button>
+      <a class="brand-link" id="brandLink" href="../index.html?settled=1" aria-label="返回首页">Librarium</a>
       <div class="title-block">
         <h1 id="pageTitle"></h1>
         <p id="pageSubtitle"></p>
@@ -949,461 +1033,331 @@
      * ============================================================ */
     const MAP_DATA = {
   "meta": {
-    "title": "希腊哲学理性与本原问题知识地图",
-    "subtitle": "从神话到理性：早期希腊哲学的本原学说",
-    "overview": "本书以古希腊哲学为对象，核心问题是说明理性如何逐步取代神话成为解释世界的根本方式，以及这一理性解释如何围绕本原展开。第一章借助轴心时代概念建立自然、本原、理智等范畴，第二章展开早期自然哲学的本原学说，从质料性本原推进到原则性、存在性本原，最终以逻各斯中心主义概括希腊理性传统。"
+    "title": "西方哲学史 · 第一章：希腊哲学的精神特质与范畴准备",
+    "subtitle": "从神话到理性：自然、本原与理智范畴",
+    "overview": "本章通过与中国、印度哲学的比较，说明希腊哲学具有非宗教精神与思辨精神两大特质，并界定自然、本原、宇宙、理智等范畴，为第二章本原学说提供概念工具与解释框架。"
   },
   "perspectives": [
     {
       "id": "all",
       "label": "全景互锁",
-      "legendLabel": "全景互锁",
+      "legendLabel": "本章结构",
       "lineClass": "both"
-    },
-    {
-      "id": "arche",
-      "label": "本原学说演进",
-      "legendLabel": "本原学说演进",
-      "lineClass": "primary"
-    },
-    {
-      "id": "rational",
-      "label": "理性取代神话",
-      "legendLabel": "理性取代神话",
-      "lineClass": "secondary"
     }
   ],
   "nodes": [
     {
-      "id": "n1",
+      "id": "c01n1",
       "x": 0,
       "y": 0,
       "category": "论点",
-      "title": "理性取代神话",
-      "brief": "非宗教与思辨精神取代神话",
-      "summary": "希腊哲学通过批判神话世界观，以非人格本原取代神人同形同性的众神，并以论辩、推理、证明追求纯粹知识。这一决裂奠定西方理性传统，表现为静观、辩证、演绎、理智、实践等思辨精神，其中理智作为纯粹实体统摄认知、意志和欲望。",
+      "title": "希腊哲学的非宗教精神与思",
+      "brief": "本章总纲，通过与中国、印度哲学比",
+      "coreIdea": "本章总纲，通过与中国、印度哲学比较得出希腊哲学两大特质。",
+      "summary": "本章总纲，通过与中国、印度哲学比较得出希腊哲学两大特质。。希腊哲学与宗教联系最不紧密，表达方式最为思辨，可归结为非宗教精神和思辨精神。这两条特质构成理解希腊哲学基本问题和概念的线索。",
       "subPoints": [
         {
+          "label": "比较维度",
+          "text": "从宗教联系程度和表达方式比较希腊、印度、中国哲学。"
+        },
+        {
           "label": "非宗教精神",
-          "text": "与神话世界观决裂，以非人格本原取代神，世界由自然秩序而非神的意志决定。"
+          "text": "与神话世界观决裂，以非人格本原取代神。"
         },
         {
           "label": "思辨精神",
-          "text": "以静观、辩证、演绎为方法，追求不变本原与纯粹知识，理智是最高实体。"
-        },
-        {
-          "label": "神话批判",
-          "text": "希腊神话人格化、神人同形同性、迷狂宗教精神与生成演化图式，无内在因果解释。"
-        },
-        {
-          "label": "轴心时代",
-          "text": "公元前800-200年，中国、印度、希腊同时发生精神突破，希腊表现为哲学理性。"
+          "text": "以论辩、推理、证明为说理方式，追求纯粹知识。"
         }
       ],
       "perspectivesNote": [
         {
-          "label": "理性取代神话线索",
-          "text": "本书从文明比较出发，凸显希腊哲学的非宗教与思辨特质。"
+          "label": "本书立场",
+          "text": "作者据此为全书立论框架。"
         }
-      ],
-      "coreIdea": "希腊哲学与神话决裂，以理性思辨取代神话解释世界。"
+      ]
     },
     {
-      "id": "n2",
+      "id": "c01n2",
       "x": 440,
       "y": 0,
       "category": "概念",
-      "title": "本原概念",
-      "brief": "既是基质又是原则的始基",
-      "summary": "本原（arche）兼具基质与缘由双重意义，是希腊哲学家对世界最终根据的追问。泰利斯以水为万有本原，开启早期自然哲学对本原的理性探索，从感性具体到抽象规定，本原由物理质料逐步提升为原则与存在。",
+      "title": "希腊神话的世界观",
+      "brief": "希腊哲学所脱离的原始世界观，具有",
+      "coreIdea": "希腊哲学所脱离的原始世界观，具有人格化、神人同形同性、迷狂宗教精神和生成演化图式四个特征。",
+      "summary": "希腊哲学所脱离的原始世界观，具有人格化、神人同形同性、迷狂宗教精神和生成演化图式四个特征。。希腊神话以多神崇拜解释自然与社会，神人同形同性，无自身秩序，神的意欲决定一切；奥尔弗斯教派体现迷狂精神；《神谱》展示生成演化图式。",
       "subPoints": [
         {
-          "label": "本原定义",
-          "text": "最初存在的东西，既是构成事物的基质，又是事物存在和运动的缘由或原则。"
+          "label": "人格化",
+          "text": "自然力和社会活动被人格化为众神，如日、月、雷、战争等各有专司之神。"
         },
         {
-          "label": "自然概念",
-          "text": "自然（physis）指事物运动变化的本性，而非自然事物总和，接近“本性”含义。"
+          "label": "神人同形同性",
+          "text": "神与凡人同形同性，具有人的恶行和强烈个性，世界由神的情欲和意志决定。"
         },
         {
-          "label": "范畴准备",
-          "text": "第一章建立自然、本原、宇宙等范畴，为第二章本原学说提供概念工具。"
-        }
-      ],
-      "perspectivesNote": [
+          "label": "迷狂宗教精神",
+          "text": "奥尔弗斯教派追求脱离肉身的癫狂体验，体现神话非理性一面。"
+        },
         {
-          "label": "本原问题的起点",
-          "text": "泰利斯的追问开启了早期自然哲学的核心问题。"
+          "label": "生成演化图式",
+          "text": "赫西俄德《神谱》以谱系描述世界生成，但只排列时间次序，未解释内在联系和原因。"
         }
       ],
-      "coreIdea": "本原既是万物的基质，又是其运动变化的原则。"
+      "perspectivesNote": []
     },
     {
-      "id": "n3",
+      "id": "c01n3",
       "x": 880,
       "y": 0,
-      "category": "学说",
-      "title": "米利都派",
-      "brief": "水、无定、气三本原",
-      "summary": "米利都派三哲人以单一可变的自然元素为本原：泰利斯的水以经验证据与神话图式为据；阿那克西曼德的无定作为无规定性的中性状态，以补偿原则解释生成消亡；阿那克西美尼的气兼具不定形与可感性质，以浓聚稀疏生成万物。",
+      "category": "概念",
+      "title": "自然哲学的核心概念",
+      "brief": "希腊哲学家以自然、本原、宇宙为核",
+      "coreIdea": "希腊哲学家以自然、本原、宇宙为核心概念探讨世界。",
+      "summary": "希腊哲学家以自然、本原、宇宙为核心概念探讨世界。。自然指事物运动变化的本性；本原是运动和变化的本原，兼具基质与原则；宇宙是天地万物的总和及其秩序。希腊哲学家认为自然是非人格本原，运动变化自因有序，可经验观察与理性思辨。",
       "subPoints": [
         {
-          "label": "泰利斯的水",
-          "text": "万物以湿为养料，种子潮湿，大地浮于水，经验观察与神话图式兼用。"
+          "label": "自然（physis）",
+          "text": "指事物运动变化的本性，接近“本性”含义，而非自然事物总和。"
         },
         {
-          "label": "阿那克西曼德的无定",
-          "text": "本原必须无规定性，各种性质从中分离，万物生成复归无定，补偿原则体现必然性。"
+          "label": "本原（arche）",
+          "text": "最初存在的东西，既是基质又是原则，赋予宇宙万物秩序。"
         },
         {
-          "label": "阿那克西美尼的气",
-          "text": "气稀疏为火，浓聚为风、云、水、土、石，以性质转化取代分离生成。"
+          "label": "宇宙（cosmos）",
+          "text": "天地间一切事物的总和及其秩序，是本原分化演变的产物。"
         }
       ],
-      "perspectivesNote": [
-        {
-          "label": "变化的一",
-          "text": "伊奥尼亚派开启本原问题，以单一可变本原解释世界。"
-        }
-      ],
-      "coreIdea": "米利都派以单一可变的自然元素解释世界，确立变化的一。"
+      "perspectivesNote": []
     },
     {
-      "id": "n4",
+      "id": "c01n4",
       "x": 880,
       "y": 260,
-      "category": "学说",
-      "title": "赫拉克利特",
-      "brief": "火与逻各斯，对立统一",
-      "summary": "赫拉克利特认为火是万物的外在本原，其燃烧与熄灭决定转化；逻各斯作为内在理性规律，不变且只能由思想把握。万物处于生成之中，对立面之间转化、和谐、同一、相对，即“既是自身又不是自身”，生成辩证法成为核心。",
+      "category": "论点",
+      "title": "希腊哲学思辨的特点",
+      "brief": "静观、辩证、演绎、理智、实践构成",
+      "coreIdea": "静观、辩证、演绎、理智、实践构成希腊哲学思辨精神的完整特征。",
+      "summary": "静观、辩证、演绎、理智、实践构成希腊哲学思辨精神的完整特征。。静观指向不变本原；辩证以对立统一和逻各斯中心主义为特征；演绎以几何学为样板，三段论为形式；理智（奴斯）是纯粹实体；实践以理性伦理学和公共政治为方向，但处于思辨之后。",
       "subPoints": [
         {
-          "label": "两层本原",
-          "text": "外在的火与内在的逻各斯，同一本原的内外两方面。"
+          "label": "静观",
+          "text": "哲学家静观不变本原，追求超越现实的宁静，与日神精神相关。"
         },
         {
-          "label": "逻各斯",
-          "text": "原意话语，转指理性、规律，是火的本性，不可感只能由思想把握。"
+          "label": "辩证",
+          "text": "通过对相反意见的分析综合达到统一，形成逻各斯中心主义。"
         },
         {
-          "label": "生成辩证法",
-          "text": "对立面转化、和谐、同一、相对，如河流、音调、道路等例证。"
-        }
-      ],
-      "perspectivesNote": [
+          "label": "演绎",
+          "text": "以欧几里德几何学为样板，三段论是论辩普遍形式。"
+        },
         {
-          "label": "变化的一的完成",
-          "text": "赫拉克利特将变化原则推到极致，引发巴门尼德批判。"
+          "label": "理智",
+          "text": "奴斯为纯粹实体，推动万物而不被推动，统摄灵魂活动。"
+        },
+        {
+          "label": "实践",
+          "text": "理性伦理学和政治实践，但实践层级低于思辨。"
         }
       ],
-      "coreIdea": "赫拉克利特以火与逻各斯说明万物在对立统一中生成变化。"
+      "perspectivesNote": []
     },
     {
-      "id": "n5",
+      "id": "c01n5",
       "x": 440,
       "y": 260,
-      "category": "学说",
-      "title": "数本原与理神论",
-      "brief": "数与唯一神，转向不变",
-      "summary": "毕达哥拉斯派认为一切性质可归结为数的规定性，数众多且不变，构成几何结构并生成万物；克塞诺芬尼从各民族神的相对性推出唯一、无形体、不动的神，以思想支配一切。两者使本原问题从可感事物转向超感性原则，对巴门尼德是者产生直接影响。",
+      "category": "概念",
+      "title": "哲学思辨的起点与条件",
+      "brief": "哲学源于诧异，闲暇是哲学思辨的必",
+      "coreIdea": "哲学源于诧异，闲暇是哲学思辨的必要条件。",
+      "summary": "哲学源于诧异，闲暇是哲学思辨的必要条件。。亚里士多德认为求知是人的本性，哲学思辨最初表现为诧异。希腊贵族享有闲暇，发展出职业哲学家；哲学独立于宗教和官宦阶层，促进思辨精神。",
       "subPoints": [
         {
-          "label": "数本原",
-          "text": "数的规定性比物理属性更普遍，1为点、2为线、3为面、4为体，可感形体由数构成。"
+          "label": "诧异",
+          "text": "哲学家对习以为常之事感到诧异，追根问底，产生哲学问题。"
         },
         {
-          "label": "内在矛盾",
-          "text": "毕达哥拉斯定理导致无公度性，与数本原说冲突，成为派别瓦解因素。"
+          "label": "闲暇",
+          "text": "希腊贵族无需为生计操劳，可从事纯思辨；希腊文“闲暇”派生出“学校”。"
         },
         {
-          "label": "理神论",
-          "text": "克塞诺芬尼批判神人同形同性，唯一神无形体、全视全知、以心思摆布一切。"
+          "label": "职业哲学家",
+          "text": "哲学在希腊是独立崇高的职业，与宗教和官宦分离。"
         }
       ],
-      "perspectivesNote": [
-        {
-          "label": "转向不变",
-          "text": "从变化的一到不变的一的过渡，为巴门尼德是者奠基。"
-        }
-      ],
-      "coreIdea": "数与唯一神把本原从可感事物转向超感性原则。"
+      "perspectivesNote": []
     },
     {
-      "id": "n6",
+      "id": "c01n6",
       "x": 0,
       "y": 260,
-      "category": "学说",
-      "title": "巴门尼德与芝诺",
-      "brief": "是者不生不灭，芝诺悖论",
-      "summary": "巴门尼德区分真理与意见，指出是者不能出于非是者，是不生不灭、连续、完满的理性思辨对象。思想与存在同一，把本原从感性提升为抽象存在。芝诺以二分法、阿基里斯、飞矢不动等悖论揭示运动悖论，维护不变的一。",
+      "category": "概念",
+      "title": "理智主义及其问题",
+      "brief": "理智（奴斯）作为纯粹实体，引出身",
+      "coreIdea": "理智（奴斯）作为纯粹实体，引出身心二元和一系列认识论问题。",
+      "summary": "理智（奴斯）作为纯粹实体，引出身心二元和一系列认识论问题。。阿那克萨戈拉提出心灵为万物运动本原，苏格拉底等发展理智主义。理智无形、纯粹、推动万物而不被推动，构成灵魂纯粹部分，统摄一切活动。由此产生身体与灵魂、感觉与理性的二元对立问题。",
       "subPoints": [
         {
-          "label": "是者论证",
-          "text": "是者不生不灭，因为不能生成于是者或非是者；连续充满，如滚圆球体。"
+          "label": "理智概念的起源",
+          "text": "阿那克萨戈拉首次提出心灵是万物运动本原，苏格拉底赞赏。"
         },
         {
-          "label": "批判生成辩证法",
-          "text": "巴门尼德否认对立面转化，认为“既是又不是”混淆是者与非是者，违反同一律。"
+          "label": "理智的特性",
+          "text": "无形、纯粹、推动万物而不被推动，弥漫世界而保持自身统一。"
         },
         {
-          "label": "芝诺悖论",
-          "text": "二分法、阿基里斯追龟、飞矢不动等否认运动可能，揭示连续与间断、无限与有限矛盾。"
+          "label": "身心二元问题",
+          "text": "理智主义使身体与灵魂、感觉与理性成为二元对立，引发作用与认识难题。"
         }
       ],
-      "perspectivesNote": [
-        {
-          "label": "不变的一",
-          "text": "是者成为形而上学中心范畴，逻辑规律影响亚里士多德。"
-        }
-      ],
-      "coreIdea": "巴门尼德确立不生不灭的是者，芝诺以悖论维护不变的一。"
+      "perspectivesNote": []
     },
     {
-      "id": "n7",
+      "id": "c01n7",
       "x": 0,
       "y": 520,
-      "category": "学说",
-      "title": "元素派与原子论",
-      "brief": "四根、种子与原子虚空",
-      "summary": "针对巴门尼德否认运动，元素派引入多个不可分割的物理单元：恩培多克勒以火土气水四根及爱恨动力，阿那克萨戈拉以无限种子和心灵；德谟克利特以原子和虚空为本原，原子只具形状、位置、次序，在虚空中运动结合分离。感觉性质为约定，真理只有原子与虚空。",
+      "category": "论点",
+      "title": "哲学实践精神及其限度",
+      "brief": "希腊哲学的实践精神表现在理性伦理",
+      "coreIdea": "希腊哲学的实践精神表现在理性伦理学和公共政治，但实践处于思辨之下。",
+      "summary": "希腊哲学的实践精神表现在理性伦理学和公共政治，但实践处于思辨之下。。希腊哲学家以善为价值取向，重视理性伦理，苏格拉底“德性就是知识”体现实践精神；哲学家关心城邦政治，提出“哲学家王”等理想。但希腊哲学思维秩序为个人思辨—个人实践—公众实践，政治功利性非第一位。",
       "subPoints": [
         {
-          "label": "四根与种子",
-          "text": "四根与种子作为不生不灭的多元本原，爱恨或心灵解释运动。"
+          "label": "理性伦理学",
+          "text": "人的自然本性是理性，意志和欲望应服从理智，美德来自理性。"
         },
         {
-          "label": "原子与虚空",
-          "text": "原子是充实不可分微粒，虚空是非存在但必不可少，共同解释众多与运动。"
+          "label": "政治实践",
+          "text": "哲学家以改善公众事务为己任，提出“哲学家王”、“世界公民”等观念。"
         },
         {
-          "label": "流射与约定",
-          "text": "感觉由影像流射造成，甜苦冷热等是约定，理智把握原子虚空。"
+          "label": "实践层级",
+          "text": "希腊哲学以个人思辨为最高，实践是思辨的结果和效用。"
         }
       ],
       "perspectivesNote": [
         {
-          "label": "变化的多",
-          "text": "以多元本原回应巴门尼德不变的一，完成一与多、变与不变的可能组合。"
+          "label": "对比中国哲学",
+          "text": "中国哲学将个人修养和政治实践放在首位，而希腊哲学更重思辨。"
         }
-      ],
-      "coreIdea": "元素派与原子论以多元不可分单元回应存在与运动问题。"
-    },
-    {
-      "id": "n8",
-      "x": 440,
-      "y": 520,
-      "category": "框架",
-      "title": "本原问题框架",
-      "brief": "一多与变不变的四种立场",
-      "summary": "早期自然哲学以伊奥尼亚派（变化的一）、毕达哥拉斯派（不变的多）、爱利亚派（不变的一）、元素派（变化的多）穷尽一与多、变与不变的组合。本原学说的完成标志自然哲学告一段落，而德里达指出希腊理性以二元对立一方为中心的逻各斯中心主义，构成西方形而上学传统。",
-      "subPoints": [
-        {
-          "label": "四维框架",
-          "text": "变化的一、不变的多、不变的一、变化的多，四种立场构成完整框架。"
-        },
-        {
-          "label": "本原演化",
-          "text": "从感性质料到理性思辨，从单一到众多与不变，本原概念逐步深化。"
-        },
-        {
-          "label": "逻各斯中心主义",
-          "text": "德里达对希腊哲学的批判，理性传统以二元对立一方为中心，如存在与非存在、理性与感性。"
-        }
-      ],
-      "perspectivesNote": [
-        {
-          "label": "总结与批判",
-          "text": "框架完成标志着需要问题与框架的转变，智者运动成为契机。"
-        }
-      ],
-      "coreIdea": "四种立场穷尽一与多、变与不变，构成希腊理性传统框架。"
+      ]
     }
   ],
   "edges": [
     {
-      "id": "e1",
-      "source": "n1",
-      "target": "n2",
+      "id": "c01e1",
+      "source": "c01n1",
+      "target": "c01n2",
       "perspective": "both",
-      "label": "开启本原",
+      "label": "决裂",
       "curve": 0,
       "labelT": 0.5,
-      "detail": "希腊哲学与神话决裂后，以本原概念取代神话的生成演化图式，追问世界最终根据，同时开启理性思辨传统。"
+      "detail": "希腊哲学的非宗教精神建立在对希腊神话世界观的批判与脱离之上。"
     },
     {
-      "id": "e2",
-      "source": "n2",
-      "target": "n3",
+      "id": "c01e2",
+      "source": "c01n2",
+      "target": "c01n3",
       "perspective": "both",
-      "label": "米利都派",
+      "label": "取代",
       "curve": 0,
       "labelT": 0.5,
-      "detail": "第一章建立的本原概念在早期自然哲学中得到具体化，泰利斯、阿那克西曼德、阿那克西美尼以单一可变元素解释世界。"
+      "detail": "自然哲学家以非人格本原取代神话中神人同形同性的神，提出自然、本原、宇宙等概念。"
     },
     {
-      "id": "e3",
-      "source": "n3",
-      "target": "n4",
+      "id": "c01e3",
+      "source": "c01n1",
+      "target": "c01n4",
       "perspective": "both",
-      "label": "推进变化",
+      "label": "包含",
       "curve": 0,
       "labelT": 0.5,
-      "detail": "赫拉克利特以火和逻各斯将变化原则推向极致，提出生成辩证法，认为万物在对抗中转化。"
+      "detail": "思辨精神的具体特点包括静观、辩证、演绎、理智、实践。"
     },
     {
-      "id": "e4",
-      "source": "n4",
-      "target": "n6",
+      "id": "c01e4",
+      "source": "c01n5",
+      "target": "c01n4",
       "perspective": "both",
-      "label": "批判生成",
-      "curve": 120,
-      "labelT": 0.5,
-      "detail": "巴门尼德批判赫拉克利特混淆是者与非是者，以不生不灭、连续完满的'是者'确立不变的一。"
-    },
-    {
-      "id": "e5",
-      "source": "n2",
-      "target": "n5",
-      "perspective": "both",
-      "label": "并行进路",
+      "label": "条件",
       "curve": 0,
       "labelT": 0.5,
-      "detail": "毕达哥拉斯派从数学和宗教角度提出不变的多作为本原，克塞诺芬尼以理神论为是者学说铺垫。"
+      "detail": "诧异引发哲学思考，闲暇提供必要社会条件，共同支撑思辨精神的发展。"
     },
     {
-      "id": "e6",
-      "source": "n5",
-      "target": "n6",
+      "id": "c01e5",
+      "source": "c01n3",
+      "target": "c01n4",
       "perspective": "both",
-      "label": "过渡",
+      "label": "对象",
       "curve": 0,
       "labelT": 0.5,
-      "detail": "数本原的不变性和理神论的唯一神为巴门尼德将本原抽象为是者提供直接思想资源。"
+      "detail": "自然哲学家对本原和宇宙的思考成为希腊哲学思辨的主要对象。"
     },
     {
-      "id": "e7",
-      "source": "n6",
-      "target": "n7",
+      "id": "c01e6",
+      "source": "c01n4",
+      "target": "c01n6",
       "perspective": "both",
-      "label": "回应存在",
+      "label": "体现",
       "curve": 0,
       "labelT": 0.5,
-      "detail": "元素派和原子论以多元本原及其运动解释可感世界的众多与流变，调和巴门尼德的存在规定与运动矛盾。"
+      "detail": "理智（奴斯）是希腊哲学理性精神最突出的体现，引发身心二元问题。"
     },
     {
-      "id": "e8",
-      "source": "n7",
-      "target": "n8",
+      "id": "c01e7",
+      "source": "c01n4",
+      "target": "c01n7",
       "perspective": "both",
-      "label": "完成框架",
+      "label": "延伸",
       "curve": 0,
       "labelT": 0.5,
-      "detail": "原子论代表变化的多，与前三种立场共同构成一与多、变与不变的四维框架，穷尽本原问题。"
+      "detail": "实践精神是思辨精神在伦理与政治领域的延伸，但实践层级低于思辨。"
     },
     {
-      "id": "e9",
-      "source": "n1",
-      "target": "n8",
+      "id": "c01e8",
+      "source": "c01n6",
+      "target": "c01n7",
       "perspective": "both",
-      "label": "概括批判",
-      "curve": -120,
+      "label": "统摄",
+      "curve": 0,
       "labelT": 0.5,
-      "detail": "从理性取代神话到本原学说完成，德里达以逻各斯中心主义概括希腊理性传统的结构性倾向。"
+      "detail": "理智主义要求意志和欲望服从理智，从而形成理性伦理学和实践理性。"
     }
   ],
-  "steps": [
-    {
-      "title": "步骤 1 / 6：理性取代神话与本原概念确立",
-      "description": "希腊哲学与神话决裂，以非宗教精神和思辨精神确立理性解释方式，引出本原概念作为核心问题。",
-      "activeNodes": [
-        "n1",
-        "n2"
-      ],
-      "activeEdges": [
-        "e1"
-      ]
-    },
-    {
-      "title": "步骤 2 / 6：米利都派与变化的一",
-      "description": "本原概念具体化为米利都派的单一可变本原：水、无定、气，开启变化的一的立场。",
-      "activeNodes": [
-        "n3",
-        "n4"
-      ],
-      "activeEdges": [
-        "e2",
-        "e3"
-      ]
-    },
-    {
-      "title": "步骤 3 / 6：毕达哥拉斯派与克塞诺芬尼",
-      "description": "本原追问的并行进路：毕达哥拉斯派以不变的多（数）为本原，克塞诺芬尼提出理神论，转向不变原则。",
-      "activeNodes": [
-        "n5"
-      ],
-      "activeEdges": [
-        "e5"
-      ]
-    },
-    {
-      "title": "步骤 4 / 6：巴门尼德与芝诺：不变的一",
-      "description": "巴门尼德批判生成辩证法，确立不生不灭的'是者'为不变的一；芝诺以悖论辩护，揭示运动矛盾。",
-      "activeNodes": [
-        "n6"
-      ],
-      "activeEdges": [
-        "e4",
-        "e6"
-      ]
-    },
-    {
-      "title": "步骤 5 / 6：元素派与原子论：变化的多",
-      "description": "回应巴门尼德的存在规定，元素派与原子论以多元本原解释运动与众多，形成变化的多。",
-      "activeNodes": [
-        "n7"
-      ],
-      "activeEdges": [
-        "e7"
-      ]
-    },
-    {
-      "title": "步骤 6 / 6：总结框架与逻各斯中心主义",
-      "description": "四维框架完成本原问题的可能性，德里达以逻各斯中心主义概括希腊理性传统，全书完成从理性取代神话到形而上学批判。",
-      "activeNodes": [
-        "n8"
-      ],
-      "activeEdges": [
-        "e8",
-        "e9"
-      ]
-    }
-  ],
+  "steps": [],
   "readingGuide": {
-    "coreQuestion": "本部分解决的核心问题：理性如何取代神话成为解释世界的根本方式，以及这一理性如何围绕本原展开。第一章建立自然、本原、理智等范畴，第二章把本原问题具体化为早期自然哲学的系列学说。",
-    "startNodeId": "n1",
+    "coreQuestion": "本章通过与中国、印度哲学的比较，说明希腊哲学具有非宗教精神与思辨精神两大特质，并界定自然、本原、宇宙、理智等范畴，为第二章本原学说提供概念工具与解释框架。",
+    "startNodeId": "c01n1",
     "recommendedPath": [
       {
-        "id": "n1",
-        "label": "理性取代神话"
+        "id": "c01n1",
+        "label": "希腊哲学的非宗教精神与思"
       },
       {
-        "id": "n2",
-        "label": "本原概念"
+        "id": "c01n2",
+        "label": "希腊神话的世界观"
       },
       {
-        "id": "n3",
-        "label": "米利都派"
+        "id": "c01n3",
+        "label": "自然哲学的核心概念"
       },
       {
-        "id": "n6",
-        "label": "巴门尼德与芝诺"
+        "id": "c01n4",
+        "label": "希腊哲学思辨的特点"
       },
       {
-        "id": "n8",
-        "label": "本原问题框架"
+        "id": "c01n5",
+        "label": "哲学思辨的起点与条件"
       }
     ]
-  }
+  },
+  "parentMap": {
+    "title": "西方哲学史",
+    "path": ""
+  },
+  "subMaps": []
 };
 
     /* ============================================================
@@ -1451,6 +1405,47 @@
     const nextStepBtn = document.getElementById("nextStepBtn");
     const resetBtn = document.getElementById("resetBtn");
     const fitBtnEl = document.getElementById("fitBtn");
+    const backBtnEl = document.getElementById("backBtn");
+    const brandLinkEl = document.getElementById("brandLink");
+
+    function computeIndexBase() {
+      return MAP_DATA.parentMap ? "../../index.html" : "../index.html";
+    }
+
+    function computeHomeHref() {
+      return computeIndexBase() + "?settled=1";
+    }
+
+    function stepBack() {
+      const curtain = document.getElementById("curtain");
+      const finish = () => {
+        let sameOrigin = false;
+        try {
+          const ref = document.referrer || "";
+          if (ref) sameOrigin = new URL(ref).origin === window.location.origin;
+        } catch (e) { sameOrigin = false; }
+        if (sameOrigin && window.history.length > 1) {
+          window.history.back();
+        } else if (MAP_DATA.parentMap && MAP_DATA.parentMap.path) {
+          window.location.href = MAP_DATA.parentMap.path;
+        } else {
+          window.location.href = computeIndexBase() + "?settled=1&view=atlases";
+        }
+      };
+      if (curtain) {
+        curtain.classList.remove("settled", "revealing");
+        curtain.classList.add("covering");
+        setTimeout(finish, 650);
+      } else {
+        finish();
+      }
+    }
+
+    function renderTopbarLinks() {
+      if (brandLinkEl) brandLinkEl.setAttribute("href", computeHomeHref());
+    }
+
+    if (backBtnEl) backBtnEl.addEventListener("click", stepBack);
 
     /* 左右分屏拖动逻辑 */
     let isDraggingSplit = false;
@@ -2185,6 +2180,10 @@
             <h3>下游去向</h3>
             <div class="rel-list">${renderRelButtons(outgoing, "out")}</div>
           </div>
+
+          ${node.subMapPath ? `
+            <a class="node-submap-btn" href="${escapeHtml(node.subMapPath)}">深入本章图谱 →</a>
+          ` : ""}
         `;
 
         detailPaneEl.querySelectorAll("[data-jump-node]").forEach(btn => {
@@ -2276,6 +2275,17 @@
           <h3>全部节点索引</h3>
           ${indexButtonsHtml}
         </div>
+        ${(MAP_DATA.subMaps && MAP_DATA.subMaps.length) ? `
+          <div class="detail-section">
+            <h3>分章节图谱入口</h3>
+            <div class="submap-list">${MAP_DATA.subMaps.map(sm => `
+              <a class="submap-btn" href="${escapeHtml(sm.path)}">
+                <span class="submap-title">${escapeHtml(sm.title)}</span>
+                <span class="submap-arrow">深入 →</span>
+              </a>
+            `).join("")}</div>
+          </div>
+        ` : ""}
         <p class="guide-hint">点击节点阅读精解 · 滚轮缩放 · 拖拽移动画布</p>
       `;
 
@@ -2329,7 +2339,21 @@
       applyView();
     });
 
+    renderTopbarLinks();
     renderAll();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialNodeId = urlParams.get("node");
+    if (initialNodeId && nodeMap.has(initialNodeId)) {
+      const settleOnce = () => {
+        window.removeEventListener("librarium:settled", settleOnce);
+        focusNode(initialNodeId);
+      };
+      window.addEventListener("librarium:settled", settleOnce);
+      setTimeout(() => {
+        if (state.selectedNodeId !== initialNodeId) focusNode(initialNodeId);
+      }, 1400);
+    }
   </script>
 
   <script>
@@ -2339,6 +2363,7 @@
       function settleCurtain() {
         curtain.classList.remove("revealing", "covering");
         curtain.classList.add("settled");
+        window.dispatchEvent(new CustomEvent("librarium:settled"));
       }
 
       /* 进入页：首帧静态绘制完成后，双层 rAF 平滑启动揭幕 */

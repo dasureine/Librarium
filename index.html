@@ -430,6 +430,7 @@
     }
   </style>
   <link rel="stylesheet" href="./assets/uploader.css">
+  <link rel="stylesheet" href="./assets/home-views.css">
 </head>
 <body>
   <svg class="noise" aria-hidden="true">
@@ -523,109 +524,20 @@
       </div>
     </aside>
     <section class="content">
-      <header class="masthead">
-        <h1 class="brand"><span>Librarium</span></h1>
-      </header>
-      <div class="toolbar">
-        <div id="filterGroup" class="filter-group"></div>
-        <span id="bookCount" class="book-count"></span>
+      <div class="title-screen">
+        <header class="masthead">
+          <h1 class="brand"><span>Librarium</span></h1>
+        </header>
+        <nav class="home-menu" id="homeMenu" aria-label="主菜单"></nav>
       </div>
-      <div id="bookGrid" class="book-grid"></div>
+      <div class="home-views" id="homeViews" aria-live="polite"></div>
       <footer class="site-foot">LIBRARIUM</footer>
     </section>
   </main>
 
   <script>
     (function () {
-      var allBooks = [];
-      var activeTag = "全部";
-      var filterGroupEl = document.getElementById("filterGroup");
-      var bookCountEl = document.getElementById("bookCount");
-      var bookGridEl = document.getElementById("bookGrid");
-
-      function escapeHtml(str) {
-        return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-      }
-
-      function renderFilters() {
-        var tagSet = new Set(["全部"]);
-        allBooks.forEach(function (b) { if (Array.isArray(b.tags)) b.tags.forEach(function (t) { tagSet.add(t); }); });
-        filterGroupEl.innerHTML = "";
-        var line = document.createElement("div");
-        line.className = "filter-underline";
-        filterGroupEl.appendChild(line);
-        tagSet.forEach(function (tag) {
-          var btn = document.createElement("button");
-          btn.type = "button";
-          btn.className = "filter-btn" + (tag === activeTag ? " active" : "");
-          btn.textContent = tag;
-          btn.addEventListener("click", function () { activeTag = tag; renderFilters(); renderBooks(); });
-          filterGroupEl.appendChild(btn);
-        });
-        requestAnimationFrame(positionFilterUnderline);
-      }
-
-      function positionFilterUnderline() {
-        var active = filterGroupEl.querySelector(".filter-btn.active");
-        var line = filterGroupEl.querySelector(".filter-underline");
-        if (active && line) {
-          line.style.left = active.offsetLeft + "px";
-          line.style.width = active.offsetWidth + "px";
-        }
-      }
-
-      function renderBooks() {
-        var filtered = activeTag === "全部" ? allBooks : allBooks.filter(function (b) { return Array.isArray(b.tags) && b.tags.indexOf(activeTag) !== -1; });
-        bookCountEl.textContent = String(filtered.length).padStart(2, "0") + " 卷";
-        bookGridEl.innerHTML = "";
-        if (filtered.length === 0) {
-          bookGridEl.innerHTML = '<div class="status-box">当前分类下暂无书目记录。</div>';
-          return;
-        }
-        filtered.forEach(function (book, i) {
-          var card = document.createElement("a");
-          card.className = "book-card";
-          card.href = book.url;
-          card.style.animationDelay = (2620 + i * 90) + "ms";
-          card.addEventListener("mousemove", function (e) {
-            var r = card.getBoundingClientRect();
-            card.style.setProperty("--mx", ((e.clientX - r.left) / r.width * 100) + "%");
-            card.style.setProperty("--my", ((e.clientY - r.top) / r.height * 100) + "%");
-          });
-          var tagsText = (book.tags || []).map(function (t) { return escapeHtml(t); }).join(" · ");
-          var dateText = (book.date || "").replace(/-/g, ".");
-          card.innerHTML =
-            '<div class="card-layout">' +
-              '<div class="card-index">' +
-                '<span class="card-num">' + String(i + 1).padStart(2, "0") + '</span>' +
-                '<span class="card-date">' + escapeHtml(dateText) + '</span>' +
-              '</div>' +
-              '<div class="card-body">' +
-                '<h2 class="card-title">' + escapeHtml(book.title) + '</h2>' +
-                (book.subtitle ? '<div class="card-subtitle">' + escapeHtml(book.subtitle) + '</div>' : '') +
-                '<div class="card-author">' + escapeHtml(book.author) + '</div>' +
-                '<p class="card-summary">' + escapeHtml(book.summary) + '</p>' +
-                (tagsText ? '<div class="card-tags">' + tagsText + '</div>' : '') +
-              '</div>' +
-              '<span class="card-arrow">→</span>' +
-            '</div>';
-          bookGridEl.appendChild(card);
-        });
-      }
-
-      async function init() {
-        try {
-          var res = await fetch("./books.json");
-          if (!res.ok) throw new Error("HTTP " + res.status);
-          allBooks = await res.json();
-          renderFilters();
-          renderBooks();
-        } catch (err) {
-          bookCountEl.textContent = "加载中断";
-          bookGridEl.innerHTML = '<div class="status-box"><strong>无法读取 books.json 文件。</strong><br>请使用本地服务器打开（如 <code>python -m http.server 8000</code>）或 VS Code Live Server。</div>';
-        }
-      }
-      init();
+      /* 书架卡片与筛选条已迁移至 Atlases 视图（由 assets/home-views.js 渲染） */
 
       /* 雾幕转场（纯 GPU 合成层：动画期间仅过渡 opacity 与 transform） */
       var curtain = document.getElementById("curtain");
@@ -1152,5 +1064,6 @@
     })();
   </script>
   <script src="./assets/uploader.js" defer></script>
+  <script src="./assets/home-views.js" defer></script>
 </body>
 </html>

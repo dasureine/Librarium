@@ -596,8 +596,16 @@ def stage2_chapters(job: JobState, llm: LLM, chapters: list) -> None:
         cmap.setdefault("chapter_title", ch["title"])
         map_path.write_text(json.dumps(cmap, ensure_ascii=False, indent=2), encoding="utf-8")
 
+        # 顺手用母版把本章 JSON 直接固化为独立分章地图，供整书总图下钻。
+        try:
+            chapter_html = inject_chapter_map(job.slug, ch["index"], cmap, job.title,
+                                              has_parent=not job.chapter_range)
+            job.log(f"  分章地图已生成：{chapter_html}")
+        except Exception as e:
+            job.log(f"  分章地图生成失败：{e}")
+
         job.set(done_chapters=done + 1)
-        job.log(f"  完成第 {ch['index']} 章（笔记 + 图谱 + 术语表）")
+        job.log(f"  完成第 {ch['index']} 章（笔记 + 图谱 + 术语表 + 分章地图）")
 
 
 def merge_notes_into(slug: str, title: str) -> tuple:
@@ -779,7 +787,7 @@ def normalize_map_data(data: dict, job: JobState) -> dict:
         if len(raw_brief) > 16 and raw_brief not in summary:
             summary = f"{raw_brief}。{summary}".strip()
         core_idea = str(n.get("coreIdea", "")).strip() or first_sentence(summary)
-        nodes.append({
+        node_obj = {
             "id": str(n.get("id") or f"n{i + 1}"),
             "x": 0,
             "y": 0,
@@ -796,7 +804,10 @@ def normalize_map_data(data: dict, job: JobState) -> dict:
                 {"label": str(pn.get("label", "")).strip(), "text": str(pn.get("text", "")).strip()}
                 for pn in (n.get("perspectivesNote") or []) if isinstance(pn, dict)
             ],
-        })
+        }
+        if n.get("subMapPath"):
+            node_obj["subMapPath"] = str(n["subMapPath"]).strip()
+        nodes.append(node_obj)
     nodes = build_deterministic_layout(nodes)
 
     perspective_ids = {p["id"] for p in perspectives}
@@ -850,9 +861,15 @@ def normalize_map_data(data: dict, job: JobState) -> dict:
         "recommendedPath": recommended_path,
     }
 
-    return {"meta": {"title": title, "subtitle": subtitle, "overview": overview},
-            "perspectives": perspectives, "nodes": nodes, "edges": edges, "steps": steps,
-            "readingGuide": reading_guide}
+    result = {"meta": {"title": title, "subtitle": subtitle, "overview": overview},
+              "perspectives": perspectives, "nodes": nodes, "edges": edges, "steps": steps,
+              "readingGuide": reading_guide}
+    # 整书总图下钻分章 / 分章返回整书的双向跳转字段（可选，原样透传）
+    if isinstance(data.get("subMaps"), list):
+        result["subMaps"] = data["subMaps"]
+    if isinstance(data.get("parentMap"), dict):
+        result["parentMap"] = data["parentMap"]
+    return result
 
 
 def generate_metadata(job: JobState, llm: LLM, map_data: dict) -> dict:
@@ -864,9 +881,11 @@ def generate_metadata(job: JobState, llm: LLM, map_data: dict) -> dict:
         "请基于下面的知识地图元信息，生成 books.json 所需的精炼条目。\n"
         "字段：id、title、subtitle、author、date、tags、summary、mapPath。\n"
         f"其中 id 固定为 \"{job.slug}\"，mapPath 固定为 \"./maps/{job.slug}.html\"，"
-        "date 用 YYYY-MM 格式（当前年月），tags 给 3-5 个，summary 给 80-150 字概括。\n\n"
+        "date 用 YYYY-MM 格式（当前年月），tags 仅给 1-3 个标准「一级学科/二级学科」标签"
+        "（如 哲学/分析哲学、社会学/宗教社会学、哲学/西方哲学），严禁输出具体理论概念"
+        "（如 本原、逻各斯中心主义、国家机器 等），summary 给 80-150 字概括。\n\n"
         f"【地图元信息】\n"
-        f"title: {map_data['meta']['title']}\n"
+        f"title: {job.title}\n"
         f"subtitle: {map_data['meta']['subtitle']}\n"
         f"author: {job.author}\n"
         f"overview: {map_data['meta']['overview'][:500]}\n"
@@ -878,7 +897,7 @@ def generate_metadata(job: JobState, llm: LLM, map_data: dict) -> dict:
     except Exception:
         entry = {}
     entry["id"] = job.slug
-    entry.setdefault("title", job.title)
+    entry["title"] = job.title
     entry.setdefault("author", job.author)
     entry.setdefault("subtitle", "")
     entry.setdefault("tags", [])
@@ -891,10 +910,12 @@ def generate_metadata(job: JobState, llm: LLM, map_data: dict) -> dict:
 def update_books_json(entry: dict) -> Path:
     """按 id 去重覆盖 books.json，追加新书条目（不触碰既有书目数据）。"""
     entry = dict(entry)
-    if "mapPath" in entry:
-        entry["url"] = entry.pop("mapPath")  # 首页读取的是 book.url
-    if not entry.get("url"):
-        entry["url"] = f"./maps/{entry.get('id', 'book')}.html"
+    map_path = str(entry.pop("mapPath", "") or "").strip()
+    entry["mapPath"] = map_path
+    if map_path:
+        entry["url"] = map_path  # 首页 Atlas 读取的是 book.url
+    else:
+        entry.pop("url", None)  # 整书未完篇：不生成 url，保持 mapPath 为空
     data = []
     if BOOKS_JSON.exists():
         try:
@@ -909,8 +930,13 @@ def update_books_json(entry: dict) -> Path:
     return BOOKS_JSON
 
 
-def inject_map(slug: str, map_data: dict) -> Path:
-    """把标题与 MAP_DATA 精准注入母版，生成 maps/<slug>.html。"""
+def inject_map_to(slug: str, map_data: dict, out_dir: Path = None) -> Path:
+    """把标题与 MAP_DATA 精准注入母版，生成 out_dir/<slug>.html。
+
+    仅替换 <title> 与 const MAP_DATA = { ... };，其余 HTML/CSS/JS 逐字节不动。
+    out_dir 默认 MAPS_DIR，分章地图可传入 MAPS_DIR/<book_slug> 子目录。
+    """
+    out_dir = out_dir or MAPS_DIR
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
 
     full_title = map_data["meta"]["title"]
@@ -929,9 +955,177 @@ def inject_map(slug: str, map_data: dict) -> Path:
     new_block = "const MAP_DATA = " + json.dumps(map_data, ensure_ascii=False, indent=2) + ";"
     result = template[:start] + new_block + template[end:]
 
-    MAPS_DIR.mkdir(parents=True, exist_ok=True)
-    out = MAPS_DIR / f"{slug}.html"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / f"{slug}.html"
     out.write_text(result, encoding="utf-8")
+    return out
+
+
+def inject_map(slug: str, map_data: dict) -> Path:
+    """把标题与 MAP_DATA 注入母版，生成 maps/<slug>.html（整书总图）。"""
+    return inject_map_to(slug, map_data, MAPS_DIR)
+
+
+def build_chapter_map_data(chapter_map: dict, book_title: str, parent_path: str,
+                           order: int, chapter_title: str = None,
+                           subtitle: str = "", overview: str = "") -> dict:
+    """把单章 chapter_maps/xx.json（nodes/edges）确定性包装为完整 MAP_DATA。
+
+    复用 build_deterministic_layout 计算无重叠坐标；自动注入 parentMap 指向整书总图，
+    使分章地图左上角出现「← 返回整书总图」按钮。
+    """
+    cmap = chapter_map if isinstance(chapter_map, dict) else {}
+    raw_chapter_title = str(cmap.get("chapter_title") or "").strip()
+    chapter_title = (chapter_title or raw_chapter_title or f"第{order}章").strip()
+
+    nodes = []
+    for i, n in enumerate(cmap.get("nodes") or []):
+        if not isinstance(n, dict):
+            continue
+        raw_brief = str(n.get("brief", "")).strip()
+        brief = truncate_cjk(raw_brief, 16)
+        summary = str(n.get("summary", "")).strip()
+        if len(raw_brief) > 16 and raw_brief not in summary:
+            summary = f"{raw_brief}。{summary}".strip()
+        core_idea = str(n.get("coreIdea", "")).strip() or first_sentence(summary)
+        nodes.append({
+            "id": str(n.get("id") or f"n{i + 1}"),
+            "x": 0,
+            "y": 0,
+            "category": str(n.get("category", "")).strip(),
+            "title": truncate_cjk(n.get("title"), 12),
+            "brief": brief,
+            "coreIdea": truncate_cjk(core_idea, 60),
+            "summary": summary,
+            "subPoints": [
+                {"label": str(sp.get("label", "")).strip(), "text": str(sp.get("text", "")).strip()}
+                for sp in (n.get("subPoints") or []) if isinstance(sp, dict)
+            ],
+            "perspectivesNote": [
+                {"label": str(pn.get("label", "")).strip(), "text": str(pn.get("text", "")).strip()}
+                for pn in (n.get("perspectivesNote") or []) if isinstance(pn, dict)
+            ],
+        })
+    nodes = build_deterministic_layout(nodes)
+
+    edges = []
+    for i, e in enumerate(cmap.get("edges") or []):
+        if not isinstance(e, dict):
+            continue
+        edges.append({
+            "id": str(e.get("id") or f"e{i + 1}"),
+            "source": str(e.get("source", "")).strip(),
+            "target": str(e.get("target", "")).strip(),
+            "perspective": "both",
+            "label": str(e.get("label", "")).strip(),
+            "curve": _as_int(e.get("curve"), 0),
+            "labelT": _as_float(e.get("labelT"), 0.5),
+            "detail": str(e.get("detail", "")).strip(),
+        })
+
+    start_node_id = nodes[0]["id"] if nodes else ""
+    recommended_path = [{"id": n["id"], "label": n["title"]} for n in nodes[:5]]
+    overview = overview or (first_sentence(nodes[0]["summary"]) if nodes else "")
+    title = f"{book_title} · {chapter_title}" if book_title else chapter_title
+
+    return {
+        "meta": {
+            "title": title,
+            "subtitle": subtitle,
+            "overview": overview,
+        },
+        "perspectives": [
+            {"id": "all", "label": "全景互锁", "legendLabel": "本章结构", "lineClass": "both"},
+        ],
+        "nodes": nodes,
+        "edges": edges,
+        "steps": [],
+        "readingGuide": {
+            "coreQuestion": overview,
+            "startNodeId": start_node_id,
+            "recommendedPath": recommended_path,
+        },
+        "parentMap": {"title": book_title, "path": parent_path},
+        "subMaps": [],
+    }
+
+
+def inject_chapter_map(slug: str, order: int, chapter_map: dict, book_title: str,
+                       chapter_title: str = None, subtitle: str = "",
+                       overview: str = "", has_parent: bool = True) -> Path:
+    """阶段2：每完成一章即用母版生成 maps/<slug>/chXX.html 分章地图。"""
+    parent_path = f"../{slug}.html" if has_parent else ""
+    map_data = build_chapter_map_data(
+        chapter_map, book_title, parent_path, order,
+        chapter_title=chapter_title, subtitle=subtitle, overview=overview,
+    )
+    return inject_map_to(f"ch{order:02d}", map_data, MAPS_DIR / slug)
+
+
+def list_chapter_maps(slug: str) -> list:
+    """读取 workspace/<slug>/chapter_maps/*.json，按编号排序返回 {order, chapter_map}。"""
+    maps_dir = WORKSPACE / slug / "chapter_maps"
+    result = []
+    if not maps_dir.is_dir():
+        return result
+    for f in sorted(maps_dir.glob("*.json"), key=natural_key):
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        m = re.match(r"^(\d+)_", f.stem)
+        order = int(m.group(1)) if m else 0
+        result.append({"order": order or (len(result) + 1), "chapter_map": data})
+    return result
+
+
+def build_submaps_and_chapters(slug: str, book_title: str) -> tuple:
+    """由已生成的分章图谱构造整书总图的 subMaps 与 books.json 的 chapters。"""
+    submaps = []
+    chapters = []
+    for item in list_chapter_maps(slug):
+        cmap = item["chapter_map"]
+        order = item["order"]
+        title = str(cmap.get("chapter_title") or f"第{order}章").strip()
+        summary = ""
+        nodes = cmap.get("nodes") or []
+        if nodes and isinstance(nodes[0], dict):
+            summary = first_sentence(str(nodes[0].get("summary", "")).strip())
+        submaps.append({"title": title, "path": f"{slug}/ch{order:02d}.html"})
+        chapters.append({
+            "id": f"{slug}-ch{order:02d}",
+            "order": order,
+            "title": title,
+            "summary": summary,
+            "tags": [],
+            "mapPath": f"./maps/{slug}/ch{order:02d}.html",
+        })
+    return submaps, chapters
+
+
+def stage2_partial_finish(job: JobState) -> Path:
+    """试跑/部分章节模式：仅上架已生成的分章地图，整书保持 partial 且 mapPath 为空。"""
+    _, chapters = build_submaps_and_chapters(job.slug, job.title)
+    entry = {
+        "id": job.slug,
+        "title": job.title,
+        "author": job.author,
+        "subtitle": "",
+        "date": beijing_now().strftime("%Y-%m"),
+        "tags": [],
+        "summary": "",
+        "overallStatus": "partial",
+        "mapPath": "",
+        "chapters": chapters,
+    }
+    out = update_books_json(entry)
+    try:
+        import build_index
+
+        build_index.rebuild_index()
+        job.log("已刷新 data/taxonomy.json")
+    except Exception as e:
+        job.log(f"刷新 data/taxonomy.json 失败：{e}")
     return out
 
 
@@ -966,10 +1160,21 @@ def stage4_map(job: JobState, llm: LLM) -> tuple:
 def stage4_inject(job: JobState, map_data: dict, meta_entry: dict) -> tuple:
     """阶段4b：注入模板生成 maps/<slug>.html，并上架 books.json。"""
     job.set(stage="inject")
+    submaps, chapters = build_submaps_and_chapters(job.slug, job.title)
+    map_data["subMaps"] = submaps
+    meta_entry["overallStatus"] = "complete"
+    meta_entry["chapters"] = chapters
     out = inject_map(job.slug, map_data)
     job.log(f"地图已生成：{out}")
     update_books_json(meta_entry)
     job.log("已上架 books.json")
+    try:
+        import build_index
+
+        build_index.rebuild_index()
+        job.log("已刷新 data/taxonomy.json")
+    except Exception as e:
+        job.log(f"刷新 data/taxonomy.json 失败：{e}")
     return str(out), str(NOTES_DIR / f"{job.slug}.md")
 
 
@@ -994,6 +1199,17 @@ def run_pipeline(job: JobState) -> None:
         stage2_chapters(job, llm, chapters)
         if job.cancel_event.is_set():
             raise JobCancelled()
+
+        if job.chapter_range:
+            out = stage2_partial_finish(job)
+            job.set(status="done")
+            job.result = {
+                "chapters": len(chapters),
+                "books_json": str(out),
+                "map_url": "",
+            }
+            job.log(f"试跑完成：仅保存 {len(chapters)} 章分章地图，整书总图待全书完成后生成。")
+            return
 
         stage3_overview(job, llm)
         if job.cancel_event.is_set():
