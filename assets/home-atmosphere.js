@@ -1,6 +1,7 @@
 /* Librarium 主页 · 动态氛围脚本
-   底纹大花惯性变速旋转 + 全屏斜落雨丝 + 雨丝撞击旋转大花向外弹开。
-   仅叠加动效，不改动入场动画、右上角百合、四模块切换与 ?settled=1 机制。
+   底纹大花惯性变速旋转 + 全屏斜落雨丝。
+   雨丝（含远景与主景、100% 命中）碰撞中央旋转大花、右上角几何百合与主页文字后弹开。
+   仅叠加动效，不改动入场动画、四模块切换与 ?settled=1 机制。
    核心可调常量（雨丝密度/速度/明度线宽/飞溅物理）集中在下方 CFG 对象中。 */
 (function () {
   'use strict';
@@ -126,16 +127,57 @@
   document.body.appendChild(epigraphEl);
 
   var textBoxes = [];
+  var lilyBoxes = [];
   var epigraphVisible = false;
   var textCollisionActive = false;
 
+  function collectTextRects(root, out) {
+    if (!root || !out) return;
+    var walker = document.createTreeWalker(root, 4, null); /* 4 = NodeFilter.SHOW_TEXT */
+    var node;
+    while ((node = walker.nextNode())) {
+      var txt = node.nodeValue;
+      if (!txt || !txt.replace(/\s/g, '').length) continue;
+      var range = document.createRange();
+      range.selectNodeContents(node);
+      var rects = range.getClientRects();
+      for (var i = 0; i < rects.length; i++) {
+        var r = rects[i];
+        if (r.width > 0 && r.height > 0) out.push({ x: r.left, y: r.top, w: r.width, h: r.height });
+      }
+    }
+  }
+
   function cacheTextBoxes() {
     textBoxes.length = 0;
-    if (!epigraphEl || !epigraphEl.classList.contains('is-visible')) return;
-    var ps = epigraphEl.querySelectorAll('p');
-    for (var i = 0; i < ps.length; i++) {
-      var r = ps[i].getBoundingClientRect();
-      if (r.width > 0 && r.height > 0) textBoxes.push({ x: r.left, y: r.top, w: r.width, h: r.height });
+    if (!textCollisionActive) return;
+    if (epigraphEl && epigraphEl.classList.contains('is-visible')) collectTextRects(epigraphEl, textBoxes);
+    var brand = document.querySelector('.brand');
+    if (brand) collectTextRects(brand, textBoxes);
+    var labels = document.querySelectorAll('.home-menu-item .hm-label');
+    for (var i = 0; i < labels.length; i++) collectTextRects(labels[i], textBoxes);
+  }
+
+  function cacheLilyBoxes() {
+    lilyBoxes.length = 0;
+    var lily = document.getElementById('artLily');
+    if (!lily) return;
+    var svg = lily.querySelector('svg');
+    if (!svg) return;
+    var svgRect = svg.getBoundingClientRect();
+    if (svgRect.width < 4 || svgRect.height < 4) return;
+    var maxArea = svgRect.width * svgRect.height * 0.20;
+    var shapes = svg.querySelectorAll('path, circle, ellipse, line, rect, use');
+    for (var i = 0; i < shapes.length; i++) {
+      var el = shapes[i];
+      if (el.closest && el.closest('defs')) continue;           /* 跳过模板 defs */
+      if (el.getAttribute('stroke-dasharray')) continue;        /* 跳过制图辅助虚线 */
+      if (parseFloat(el.getAttribute('opacity') || '1') < 0.2) continue; /* 跳过极淡辅助线 */
+      var r = el.getBoundingClientRect();
+      if (r.width < 2 || r.height < 2) continue;
+      if (r.width * r.height > maxArea) continue;              /* 过滤大面积容器框 */
+      var pad = 2.5;                                           /* 向内收紧 2–3px */
+      lilyBoxes.push({ x: r.left + pad, y: r.top + pad, w: r.width - pad * 2, h: r.height - pad * 2 });
     }
   }
 
@@ -145,12 +187,18 @@
     if (want !== epigraphVisible) {
       epigraphVisible = want;
       epigraphEl.classList.toggle('is-visible', want);
+    }
+    if (want !== textCollisionActive) {
+      textCollisionActive = want;
       cacheTextBoxes();
     }
-    textCollisionActive = want;
   }
 
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(cacheTextBoxes);
+  cacheLilyBoxes();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () {
+    cacheTextBoxes();
+    cacheLilyBoxes();
+  });
 
   /* ---- 核心可调常量（密度 / 速度 / 明度线宽 / 飞溅物理，后续微调集中改这里） ---- */
   var CFG = {
@@ -159,7 +207,7 @@
     countBase: 44,              /* 1920 宽基准雨丝数（1080p ≈ 44 根） */
     countMin: 38,
     countMax: 50,
-    farRatio: 0.40,             /* 远景细短雨丝占比（不碰撞） */
+    farRatio: 0.40,             /* 远景细短雨丝占比（远景同样参与 100% 碰撞） */
 
     /* —— 雨丝速度（统一放缓约 50%，静谧滞空细雨节奏） —— */
     farSpeed: [260, 380],       /* 远景下落速度 px/s（原 [520,760]） */
@@ -172,7 +220,6 @@
     nearWidth: [0.85, 1.1],     /* 主景线宽 0.85–1.1px（原 [1.0,1.45]） */
     farAlpha: [0.07, 0.13],     /* 远景透明度（原 [0.16,0.28]） */
     nearAlpha: [0.18, 0.34],    /* 主景前端透明度（原 [0.45,0.72]） */
-    collidableRatio: 0.75,       /* 主景雨丝中参与碰撞的比例 */
 
     /* —— 大花轮廓（碰撞命中半径） —— */
     lobeBase: 0.76,             /* rHit = R*(lobeBase + lobeAmp*|cos(lobeK*(θ-ωt))|) */
@@ -180,14 +227,18 @@
     lobeK: 4,
     flowerBandRatio: 0.12,      /* 外缘花瓣碰撞捕获带厚度（占 rHit 比例，0.08→0.12 放宽） */
 
-    /* —— 飞溅短水丝（弹开抛物线与慢雨节奏协调，保留高速甩更远反差） —— */
-    splashPerHit: [2, 4],
+    /* —— 飞溅短水丝（主景 2–3 道，远景 1–2 道且等比调淡调细，保留层次） —— */
+    splashPerHit: [2, 3],       /* 主景飞溅水丝数 */
+    splashPerHitFar: [1, 2],    /* 远景飞溅水丝数 */
     splashLen: [6, 18],
+    splashLenFar: [4, 12],
     splashWidth: [0.6, 1.1],
+    splashWidthFar: [0.45, 0.62],
     splashArc: [2, 6],
-    splashAlpha: [0.18, 0.34],  /* 飞溅透明度，匹配主景雨丝亮度（原硬编码 0.55–0.85） */
+    splashAlpha: [0.18, 0.34],  /* 飞溅透明度，匹配主景雨丝亮度 */
+    splashAlphaFar: [0.08, 0.16],
     splashLife: [0.35, 0.75],
-    splashGravity: 880,         /* 飞溅重力 px/s²（原 1150，略微放缓） */
+    splashGravity: 880,         /* 飞溅重力 px/s² */
     splashDrag: 1.1,            /* 空气阻力 */
     vnIdle: [35, 70],           /* 慢转法向弹开速度 px/s */
     vnSpin: [240, 360],         /* 高速离心径向增量 px/s（保持甩得更远反差） */
@@ -195,12 +246,14 @@
 
     fadeTo: 0.35,                /* 子视图/弹窗时整体透明度 */
 
-    /* —— 左下角题词文字碰撞（原子偏斜水丝，自然掠碰） —— */
-    textHitChance: 0.60,        /* 雨丝落入题词文字包围盒时的偏斜概率（55%–65%） */
-    textSplashCount: [1, 3],    /* 每次偏斜生成的极细短水丝数 */
+    /* —— 文字 / 百合碰撞（100% 命中，极细斜向短水丝，不画圆点） —— */
+    textSplashCount: [1, 3],    /* 主景每次生成的极细短水丝数 */
+    textSplashCountFar: [1, 2], /* 远景每次生成的极细短水丝数 */
     textSplashLen: [4, 9],      /* 短水丝长度 px */
     textSplashWidth: [0.55, 0.85],
+    textSplashWidthFar: [0.35, 0.55],
     textSplashAlpha: [0.16, 0.30],
+    textSplashAlphaFar: [0.07, 0.15],
     textSplashLife: [0.55, 0.95],
     textSplashGravity: 260,     /* 慢重力 px/s² */
     textSplashVx: [-36, 36],    /* 左右微偏初速度 px/s */
@@ -229,16 +282,13 @@
       len: far ? randArr(CFG.farLen) : randArr(CFG.nearLen),
       width: far ? CFG.farWidth : randArr(CFG.nearWidth),
       alpha: far ? randArr(CFG.farAlpha) : randArr(CFG.nearAlpha),
-      far: far,
-      collidable: !far && Math.random() < CFG.collidableRatio, textPassed: 0, textHitBox: -1
+      far: far
     };
   }
 
   function resetDrop(d) {
     d.x = rand(-W * 0.25, W * 1.1);
     d.y = rand(-H * 0.7, -d.len);
-    d.textPassed = 0;
-    d.textHitBox = -1;
   }
 
   function seedRain() {
@@ -254,6 +304,7 @@
     resizeCanvas();
     seedRain();
     cacheTextBoxes();
+    cacheLilyBoxes();
     if (isSettled()) applyRotation();
   });
 
@@ -264,11 +315,12 @@
     if (d.y - d.len > H + 40 || d.x > W + 60 || d.x < -80) resetDrop(d);
   }
 
-  function spawnSplash(px, py, theta) {
+  function spawnSplash(px, py, theta, far) {
     var nx = Math.cos(theta), ny = Math.sin(theta);  /* 向外法向 */
     var tx = -Math.sin(theta), ty = Math.cos(theta); /* 顺时针切向（顺大花旋转） */
     var spin = clampNum(Math.abs(omega) / DEG_HOVER, 0, 1.4);
-    var n = CFG.splashPerHit[0] + ((Math.random() * (CFG.splashPerHit[1] - CFG.splashPerHit[0] + 1)) | 0);
+    var range = far ? CFG.splashPerHitFar : CFG.splashPerHit;
+    var n = range[0] + ((Math.random() * (range[1] - range[0] + 1)) | 0);
     for (var i = 0; i < n; i++) {
       var vn = randArr(CFG.vnIdle) + spin * spin * randArr(CFG.vnSpin);
       var vt = omega * CFG.vtFactor * R * rand(0.8, 1.1);
@@ -278,29 +330,30 @@
         x: px, y: py,
         vx: nx * vn * sn + tx * vt * st + (Math.random() - 0.5) * 26,
         vy: ny * vn * sn + ty * vt * st - rand(30, 90),
-        len: randArr(CFG.splashLen),
-        width: randArr(CFG.splashWidth),
+        len: randArr(far ? CFG.splashLenFar : CFG.splashLen),
+        width: randArr(far ? CFG.splashWidthFar : CFG.splashWidth),
         arc: randArr(CFG.splashArc),
-        alpha: randArr(CFG.splashAlpha),
+        alpha: randArr(far ? CFG.splashAlphaFar : CFG.splashAlpha),
         life: randArr(CFG.splashLife),
         age: 0
       });
     }
   }
 
-  /* 题词文字偏斜：原雨丝消散，落点生成 1–3 道极细短水丝，
+  /* 文字 / 百合碰撞：原雨丝消散，落点生成 1–3 道（远景 1–2 道）极细短水丝，
      斜向上/左右微偏轻轻弹开后随慢重力下坠淡出（不画圆点）。 */
-  function spawnTextSplash(px, py) {
-    var n = CFG.textSplashCount[0] + ((Math.random() * (CFG.textSplashCount[1] - CFG.textSplashCount[0] + 1)) | 0);
+  function spawnTextSplash(px, py, far) {
+    var range = far ? CFG.textSplashCountFar : CFG.textSplashCount;
+    var n = range[0] + ((Math.random() * (range[1] - range[0] + 1)) | 0);
     for (var i = 0; i < n; i++) {
       splashes.push({
         x: px, y: py,
-        vx: randArr(CFG.textSplashVx),
+        vx: randArr(CFG.textSplashVx) * (far ? 0.8 : 1),
         vy: -randArr(CFG.textSplashVy),
         len: randArr(CFG.textSplashLen),
-        width: randArr(CFG.textSplashWidth),
+        width: randArr(far ? CFG.textSplashWidthFar : CFG.textSplashWidth),
         arc: 0,
-        alpha: randArr(CFG.textSplashAlpha),
+        alpha: randArr(far ? CFG.textSplashAlphaFar : CFG.textSplashAlpha),
         life: randArr(CFG.textSplashLife),
         age: 0,
         grav: CFG.textSplashGravity
@@ -312,27 +365,31 @@
     if (!textBoxes.length) return false;
     for (var i = 0; i < textBoxes.length; i++) {
       var b = textBoxes[i];
-      if (d.x >= b.x && d.x <= b.x + b.w && d.y >= b.y && d.y <= b.y + b.h) {
-        if (!(d.textPassed & (1 << i))) {
-          if (Math.random() < CFG.textHitChance) {
-            d.textHitBox = i;
-            d.textHitY = b.y + Math.random() * b.h;
-          }
-          d.textPassed |= (1 << i);
-        }
-      }
+      if (d.x >= b.x && d.x <= b.x + b.w && d.y >= b.y && d.y <= b.y + b.h) return true;
     }
-    if (d.textHitBox >= 0 && d.y >= d.textHitY) return true;
     return false;
   }
 
   function hitText(d) {
-    spawnTextSplash(d.x, d.y);
+    spawnTextSplash(d.x, d.y, d.far);
+    resetDrop(d);
+  }
+
+  function checkLilyHit(d) {
+    if (!lilyBoxes.length) return false;
+    for (var i = 0; i < lilyBoxes.length; i++) {
+      var b = lilyBoxes[i];
+      if (d.x >= b.x && d.x <= b.x + b.w && d.y >= b.y && d.y <= b.y + b.h) return true;
+    }
+    return false;
+  }
+
+  function hitLily(d) {
+    spawnTextSplash(d.x, d.y, d.far);
     resetDrop(d);
   }
 
   function checkFlowerHit(d) {
-    if (!d.collidable) return false;
     var dx = d.x - CX, dy = d.y - CY;
     var distSq = dx * dx + dy * dy;
     if (distSq > R * R) return false;
@@ -353,7 +410,7 @@
     var rHit = R * (CFG.lobeBase + CFG.lobeAmp * Math.abs(Math.cos(CFG.lobeK * (theta - angleRad))));
     var px = CX + Math.cos(theta) * rHit;
     var py = CY + Math.sin(theta) * rHit;
-    spawnSplash(px, py, theta);
+    spawnSplash(px, py, theta, d.far);
     resetDrop(d);
   }
 
@@ -361,7 +418,10 @@
     for (var i = 0; i < rain.length; i++) {
       var d = rain[i];
       stepDrop(d, dt);
-      if (d.collidable && settled && checkFlowerHit(d)) hitFlower(d); else if (d.collidable && textCollisionActive && checkTextHit(d)) hitText(d);
+      /* 单根雨丝每周期只撞击一次并重置；文字更靠前/更高，优先于百合与大花 */
+      if (textCollisionActive && checkTextHit(d)) hitText(d);
+      else if (settled && checkLilyHit(d)) hitLily(d);
+      else if (settled && checkFlowerHit(d)) hitFlower(d);
     }
   }
 
