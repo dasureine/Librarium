@@ -109,7 +109,7 @@
   font-family: var(--font-aux, "Cormorant Garamond", Georgia, serif);
   font-style: italic;
   font-weight: 400;
-  font-size: 14.5px;
+  font-size: 16.5px;
   line-height: 1.65;
   color: #ced7d1;
   opacity: 0;
@@ -161,11 +161,11 @@
   font-family: var(--font-display, "Pinyon Script", "Snell Roundhand", "Edwardian Script ITC", cursive);
   font-style: normal;
   font-weight: 400;
-  font-size: 36px;
+  font-size: 40px;
   line-height: 1;
   overflow: visible;
-  padding: 0.04em 0.20em 0.32em 0.06em;
-  margin: 0 0.12em 0 0;
+  padding: 0.05em 0.22em 0.36em 0.07em;
+  margin: 0 0.14em 0 0;
   color: #ede9df;
   text-shadow: 0 0 12px rgba(235, 232, 224, 0.24);
 }
@@ -174,7 +174,7 @@
   margin-top: 8px;
   font-style: normal;
   font-variant: small-caps;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.14em;
   color: #9bb0a5;
 }

@@ -1656,12 +1656,10 @@
       }
 
       if (state.perspective !== "all") {
-        MAP_DATA.edges.forEach(e => {
-          if (isEdgeInPerspective(e)) {
-            activeEdges.add(e.id);
-            activeNodes.add(e.source);
-            activeNodes.add(e.target);
-          }
+        getPerspectiveFocusedEdges(state.perspective).forEach(e => {
+          activeEdges.add(e.id);
+          activeNodes.add(e.source);
+          activeNodes.add(e.target);
         });
         return { activeNodes, activeEdges, filtering: true };
       }
@@ -1676,16 +1674,24 @@
       return edge.perspective === "both" || edge.perspective === state.perspective;
     }
 
+    function getPerspectiveFocusedEdges(perspId) {
+      if (perspId === "all") return MAP_DATA.edges;
+      const exclusive = MAP_DATA.edges.filter(e => e.perspective === perspId);
+      if (exclusive.length > 0) return exclusive;
+      return MAP_DATA.edges.filter(e => isEdgeInPerspective(e));
+    }
+
     function getEdgeStyle(edge) {
-      let stroke = "#8aa097";
-      let dash = "";
-      if (edge.perspective === "weber") {
-        stroke = "#85a897";
-      } else if (edge.perspective === "althusser") {
-        stroke = "#6d8679";
-        dash = "6 4";
+      // 按 MAP_DATA.perspectives 的 lineClass 动态映射：primary 实线苔绿，
+      // secondary 虚线深苔，其余（含 both 与未匹配视角）统一雾灰绿实线。
+      const perspective = (MAP_DATA.perspectives || []).find(p => p.id === edge.perspective);
+      if (perspective && perspective.lineClass === "primary") {
+        return { stroke: "#85a897", dash: "" };
       }
-      return { stroke, dash };
+      if (perspective && perspective.lineClass === "secondary") {
+        return { stroke: "#6d8679", dash: "6 4" };
+      }
+      return { stroke: "#8aa097", dash: "" };
     }
 
     function renderHeaderAndLegend() {
@@ -1742,7 +1748,8 @@
       } else if (state.selectedNodeId || state.hoveredNodeId) {
         const nid = state.selectedNodeId || state.hoveredNodeId;
         MAP_DATA.edges.forEach(e => {
-          if (e.source === nid || e.target === nid) {
+          if ((e.source === nid || e.target === nid) &&
+              (state.perspective === "all" || isEdgeInPerspective(e))) {
             focusEdgeIds.add(e.id);
             strongEdgeIds.add(e.id);
           }
@@ -1764,6 +1771,14 @@
       }
 
       const perspectiveFiltered = !hasFocus && state.perspective !== "all";
+      let perspectiveFocusedEdgeIds = new Set();
+      let hasExclusiveEdges = false;
+      if (perspectiveFiltered) {
+        const exclusive = MAP_DATA.edges.filter(e => e.perspective === state.perspective);
+        hasExclusiveEdges = exclusive.length > 0;
+        (hasExclusiveEdges ? exclusive : MAP_DATA.edges.filter(e => isEdgeInPerspective(e)))
+          .forEach(e => perspectiveFocusedEdgeIds.add(e.id));
+      }
 
       MAP_DATA.edges.forEach(e => {
         let cls = "";
@@ -1775,8 +1790,15 @@
           } else {
             cls = "edge-dim";
           }
-        } else if (perspectiveFiltered && !isEdgeInPerspective(e)) {
-          cls = "edge-dim";
+        } else if (perspectiveFiltered) {
+          if (perspectiveFocusedEdgeIds.has(e.id)) {
+            cls = "edge-strong";
+            showLabel = false;
+          } else if (hasExclusiveEdges && e.perspective === "both") {
+            cls = "";
+          } else {
+            cls = "edge-dim";
+          }
         }
         result.set(e.id, { cls, showLabel });
       });
@@ -1965,8 +1987,8 @@
     function renderDetailPane() {
       if (state.selectedNodeId) {
         const node = nodeMap.get(state.selectedNodeId);
-        const incoming = MAP_DATA.edges.filter(e => e.target === node.id);
-        const outgoing = MAP_DATA.edges.filter(e => e.source === node.id);
+        const incoming = MAP_DATA.edges.filter(e => e.target === node.id && isEdgeInPerspective(e));
+        const outgoing = MAP_DATA.edges.filter(e => e.source === node.id && isEdgeInPerspective(e));
 
         const subPointsHtml = node.subPoints
           .map(sp => `<li><strong>${escapeHtml(sp.label)}：</strong>${escapeHtml(sp.text)}</li>`)
@@ -2005,6 +2027,7 @@
           </div>
           <h2 class="detail-title">${escapeHtml(node.title)}</h2>
           <blockquote class="detail-core">${escapeHtml(coreIdea)}</blockquote>
+          ${node.summary && node.summary !== coreIdea ? `<p class="detail-summary">${escapeHtml(node.summary)}</p>` : ""}
 
           <div class="detail-section">
             <h3>详细展开</h3>
@@ -2066,6 +2089,68 @@
             state.selectedNodeId = btn.getAttribute("data-jump-node");
             state.selectedEdgeId = null;
             renderAll();
+          });
+        });
+        return;
+      }
+
+      const pObj = MAP_DATA.perspectives.find(p => p.id === state.perspective);
+      if (state.perspective !== "all" && pObj) {
+        const focusedEdges = getPerspectiveFocusedEdges(state.perspective);
+        const focusedNodeIds = new Set();
+        focusedEdges.forEach(e => { focusedNodeIds.add(e.source); focusedNodeIds.add(e.target); });
+        const focusedNodes = MAP_DATA.nodes.filter(n => focusedNodeIds.has(n.id));
+
+        const edgeItemsHtml = focusedEdges.map(e => {
+          const s = nodeMap.get(e.source);
+          const t = nodeMap.get(e.target);
+          return `
+            <button class="rel-item" type="button" data-jump-edge="${e.id}">
+              <div class="rel-head">
+                <span>${escapeHtml(s.title)} → ${escapeHtml(t.title)}</span>
+                <span>${escapeHtml(e.label)}</span>
+              </div>
+              <div class="rel-body">${escapeHtml(e.detail)}</div>
+            </button>
+          `;
+        }).join("");
+
+        const nodeItemsHtml = focusedNodes.map(n => `
+          <button class="node-index-btn" type="button" data-jump-node="${n.id}">
+            <span>${escapeHtml(n.title)}</span>
+            <span>${escapeHtml(n.category)}</span>
+          </button>
+        `).join("");
+
+        detailPaneEl.innerHTML = `
+          <div class="detail-kicker">分析视角 · ${escapeHtml(pObj.legendLabel || pObj.label)}</div>
+          <h2 class="detail-title">${escapeHtml(pObj.label)}</h2>
+          <blockquote class="detail-core">本视角聚焦「${escapeHtml(pObj.legendLabel || pObj.label)}」这一核心线索，共 ${focusedEdges.length} 条连线、${focusedNodes.length} 个节点。</blockquote>
+
+          <div class="detail-section">
+            <h3>本视角核心脉络</h3>
+            <div class="rel-list">${edgeItemsHtml || `<p style="font-size:12.5px;color:#7A7F7A;">本视角暂无专属连线</p>`}</div>
+          </div>
+
+          <div class="detail-section">
+            <h3>本视角涉及节点</h3>
+            ${nodeItemsHtml}
+          </div>
+
+          <p class="guide-hint">点击连线或节点查看精解 · 点击顶部「全景互锁」返回完整导览</p>
+        `;
+
+        detailPaneEl.querySelectorAll("[data-jump-edge]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            state.selectedEdgeId = btn.getAttribute("data-jump-edge");
+            state.selectedNodeId = null;
+            state.stepIndex = -1;
+            renderAll();
+          });
+        });
+        detailPaneEl.querySelectorAll("[data-jump-node]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            focusNode(btn.getAttribute("data-jump-node"));
           });
         });
         return;

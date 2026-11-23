@@ -5,6 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>西方哲学史 · 第二章 — Librarium</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231c2422'/%3E%3Cg fill='none' stroke='%23ede9df' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 25 C16 21 16 18 16 15'/%3E%3Cpath d='M16 15 C12 15 9 12 8 8 C12 9.5 14.5 12 16 15'/%3E%3Cpath d='M16 15 C20 15 23 12 24 8 C20 9.5 17.5 12 16 15'/%3E%3Cpath d='M16 15 C16 12 16 10 16 8'/%3E%3C/g%3E%3C/svg%3E" />
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg" id="lr-favicon" />
+  <script>
+    (function () {
+      var el = document.getElementById('lr-favicon');
+      if (!el) return;
+      var seg = (location.pathname || '').split('/').filter(Boolean);
+      var idx = seg.indexOf('maps');
+      var depth = idx >= 0 ? Math.max(0, seg.length - idx - 1) : 0;
+      el.href = new Array(depth + 1).join('../') + 'assets/favicon.svg';
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Pinyon+Script&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
@@ -1033,9 +1044,9 @@
      * ============================================================ */
     const MAP_DATA = {
   "meta": {
-    "title": "西方哲学史 · 第二章：早期自然哲学的本原学说",
-    "subtitle": "一与多、变与不变：本原问题的四种立场",
-    "overview": "本章展开早期希腊自然哲学对本原问题的追问，沿一与多、变与不变两条线索，依次梳理米利都派、赫拉克利特、毕达哥拉斯派、爱利亚派与元素派、原子论，最终以逻各斯中心主义概括希腊理性传统。"
+    "title": "西方哲学史 · 第二章",
+    "subtitle": "从米利都物质始基到原子与虚空",
+    "overview": "本章以“一与多、变与不变”为分类轴，排列伊奥尼亚派、毕达哥拉斯派、爱利亚派、元素派、原子论等立场。早期自然哲学围绕世界本原展开，各派相继提出、修正并回应前说，最终暴露该框架内本原理论的穷尽，为智者运动的问题转变提供契机。"
   },
   "perspectives": [
     {
@@ -1043,511 +1054,551 @@
       "label": "全景互锁",
       "legendLabel": "本章结构",
       "lineClass": "both"
+    },
+    {
+      "id": "unity-plurality",
+      "label": "一与多",
+      "legendLabel": "单一本原与众多本原",
+      "lineClass": "primary"
+    },
+    {
+      "id": "change-permanence",
+      "label": "变与不变",
+      "legendLabel": "生成本原与永恒原则",
+      "lineClass": "secondary"
     }
   ],
   "nodes": [
     {
-      "id": "c02n1",
+      "id": "n1",
       "x": 0,
       "y": 0,
-      "category": "学说",
-      "title": "水本原说（泰利斯）",
-      "brief": "泰利斯提出“水是万物的本原”，以",
-      "coreIdea": "泰利斯提出“水是万物的本原”，以经验观察和神话图式为理由，开启早期自然哲学对本原的追问。",
-      "summary": "泰利斯提出“水是万物的本原”，以经验观察和神话图式为理由，开启早期自然哲学对本原的追问。。泰利斯作为第一位哲学家，提出“世界本原是什么”的问题，并以水有滋养作用、种子潮湿等经验证据及大地漂浮于水的神话图式论证水为万物本原。",
+      "category": "感性始基",
+      "title": "伊奥尼亚物质本原",
+      "brief": "水→无定→气，单一可变始基",
+      "coreIdea": "从水到气，本原须兼具普遍性与转化能力。",
+      "summary": "泰利斯以水解释万物，但无法说明火土气；阿那克西曼德改以无定取消规定性，阿那克西美尼以气综合确定与不定。这一演进显示本原需同时具备普遍性与转化能力，但物质始基框架未能摆脱特定性质的限制。",
       "subPoints": [
         {
-          "label": "经验理由",
-          "text": "万物以湿为养料，种子具有潮湿本性。"
+          "label": "核心论证",
+          "text": "泰利斯以水为本原，理由在于万物以湿为养料、种子潮湿；阿那克西曼德以无定为本原，作为中和各种规定性的状态；阿那克西美尼以气为本原，通过浓聚稀疏生成万物。"
         },
         {
-          "label": "神话图式",
-          "text": "大地漂浮于水，天上也有水，世界原初状态只是水。"
+          "label": "关键区分",
+          "text": "经验观察与理性抽象；分离生成观与转化生成观；无定的中性状态与气的确定性质。"
         },
         {
-          "label": "哲学意义",
-          "text": "提出问题与理性解释方式，但本原选择仍受感性局限。"
+          "label": "内在两难",
+          "text": "水本原无法解释火的热性、土的干性、气的冷性；无定缺乏具体分离机制；气仍局限单一物质形态，未摆脱特定性质限制。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "亚里士多德《形而上学》983b20、《论生灭》332a19；苗力田主编《古希腊哲学》24、31页。"
         }
       ],
-      "perspectivesNote": []
+      "perspectivesNote": [
+        {
+          "label": "【原书评述】",
+          "text": "本书认为泰利斯的结论虽过时，但其问题和思维方式表现哲学思维的本质特征，被称为第一位哲学家当之无愧。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "后世学界常以“物活论”概括伊奥尼亚派的自然观，但这一标签容易简化其从神话到理性的过渡，应关注其本原概念的内在张力。"
+        },
+        {
+          "label": "【跨章锚点】",
+          "text": "为赫拉克利特以火与逻各斯解决单一物质本原的转化机制问题提供直接前提，并在后文被芝诺以运动悖论批评。"
+        }
+      ]
     },
     {
-      "id": "c02n2",
+      "id": "n2",
       "x": 440,
       "y": 0,
-      "category": "学说",
-      "title": "无定说（阿那克西曼德）",
-      "brief": "阿那克西曼德以“无定”为万物本原",
-      "coreIdea": "阿那克西曼德以“无定”为万物本原，以无规定性调和多种性质，并提出补偿原则解释生成与消亡。",
-      "summary": "阿那克西曼德以“无定”为万物本原，以无规定性调和多种性质，并提出补偿原则解释生成与消亡。。针对水本原无法解释火、土、气等性质，阿那克西曼德认为本原必须没有任何规定性的“无定”，万物从无定分离而生，复归无定而消，生成与消亡构成必然循环。",
+      "category": "逻辑本体",
+      "title": "赫拉克利特逻各斯",
+      "brief": "活火与逻各斯；对立统一",
+      "coreIdea": "火为外在本原，逻各斯为内在本原，生成即对立统一。",
+      "summary": "赫拉克利特以火为本原，区分可灭的活火与不变的内在本原逻各斯。逻各斯支配火的不足与多余，生成辩证法表现为事物既是自身又不是自身。这一观点既回应本原的转化问题，也引出巴门尼德对变化的否认。",
       "subPoints": [
         {
-          "label": "对水本原的批评",
-          "text": "水本原只能解释湿性，不能解释热性、干性、冷性。"
+          "label": "核心论证",
+          "text": "火是万物本原，通过不足与多余实现循环转化；逻各斯作为说出的道理兼原理，不可感而由思想发现；生成辩证法以 A 既是自身又不是自身表达对立统一。"
         },
         {
-          "label": "无定性质",
-          "text": "无定是各种规定性的中性状态，等同原初混沌。"
+          "label": "关键区分",
+          "text": "外在本原（火的形态）与内在本原（原则）；火的燃烧与熄灭；转化、和谐、同一、相对四类生成关系。"
         },
         {
-          "label": "补偿原则",
-          "text": "生成是对无定的损害，消亡是补偿，表达必然性与因果观念。"
+          "label": "内在两难",
+          "text": "逻各斯适用万物却只归于火的本性，原文未完全解决；生成辩证法被后世形式逻辑以矛盾律否定。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "《西方哲学原著选读》上册21、23、25、26页；苗力田主编《古希腊哲学》37、46页。"
         }
       ],
-      "perspectivesNote": []
+      "perspectivesNote": [
+        {
+          "label": "【原书评述】",
+          "text": "本书认为这种本原观比米利都派更复杂，没有简单地把本原归结为某一种变化状态；并指出赫拉克利特并没有把逻各斯看作与火不同的本原，而是同一本原的内外两方面。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "黑格尔在《哲学史讲演录》中将赫拉克利特的生成思想视为辩证法的开端，但这一解读常被批评为将古代对立思想纳入近代辩证法框架。"
+        },
+        {
+          "label": "【跨章锚点】",
+          "text": "巴门尼德直接批评其“既是又不是”混淆是者与非是者，柏拉图将其限定于感觉对象，亚里士多德以矛盾律否定其可能性。"
+        }
+      ]
     },
     {
-      "id": "c02n3",
+      "id": "n3",
       "x": 880,
       "y": 0,
-      "category": "学说",
-      "title": "气本原说（阿那克西美尼）",
-      "brief": "阿那克西美尼主张气为万物本原，以",
-      "coreIdea": "阿那克西美尼主张气为万物本原，以气的浓聚与稀疏解释万物转化，兼具无定性和特定性质。",
-      "summary": "阿那克西美尼主张气为万物本原，以气的浓聚与稀疏解释万物转化，兼具无定性和特定性质。。气本原综合了水的特定性质与无定的不定形，通过浓聚稀疏生成火、风、云、水、土、石，以冷热对立和运动程度说明转化，是典型的转化生成观。",
+      "category": "数理始基",
+      "title": "毕达哥拉斯数本原",
+      "brief": "不变的多；几何结构",
+      "coreIdea": "数是不变的多，先于事物并构成几何结构。",
+      "summary": "毕达哥拉斯派将灵魂净化与数思辨结合，主张数是众多且不变的本原。数的规定性比物理属性更普遍，数字先于事物并由点线面体产生可感形体。但无公度边长的发现与数本原相矛盾，动摇其基础。",
       "subPoints": [
         {
-          "label": "气的双重特征",
-          "text": "保留无定的无限不定形，同时具有冷热等可感性质。"
+          "label": "核心论证",
+          "text": "数是不变的多，数的规定性比物理属性更普遍；数字先于事物，由点、线、面、体产生可感形体与水火气土；灵魂是和谐，哲学首要对象是数。"
         },
         {
-          "label": "生成机制",
-          "text": "气稀疏为火，浓聚依次为风、云、水、土、石。"
+          "label": "关键区分",
+          "text": "信条派与数理派；数学比例、对立、类比三类规定性；抽象数字单元与有体积的物理质点。"
         },
         {
-          "label": "与分离生成观对照",
-          "text": "用性质转化取代无定的分离生成。"
+          "label": "内在两难",
+          "text": "毕达哥拉斯定理要求的无公度边长与数本原说中一切线段有公度相矛盾，无理数缺位使数本原说理由被否认。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "《西方哲学原著选读》上册18-19页；亚里士多德《形而上学》1083b10。"
         }
       ],
-      "perspectivesNote": []
+      "perspectivesNote": [
+        {
+          "label": "【原书评述】",
+          "text": "亚里士多德批评这种观点混淆了抽象数字单元和有体积的物理质点；本书认为毕达哥拉斯派对世界几何结构的思考意义不亚于伊奥尼亚派对世界生成过程的思考。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "数学史家常将无理数的发现视为希腊数学的第一次基础危机，这一危机直接冲击了早期数本原论，也为柏拉图以后的数学本体论转型埋下伏笔。"
+        },
+        {
+          "label": "【跨章锚点】",
+          "text": "与伊奥尼亚派单一可变的本原构成直接对立，为爱利亚派以理性原则取代感性本原提供中间形态。"
+        }
+      ]
     },
     {
-      "id": "c02n4",
+      "id": "n4",
       "x": 880,
       "y": 260,
-      "category": "学说",
-      "title": "火本原与逻各斯（赫拉克利",
-      "brief": "赫拉克利特以永恒的活火为外在本原",
-      "coreIdea": "赫拉克利特以永恒的活火为外在本原，以逻各斯为内在原则，主张万物在火与万物的循环转化中生成。",
-      "summary": "赫拉克利特以永恒的活火为外在本原，以逻各斯为内在原则，主张万物在火与万物的循环转化中生成。。火有燃烧与熄灭的活动状态，外在本原是可灭的形态，内在本原是永恒不变的逻各斯，决定火的运动分寸，支配万物转化。逻各斯与火是同一本原的内外两方面，只有思想能认识隐藏的逻各斯。",
+      "category": "理神原则",
+      "title": "克塞诺芬尼理神论",
+      "brief": "反神人同形；绝对神",
+      "coreIdea": "批判神人同形同性，确立非人格的绝对神原则。",
+      "summary": "克塞诺芬尼指出各民族按自己形象想象神，神人同形同性论导致荒谬性。他提出唯一、绝对、普遍、不动的神，以心思摆布一切，本书将这一传统称为理神论，为巴门尼德的“是者”概念准备原则意义上的本原。",
       "subPoints": [
         {
-          "label": "两层本原",
-          "text": "外在的火形态与内在的世界秩序原则。"
+          "label": "核心论证",
+          "text": "神人同形同性论使神的观念相对化，必然荒谬；唯一的神绝对、普遍、无人的形体，全视全知全闻，以心思摆布一切，静止不动。"
         },
         {
-          "label": "逻各斯",
-          "text": "原意话语，转指理性、规律，是火的本性，不可感只能由思想把握。"
+          "label": "关键区分",
+          "text": "理神论（deism）与有神论（theism）；神的绝对普遍性与神话观念的相对性；原则意义的神与人格神。"
         },
         {
-          "label": "火的转化",
-          "text": "火转化为万物是消耗熄灭，万物归火是充裕燃烧。"
+          "label": "内在两难",
+          "text": "理神论仍沿用神的名号，缺乏清晰哲学范畴；非人格原则与神话传统之间留有未消解张力。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "《西方哲学原著选读》上卷29-30页。"
         }
       ],
-      "perspectivesNote": []
+      "perspectivesNote": [
+        {
+          "label": "【原书评述】",
+          "text": "本书指出希腊哲学家所说的神都是统摄世界万物的、非人格的原则、原因或实体，是人的理智所能认识的最高对象，并将这一传统称为理神论。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "当代宗教学者常讨论克塞诺芬尼的反神话立场是否意味着无神论，但更多解读认为其目标是净化神概念，为哲学一神论开辟道路。"
+        },
+        {
+          "label": "【跨章锚点】",
+          "text": "为巴门尼德将“是者”作为最高原则提供神学—形而上学过渡，爱利亚派的理性一元论由此展开。"
+        }
+      ]
     },
     {
-      "id": "c02n5",
+      "id": "n5",
       "x": 440,
       "y": 260,
-      "category": "概念",
-      "title": "生成辩证法",
-      "brief": "赫拉克利特提出万物处于生成变化中",
-      "coreIdea": "赫拉克利特提出万物处于生成变化中，对立面之间具有转化、和谐、同一、相对关系，表达为“既是自身又不是自身”。",
-      "summary": "赫拉克利特提出万物处于生成变化中，对立面之间具有转化、和谐、同一、相对关系，表达为“既是自身又不是自身”。。生成中的事物处于A与B之间，既是A又是B。赫拉克利特以河流、颜色、音调、道路等例证说明转化、和谐、同一、相对四种关系，形成对立统一的辩证关系，成为后来哲学家争论的焦点。",
+      "category": "存在本体",
+      "title": "巴门尼德是者",
+      "brief": "真理之路；是者不动",
+      "coreIdea": "从“是”动词确立不生不灭、连续完满的是者。",
+      "summary": "巴门尼德借正义女神区分真理之路与意见之路，从“是”动词的表述与存在功能论证思想与存在同一。他规定是者不生不灭、连续、完满，批判赫拉克利特混淆是者与非是者，将早期本原论推向理性一元论高峰。",
       "subPoints": [
         {
-          "label": "转化关系",
-          "text": "事物不断向对立面转化，如人不能两次踏入同一条河。"
+          "label": "核心论证",
+          "text": "“是”动词兼有表述与存在功能，故思想与存在同一；是者不生不灭，因生成只可能由是者或非是者，二者皆不可能；是者连续、完满、如同滚圆球体。"
         },
         {
-          "label": "和谐关系",
-          "text": "对立性质共存产生和谐，如不同音调造成乐曲。"
+          "label": "关键区分",
+          "text": "真理之路与意见之路；系动词用法与存在用法；是者与非是者；不生与不灭的相互推导。"
         },
         {
-          "label": "同一关系",
-          "text": "对立面是同一事物不同方面，如圆周上起点终点。"
+          "label": "内在两难",
+          "text": "本书批评其混淆主观和客观，“是”的意义过于笼统；是者作为球体与连续完满的抽象规定之间存在张力。"
         },
         {
-          "label": "相对关系",
-          "text": "事物性质因评判标准不同而不同，如海水对鱼有益对人有毒。"
+          "label": "原典锚点",
+          "text": "《西方哲学原著选读》上卷31-34页。"
         }
       ],
       "perspectivesNote": [
         {
-          "label": "巴门尼德的批判",
-          "text": "巴门尼德认为这种观点混淆是者与非是者，违反同一律。"
+          "label": "【原书评述】",
+          "text": "本书认为巴门尼德的思辨和论辩达到早期自然哲学最高水平，“是者”后来成为形而上学中心范畴。"
         },
         {
-          "label": "后世评价",
-          "text": "后人多从中发掘辩证法源头。"
+          "label": "【学术延伸】",
+          "text": "海德格尔将巴门尼德的“是”解读为存在本身，批判形而上学对存在的遗忘，这一诠释构成现象学存在论的重要起点。"
+        },
+        {
+          "label": "【跨章锚点】",
+          "text": "对赫拉克利特的批判构成变与不变之争的顶点；芝诺悖论继而以反证方式维护是者不变。"
         }
       ]
     },
     {
-      "id": "c02n6",
+      "id": "n6",
       "x": 0,
       "y": 260,
-      "category": "学说",
-      "title": "数本原说（毕达哥拉斯派）",
-      "brief": "毕达哥拉斯派主张数是万物的本原，",
-      "coreIdea": "毕达哥拉斯派主张数是万物的本原，数众多且不变，以数的规定性说明事物性质与和谐。",
-      "summary": "毕达哥拉斯派主张数是万物的本原，数众多且不变，以数的规定性说明事物性质与和谐。。与伊奥尼亚派相反，毕达哥拉斯派认为一切事物性质都可归结为数的规定性，数字先于事物存在并构成几何结构，1是点、2是线、3是面、4是体。灵魂是和谐，哲学是爱智慧，智慧即把握数的本性。",
+      "category": "悖论诘难",
+      "title": "芝诺运动悖论",
+      "brief": "二分法、阿基里、飞矢",
+      "coreIdea": "以四个悖论否认运动，暴露连续与间断矛盾。",
+      "summary": "芝诺为维护巴门尼德，针对伊奥尼亚派变化观提出二分法、阿基里与龟、飞矢不动、一倍时间等于一半时间四个悖论。前三个可用无穷收敛数列表示，但微积分极限概念预设相反前提，未解决对立面统一。",
       "subPoints": [
         {
-          "label": "数的普遍性",
-          "text": "数的规定性比物理属性更普遍，事物不能没有数的规定性。"
+          "label": "核心论证",
+          "text": "四个论证分别从到达、追赶、瞬间位置、时间比较否认运动可能性；悖论方法揭示连续与间断、无限与有限、整体与部分的矛盾。"
         },
         {
-          "label": "几何构造",
-          "text": "从点线面体产生可感形体，再产生火土气水。"
+          "label": "关键区分",
+          "text": "二分法、阿基里与龟、飞矢不动、一倍时间等于一半时间四个悖论的不同针对性；悖论方法与正面论证。"
         },
         {
-          "label": "内在矛盾",
-          "text": "毕达哥拉斯定理导致无公度性，与数本原说冲突，成为派别瓦解因素。"
+          "label": "内在两难",
+          "text": "第四个悖论被视为数字游戏；前三个可用无穷收敛数列表示，但微积分极限概念预先设定了相反前提，未真正回答连续性、间断性等对立面如何统一。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "《西方哲学原著选读》上卷34-36页；柏拉图《巴门尼德篇》转述。"
         }
       ],
       "perspectivesNote": [
         {
-          "label": "亚里士多德批评",
-          "text": "混淆抽象数字单元与有体积的物理质点。"
+          "label": "【原书评述】",
+          "text": "本书指出芝诺悖论包含深刻哲学意义，不能仅视为诡辩；亚里士多德推芝诺为辩证法创始者。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "罗素将芝诺悖论看作是无限集合理论的先驱，但对无穷收敛数列的数学解决是否触及运动本性问题，分析哲学内部仍存争论。"
+        },
+        {
+          "label": "【跨章锚点】",
+          "text": "直接针对伊奥尼亚派的变化本原观，间接维护巴门尼德的不变的一，将一与多、变与不变的矛盾逼至极端。"
         }
       ]
     },
     {
-      "id": "c02n7",
+      "id": "n7",
       "x": 0,
       "y": 520,
-      "category": "学说",
-      "title": "理神论（克塞诺芬尼）",
-      "brief": "克塞诺芬尼批判神人同形同性论，主",
-      "coreIdea": "克塞诺芬尼批判神人同形同性论，主张唯一、不变、无形体的神，开创非人格神的理神论传统。",
-      "summary": "克塞诺芬尼批判神人同形同性论，主张唯一、不变、无形体的神，开创非人格神的理神论传统。。从各民族神的相对性推出神人同形同性的荒谬，提出唯一神无形体、全视全知全闻、以思想支配一切、静止不动。神是最高原则的代名词，是理神论（deism）肇始。",
+      "category": "多元动力",
+      "title": "恩培多克勒四根说",
+      "brief": "四根、爱恨、同类相知",
+      "coreIdea": "四根加爱恨动力，以流射说解释同类相知。",
+      "summary": "恩培多克勒以火土气水四根为本原，万物因四根组合与分离而生成消失；四根自身无分合能力，需爱与恨作为外部动力。其流射说主张同类相知，人由四根构成，同类根相触产生感觉，但未区分感觉与思想。",
       "subPoints": [
         {
-          "label": "对神话的批判",
-          "text": "埃塞俄比亚人的神黑皮肤扁鼻子，特拉基人的神蓝眼睛红头发，动物若有手也会造出动物神。"
+          "label": "核心论证",
+          "text": "四根不生不灭，组合生成、分离消失；爱恨为外部动力，被赋予道德审美价值；流射说解释同类相知，感觉由同类根相触产生。"
         },
         {
-          "label": "唯一神特征",
-          "text": "无形体、全视全知、以心思摆布一切、保持同一位置。"
+          "label": "关键区分",
+          "text": "四根与爱恨动力；同类相知与异类相知；清晰感觉（思想）与无知；未被区分的因素。"
         },
         {
-          "label": "理神论",
-          "text": "神是非人格的原则，区别于有神论崇拜的人格神。"
+          "label": "内在两难",
+          "text": "四根无分合能力，需外在动力，但爱恨本身仍是原则而非实体，动力来源不明确；流射说把认识归结为感觉，未区分感觉与思想。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "《西方哲学原著选读》上卷43-45页；亚里士多德《形而上学》985a8、1000b6。"
         }
       ],
-      "perspectivesNote": []
+      "perspectivesNote": [
+        {
+          "label": "【原书评述】",
+          "text": "亚里士多德认为恩培多克勒首次以善和恶为本原；本书指出恩培多克勒未区分感觉和思想，流射说把认识归结为感觉。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "现代科学史常将四根说视为前化学的元素论，但其动力因与质料因的二元结构更接近亚里士多德四因说的雏形。"
+        },
+        {
+          "label": "【跨章锚点】",
+          "text": "与阿那克萨戈拉的同类/异类相知构成直接对立，共同推进元素派在认识论上的分化。"
+        }
+      ]
     },
     {
-      "id": "c02n8",
+      "id": "n8",
       "x": 440,
       "y": 520,
-      "category": "学说",
-      "title": "“是者”学说（巴门尼德）",
-      "brief": "巴门尼德以“是者”为不变的一，通",
-      "coreIdea": "巴门尼德以“是者”为不变的一，通过逻辑思辨规定其不生不灭、连续、完满，区分真理与意见。",
-      "summary": "巴门尼德以“是者”为不变的一，通过逻辑思辨规定其不生不灭、连续、完满，区分真理与意见。。巴门尼德区分真理之路与意见之路，指出“是者不是，非是者必定是”不可能。是者不生不灭、连续不可分割、完满如球体。思想与存在同一。他是爱利亚派主要代表，把本原从感性对象提升为理性思辨对象。",
+      "category": "精神能动",
+      "title": "阿那克萨戈拉种子与心灵",
+      "brief": "种子、心灵、异类相知",
+      "coreIdea": "种子同质无限，心灵为纯粹精神本原，感觉由相反者产生。",
+      "summary": "阿那克萨戈拉以种子为万物本原，种子在数量上无限多、体积细微、种类与可感性质相同。他另设心灵为独立纯粹的精神本原，在事物之外起作用。认识论上主张异类相知，感觉由相反者产生，思想可作相反判断，比流射说更接近现代认识论。",
       "subPoints": [
         {
-          "label": "真理与意见",
-          "text": "理智把握真理对象，感觉得到不可靠意见。"
+          "label": "核心论证",
+          "text": "种子性质与事物可感性质相同，由原初未分化整体分化而来；心灵为纯精神本原，外在独立，弥漫世界；异类相知：由热知冷，感觉软弱，思想可作相反判断。"
         },
         {
-          "label": "是者论证",
-          "text": "是者不能生成于是者或非是者，因此不生不灭；是者连续充满，是滚圆球体。"
+          "label": "关键区分",
+          "text": "种子与元素；心灵与灵魂；心灵（Mind）与理智（Intellect）；同类相知与异类相知。"
         },
         {
-          "label": "与赫拉克利特对立",
-          "text": "否认对立面转化，批判“一切都朝向反面”混淆是者与非是者。"
+          "label": "内在两难",
+          "text": "种子种类无限，难以解释统一；心灵作为绝对概念长期无可匹配；感觉与思想的关系表达语焉不详。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "《西方哲学原著选读》上卷38-40页；苗力田主编《古希腊哲学》152-153页。"
         }
       ],
       "perspectivesNote": [
         {
-          "label": "对后世影响",
-          "text": "是者成为形而上学中心范畴，其逻辑规律影响亚里士多德。"
+          "label": "【原书评述】",
+          "text": "本书指出心灵是第一个表示独立的、纯粹的精神的概念；并认为异类相知比恩培多克勒的流射说更接近现代认识论立场。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "亚里士多德认为阿那克萨戈拉的心灵是理性神，但未能贯穿其宇宙论，后世研究者常将此看作精神与物质分离的首次尝试。"
+        },
+        {
+          "label": "【跨章锚点】",
+          "text": "心灵概念与巴门尼德的是者并行，为柏拉图分离的理念世界和亚里士多德的纯形式提供先驱。"
         }
       ]
     },
     {
-      "id": "c02n9",
+      "id": "n9",
       "x": 880,
       "y": 520,
-      "category": "概念",
-      "title": "芝诺悖论",
-      "brief": "芝诺以四个悖论否认运动可能性，揭",
-      "coreIdea": "芝诺以四个悖论否认运动可能性，揭示连续与间断、无限与有限的矛盾，维护巴门尼德学说。",
-      "summary": "芝诺以四个悖论否认运动可能性，揭示连续与间断、无限与有限的矛盾，维护巴门尼德学说。。芝诺提出二分法、阿基里斯、飞矢不动、一倍时间等四个悖论，针对变化本原观，论证运动不可能。悖论触及数学分析极限概念的基础，深化一与多、变与不变的讨论。",
+      "category": "微观折中",
+      "title": "原子论：原子与虚空",
+      "brief": "原子、虚空、流射约定",
+      "coreIdea": "原子充实不可分，虚空为众多和运动条件。",
+      "summary": "留基波和德谟克利特以原子和虚空为本原，原子是充实的最小微粒，虚空是非存在却为众多和运动的条件。原子漩涡运动被称作必然性但实为偶然，感觉论则流射说与约定论并存，最终区分感觉与理智，暴露原子论的内在两难。",
       "subPoints": [
         {
-          "label": "二分法",
-          "text": "到达目的地前先完成一半，再一半，无穷分割，永远达不到。"
+          "label": "核心论证",
+          "text": "充实可分割，分割需虚空，故原子与虚空为本原；无数原子在漩涡运动中结合分离；感觉有流射说与约定论两面，理智真理关于原子虚空，感觉把握印象。"
         },
         {
-          "label": "阿基里斯追龟",
-          "text": "每次追到起点时乌龟又前进一段，无穷逼近，永远赶不上。"
+          "label": "关键区分",
+          "text": "原子与虚空；不可分性与可分割性；必然性与偶然原因；流射说与约定论；感觉与理智。"
         },
         {
-          "label": "飞矢不动",
-          "text": "每一时刻箭矢占据一个位置，因此静止。"
+          "label": "内在两难",
+          "text": "承认虚空为非存在违背爱利亚派存在原则；必然性若与偶然原因对立则不能成立；流射说与约定论相互矛盾；原子数学特征不能解释物理运动。"
         },
         {
-          "label": "哲学意义",
-          "text": "涉及连续与间断、无限与有限，推进运动、数学和逻辑学思考。"
+          "label": "原典锚点",
+          "text": "《西方哲学原著选读》上卷51页；苗力田主编《古希腊哲学》165-166页；亚里士多德《论灵魂》405a12。"
         }
       ],
       "perspectivesNote": [
         {
-          "label": "亚里士多德评价",
-          "text": "推芝诺为辩证法创始者。"
+          "label": "【原书评述】",
+          "text": "本书指出原子论者面临难题：要么承认本原只是存在而放弃虚空，要么坚持虚空而承认本原也可以是非存在；早期原子论者对原子性质的抽象思辨阻碍了经验研究。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "近代机械论原子论复兴了德谟克利特的原型，但伽利略与笛卡尔区分第一性质与第二性质的路径仍未能摆脱约定论与流射说的紧张。"
+        },
+        {
+          "label": "【跨章锚点】",
+          "text": "原子论综合了存在不可分与虚空，试图穷尽一多与变不变的框架，但内在两难为智者运动的问题转变提供直接契机。"
         }
       ]
-    },
-    {
-      "id": "c02n10",
-      "x": 880,
-      "y": 780,
-      "category": "学说",
-      "title": "元素派（恩培多克勒四根说",
-      "brief": "元素派把本原归结为多种不可分割的",
-      "coreIdea": "元素派把本原归结为多种不可分割的物理单元，以爱恨或心灵解释运动，提出同类相知或异类相知的认识论。",
-      "summary": "元素派把本原归结为多种不可分割的物理单元，以爱恨或心灵解释运动，提出同类相知或异类相知的认识论。。恩培多克勒以火、土、气、水四根为万物本原，爱恨作为动力，四根不生不灭，提出流射说同类相知。阿那克萨戈拉以无限多、同质体种子为万物本原，设定心灵为独立的纯粹精神，主张异类相知，感觉与思想对立。",
-      "subPoints": [
-        {
-          "label": "四根说",
-          "text": "万物因四根组合生成、分离消失，爱恨推动根分合。"
-        },
-        {
-          "label": "种子说",
-          "text": "种子与可感性质相同，数量无限多，种类与可感性质对应。"
-        },
-        {
-          "label": "心灵",
-          "text": "第一个独立纯粹的精神概念，外在独立、无形无性质。"
-        },
-        {
-          "label": "认识论",
-          "text": "恩培多克勒同类相知流射说；阿那克萨戈拉异类相知，思想引导感觉。"
-        }
-      ],
-      "perspectivesNote": []
-    },
-    {
-      "id": "c02n11",
-      "x": 440,
-      "y": 780,
-      "category": "学说",
-      "title": "原子论（德谟克利特）",
-      "brief": "原子论以原子和虚空为万物本原，用",
-      "coreIdea": "原子论以原子和虚空为万物本原，用原子形状、位置、次序解释世界，提出流射说与约定论解释感觉。",
-      "summary": "原子论以原子和虚空为万物本原，用原子形状、位置、次序解释世界，提出流射说与约定论解释感觉。。留基波和德谟克利特认为原子是充实不可分的最小微粒，虚空是非存在但必不可少。原子在虚空中漩涡运动，因形状不同结合分离。灵魂是精细球形原子。感觉由影像流射造成，但感觉性质是约定，只有原子和虚空真实。",
-      "subPoints": [
-        {
-          "label": "原子与虚空论证",
-          "text": "可感事物众多变动要求充实可分割，虚空提供间隙和运动可能。"
-        },
-        {
-          "label": "原子性质",
-          "text": "只具形状、位置、次序，属几何学性质而非物理性质。"
-        },
-        {
-          "label": "流射与约定",
-          "text": "影像流射造成感觉印象；甜苦冷热等是约定，真理只原子虚空。"
-        },
-        {
-          "label": "理智与感觉",
-          "text": "理智把握原子虚空，感觉把握印象，印象不是真理但不违反真理。"
-        }
-      ],
-      "perspectivesNote": [
-        {
-          "label": "思辨局限",
-          "text": "原子数学特征不能解释物理运动，长期停留思辨阶段。"
-        }
-      ]
-    },
-    {
-      "id": "c02n12",
-      "x": 0,
-      "y": 780,
-      "category": "框架",
-      "title": "早期自然哲学的本原问题框",
-      "brief": "早期自然哲学家围绕一与多、变与不",
-      "coreIdea": "早期自然哲学家围绕一与多、变与不变两条线索思考本原，形成四种基本立场，穷尽可能性。",
-      "summary": "早期自然哲学家围绕一与多、变与不变两条线索思考本原，形成四种基本立场，穷尽可能性。。伊奥尼亚派认为本原是变化的一（水、气、火），毕达哥拉斯派认为本原是不变的多（数），爱利亚派认为本原是不变的一（是者），元素派认为本原是变化的多（根、种子、原子）。这一框架的完成标志着自然哲学发展告一段落，需要问题与框架的转变。",
-      "subPoints": [
-        {
-          "label": "四种立场",
-          "text": "变化的一、不变的多、不变的一、变化的多。"
-        },
-        {
-          "label": "思想进展",
-          "text": "从感性本原到理性思辨，从单一到众多与不变。"
-        },
-        {
-          "label": "转向契机",
-          "text": "智者运动提供问题转变的契机。"
-        }
-      ],
-      "perspectivesNote": []
     }
   ],
   "edges": [
     {
-      "id": "c02e1",
-      "source": "c02n1",
-      "target": "c02n2",
+      "id": "e1",
+      "source": "n3",
+      "target": "n1",
       "perspective": "both",
-      "label": "批评与发展",
+      "label": "对立",
       "curve": 0,
       "labelT": 0.5,
-      "detail": "泰利斯水本原无法解释多样性，阿那克西曼德提出无定作为无规定性本原。"
+      "detail": "毕达哥拉斯派主张数是不变的多，与伊奥尼亚派单一可变的物质本原正相反。"
     },
     {
-      "id": "c02e2",
-      "source": "c02n2",
-      "target": "c02n3",
-      "perspective": "both",
-      "label": "综合与修正",
+      "id": "e2",
+      "source": "n5",
+      "target": "n2",
+      "perspective": "change-permanence",
+      "label": "批评",
       "curve": 0,
       "labelT": 0.5,
-      "detail": "阿那克西美尼的气本原综合无定的不定形和水的特定性质，以浓聚稀散解释转化。"
+      "detail": "巴门尼德认为赫拉克利特的“既是又不是”混淆了是者与非是者。"
     },
     {
-      "id": "c02e3",
-      "source": "c02n3",
-      "target": "c02n4",
-      "perspective": "both",
-      "label": "推进",
+      "id": "e3",
+      "source": "n6",
+      "target": "n1",
+      "perspective": "change-permanence",
+      "label": "批评",
       "curve": 0,
       "labelT": 0.5,
-      "detail": "赫拉克利特以火与逻各斯的内外本原超越米利都派的简单本原观，引入变化原则。"
+      "detail": "芝诺针对伊奥尼亚派的变化本原观提出否认运动可能性的四个论证。"
     },
     {
-      "id": "c02e4",
-      "source": "c02n4",
-      "target": "c02n5",
-      "perspective": "both",
-      "label": "展开",
+      "id": "e4",
+      "source": "n6",
+      "target": "n5",
+      "perspective": "change-permanence",
+      "label": "辩护",
       "curve": 0,
       "labelT": 0.5,
-      "detail": "火本原中的逻各斯原则直接导出万物生成变化中的对立统一辩证关系。"
+      "detail": "芝诺以悖论方法维护巴门尼德所强调的不变的真理。"
     },
     {
-      "id": "c02e5",
-      "source": "c02n5",
-      "target": "c02n8",
+      "id": "e5",
+      "source": "n7",
+      "target": "n8",
       "perspective": "both",
-      "label": "对立批判",
+      "label": "对立",
       "curve": 0,
       "labelT": 0.5,
-      "detail": "巴门尼德批判赫拉克利特“既是又不是”混淆是者与非是者，以不变的是者否定变化。"
+      "detail": "恩培多克勒主张同类相知，阿那克萨戈拉主张异类相知，两者构成认识论原则的直接对立。"
     },
     {
-      "id": "c02e6",
-      "source": "c02n8",
-      "target": "c02n9",
+      "id": "e6",
+      "source": "n9",
+      "target": "n5",
       "perspective": "both",
-      "label": "辩护引申",
+      "label": "继承",
       "curve": 0,
       "labelT": 0.5,
-      "detail": "芝诺悖论否认运动可能性，维护巴门尼德不变的一，反驳变化观。"
+      "detail": "原子论同意爱利亚派关于充实存在物不会在分割中消失的观点，但引入虚空作为众多和运动的条件。"
     },
     {
-      "id": "c02e7",
-      "source": "c02n1",
-      "target": "c02n6",
-      "perspective": "both",
-      "label": "对比",
+      "id": "e7",
+      "source": "n2",
+      "target": "n1",
+      "perspective": "change-permanence",
+      "label": "平行对照",
       "curve": 0,
       "labelT": 0.5,
-      "detail": "毕达哥拉斯派以数本原反对米利都派单一可变的物理本原，主张多与不变。"
-    },
-    {
-      "id": "c02e8",
-      "source": "c02n6",
-      "target": "c02n7",
-      "perspective": "both",
-      "label": "转向",
-      "curve": 0,
-      "labelT": 0.5,
-      "detail": "克塞诺芬尼的神作为唯一不变本原，突破神话世界观，为巴门尼德是者做准备。"
-    },
-    {
-      "id": "c02e9",
-      "source": "c02n7",
-      "target": "c02n8",
-      "perspective": "both",
-      "label": "发展",
-      "curve": 0,
-      "labelT": 0.5,
-      "detail": "巴门尼德用更具概括性和思辨性的“是者”取代“神”，表达不变的一。"
-    },
-    {
-      "id": "c02e10",
-      "source": "c02n8",
-      "target": "c02n10",
-      "perspective": "both",
-      "label": "回应与修正",
-      "curve": 0,
-      "labelT": 0.5,
-      "detail": "元素派在坚持本原不生不灭的前提下，引入多个元素及其运动，调和一与多、变与不变。"
-    },
-    {
-      "id": "c02e11",
-      "source": "c02n10",
-      "target": "c02n11",
-      "perspective": "both",
-      "label": "简化与推进",
-      "curve": 0,
-      "labelT": 0.5,
-      "detail": "原子论将元素派的多元素归结为原子与虚空，以最简明形态完成自然哲学。"
-    },
-    {
-      "id": "c02e12",
-      "source": "c02n11",
-      "target": "c02n12",
-      "perspective": "both",
-      "label": "总结",
-      "curve": 0,
-      "labelT": 0.5,
-      "detail": "原子论所代表的变化的多与前三派共同构成一与多、变与不变的四维框架，穷尽可能性。"
-    },
-    {
-      "id": "c02e13",
-      "source": "c02n12",
-      "target": "c02n1",
-      "perspective": "both",
-      "label": "问题起点",
-      "curve": 0,
-      "labelT": 0.5,
-      "detail": "泰利斯提出本原问题，框架内各派回应这一根本问题。"
+      "detail": "赫拉克利特的火的转化原则与阿那克西曼德的补偿原则相同，都表达生成中的补偿与平衡。"
     }
   ],
-  "steps": [],
+  "steps": [
+    {
+      "title": "步骤 1 / 5：伊奥尼亚派确立物质本原",
+      "description": "泰利斯、阿那克西曼德、阿那克西美尼相继提出水、无定、气为本原，展现单一物质始基的修正过程。",
+      "activeNodes": [
+        "n1"
+      ],
+      "activeEdges": []
+    },
+    {
+      "title": "步骤 2 / 5：赫拉克利特与毕达哥拉斯分化",
+      "description": "赫拉克利特以火与逻各斯确立变化的一，毕达哥拉斯派以数本原确立不变的多，各自对应一多与变不变框架的一翼。",
+      "activeNodes": [
+        "n2",
+        "n3"
+      ],
+      "activeEdges": [
+        "e1",
+        "e7"
+      ]
+    },
+    {
+      "title": "步骤 3 / 5：爱利亚派以不变的一否定变化",
+      "description": "克塞诺芬尼理神论奠基，巴门尼德以是者确立不变的一并批评赫拉克利特，芝诺悖论继而以反证维护巴门尼德。",
+      "activeNodes": [
+        "n4",
+        "n5",
+        "n6"
+      ],
+      "activeEdges": [
+        "e2",
+        "e4"
+      ]
+    },
+    {
+      "title": "步骤 4 / 5：元素派以变化的多回应",
+      "description": "恩培多克勒四根说与阿那克萨戈拉种子心灵说都主张多元本原与生成变化，但在认识论原则上形成对立。",
+      "activeNodes": [
+        "n7",
+        "n8"
+      ],
+      "activeEdges": [
+        "e5"
+      ]
+    },
+    {
+      "title": "步骤 5 / 5：原子论综合并陷入两难",
+      "description": "原子论继承存在不可分原则并引入虚空，试图综合一与多、变与不变，但内在两难暴露本原理论穷尽。",
+      "activeNodes": [
+        "n9"
+      ],
+      "activeEdges": [
+        "e6"
+      ]
+    }
+  ],
   "readingGuide": {
-    "coreQuestion": "本章展开早期希腊自然哲学对本原问题的追问，沿一与多、变与不变两条线索，依次梳理米利都派、赫拉克利特、毕达哥拉斯派、爱利亚派与元素派、原子论，最终以逻各斯中心主义概括希腊理性传统。",
-    "startNodeId": "c02n1",
+    "coreQuestion": "本章考察早期希腊自然哲学关于世界本原的思考，追问本原在“一与多、变与不变”的框架下如何被规定。从泰利斯的水到德谟克利特的原子与虚空，各派相继提出、修正并回应前说，最终暴露该框架内本原理论的穷尽，为智者运动的问题转变提供契机。",
+    "startNodeId": "n1",
     "recommendedPath": [
       {
-        "id": "c02n1",
-        "label": "水本原说（泰利斯）"
+        "id": "n1",
+        "label": "伊奥尼亚物质本原"
       },
       {
-        "id": "c02n2",
-        "label": "无定说（阿那克西曼德）"
+        "id": "n2",
+        "label": "赫拉克利特逻各斯"
       },
       {
-        "id": "c02n3",
-        "label": "气本原说（阿那克西美尼）"
+        "id": "n3",
+        "label": "毕达哥拉斯数本原"
       },
       {
-        "id": "c02n4",
-        "label": "火本原与逻各斯（赫拉克利"
+        "id": "n5",
+        "label": "巴门尼德是者"
       },
       {
-        "id": "c02n5",
-        "label": "生成辩证法"
+        "id": "n9",
+        "label": "原子论：原子与虚空"
       }
     ]
   },
@@ -2012,12 +2063,10 @@
       }
 
       if (state.perspective !== "all") {
-        MAP_DATA.edges.forEach(e => {
-          if (isEdgeInPerspective(e)) {
-            activeEdges.add(e.id);
-            activeNodes.add(e.source);
-            activeNodes.add(e.target);
-          }
+        getPerspectiveFocusedEdges(state.perspective).forEach(e => {
+          activeEdges.add(e.id);
+          activeNodes.add(e.source);
+          activeNodes.add(e.target);
         });
         return { activeNodes, activeEdges, filtering: true };
       }
@@ -2032,16 +2081,24 @@
       return edge.perspective === "both" || edge.perspective === state.perspective;
     }
 
+    function getPerspectiveFocusedEdges(perspId) {
+      if (perspId === "all") return MAP_DATA.edges;
+      const exclusive = MAP_DATA.edges.filter(e => e.perspective === perspId);
+      if (exclusive.length > 0) return exclusive;
+      return MAP_DATA.edges.filter(e => isEdgeInPerspective(e));
+    }
+
     function getEdgeStyle(edge) {
-      let stroke = "#8aa097";
-      let dash = "";
-      if (edge.perspective === "weber") {
-        stroke = "#85a897";
-      } else if (edge.perspective === "althusser") {
-        stroke = "#6d8679";
-        dash = "6 4";
+      // 按 MAP_DATA.perspectives 的 lineClass 动态映射：primary 实线苔绿，
+      // secondary 虚线深苔，其余（含 both 与未匹配视角）统一雾灰绿实线。
+      const perspective = (MAP_DATA.perspectives || []).find(p => p.id === edge.perspective);
+      if (perspective && perspective.lineClass === "primary") {
+        return { stroke: "#85a897", dash: "" };
       }
-      return { stroke, dash };
+      if (perspective && perspective.lineClass === "secondary") {
+        return { stroke: "#6d8679", dash: "6 4" };
+      }
+      return { stroke: "#8aa097", dash: "" };
     }
 
     function renderHeaderAndLegend() {
@@ -2098,7 +2155,8 @@
       } else if (state.selectedNodeId || state.hoveredNodeId) {
         const nid = state.selectedNodeId || state.hoveredNodeId;
         MAP_DATA.edges.forEach(e => {
-          if (e.source === nid || e.target === nid) {
+          if ((e.source === nid || e.target === nid) &&
+              (state.perspective === "all" || isEdgeInPerspective(e))) {
             focusEdgeIds.add(e.id);
             strongEdgeIds.add(e.id);
           }
@@ -2120,6 +2178,14 @@
       }
 
       const perspectiveFiltered = !hasFocus && state.perspective !== "all";
+      let perspectiveFocusedEdgeIds = new Set();
+      let hasExclusiveEdges = false;
+      if (perspectiveFiltered) {
+        const exclusive = MAP_DATA.edges.filter(e => e.perspective === state.perspective);
+        hasExclusiveEdges = exclusive.length > 0;
+        (hasExclusiveEdges ? exclusive : MAP_DATA.edges.filter(e => isEdgeInPerspective(e)))
+          .forEach(e => perspectiveFocusedEdgeIds.add(e.id));
+      }
 
       MAP_DATA.edges.forEach(e => {
         let cls = "";
@@ -2131,8 +2197,15 @@
           } else {
             cls = "edge-dim";
           }
-        } else if (perspectiveFiltered && !isEdgeInPerspective(e)) {
-          cls = "edge-dim";
+        } else if (perspectiveFiltered) {
+          if (perspectiveFocusedEdgeIds.has(e.id)) {
+            cls = "edge-strong";
+            showLabel = false;
+          } else if (hasExclusiveEdges && e.perspective === "both") {
+            cls = "";
+          } else {
+            cls = "edge-dim";
+          }
         }
         result.set(e.id, { cls, showLabel });
       });
@@ -2321,8 +2394,8 @@
     function renderDetailPane() {
       if (state.selectedNodeId) {
         const node = nodeMap.get(state.selectedNodeId);
-        const incoming = MAP_DATA.edges.filter(e => e.target === node.id);
-        const outgoing = MAP_DATA.edges.filter(e => e.source === node.id);
+        const incoming = MAP_DATA.edges.filter(e => e.target === node.id && isEdgeInPerspective(e));
+        const outgoing = MAP_DATA.edges.filter(e => e.source === node.id && isEdgeInPerspective(e));
 
         const subPointsHtml = node.subPoints
           .map(sp => `<li><strong>${escapeHtml(sp.label)}：</strong>${escapeHtml(sp.text)}</li>`)
@@ -2361,6 +2434,7 @@
           </div>
           <h2 class="detail-title">${escapeHtml(node.title)}</h2>
           <blockquote class="detail-core">${escapeHtml(coreIdea)}</blockquote>
+          ${node.summary && node.summary !== coreIdea ? `<p class="detail-summary">${escapeHtml(node.summary)}</p>` : ""}
 
           <div class="detail-section">
             <h3>详细展开</h3>
@@ -2422,6 +2496,68 @@
             state.selectedNodeId = btn.getAttribute("data-jump-node");
             state.selectedEdgeId = null;
             renderAll();
+          });
+        });
+        return;
+      }
+
+      const pObj = MAP_DATA.perspectives.find(p => p.id === state.perspective);
+      if (state.perspective !== "all" && pObj) {
+        const focusedEdges = getPerspectiveFocusedEdges(state.perspective);
+        const focusedNodeIds = new Set();
+        focusedEdges.forEach(e => { focusedNodeIds.add(e.source); focusedNodeIds.add(e.target); });
+        const focusedNodes = MAP_DATA.nodes.filter(n => focusedNodeIds.has(n.id));
+
+        const edgeItemsHtml = focusedEdges.map(e => {
+          const s = nodeMap.get(e.source);
+          const t = nodeMap.get(e.target);
+          return `
+            <button class="rel-item" type="button" data-jump-edge="${e.id}">
+              <div class="rel-head">
+                <span>${escapeHtml(s.title)} → ${escapeHtml(t.title)}</span>
+                <span>${escapeHtml(e.label)}</span>
+              </div>
+              <div class="rel-body">${escapeHtml(e.detail)}</div>
+            </button>
+          `;
+        }).join("");
+
+        const nodeItemsHtml = focusedNodes.map(n => `
+          <button class="node-index-btn" type="button" data-jump-node="${n.id}">
+            <span>${escapeHtml(n.title)}</span>
+            <span>${escapeHtml(n.category)}</span>
+          </button>
+        `).join("");
+
+        detailPaneEl.innerHTML = `
+          <div class="detail-kicker">分析视角 · ${escapeHtml(pObj.legendLabel || pObj.label)}</div>
+          <h2 class="detail-title">${escapeHtml(pObj.label)}</h2>
+          <blockquote class="detail-core">本视角聚焦「${escapeHtml(pObj.legendLabel || pObj.label)}」这一核心线索，共 ${focusedEdges.length} 条连线、${focusedNodes.length} 个节点。</blockquote>
+
+          <div class="detail-section">
+            <h3>本视角核心脉络</h3>
+            <div class="rel-list">${edgeItemsHtml || `<p style="font-size:12.5px;color:#7A7F7A;">本视角暂无专属连线</p>`}</div>
+          </div>
+
+          <div class="detail-section">
+            <h3>本视角涉及节点</h3>
+            ${nodeItemsHtml}
+          </div>
+
+          <p class="guide-hint">点击连线或节点查看精解 · 点击顶部「全景互锁」返回完整导览</p>
+        `;
+
+        detailPaneEl.querySelectorAll("[data-jump-edge]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            state.selectedEdgeId = btn.getAttribute("data-jump-edge");
+            state.selectedNodeId = null;
+            state.stepIndex = -1;
+            renderAll();
+          });
+        });
+        detailPaneEl.querySelectorAll("[data-jump-node]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            focusNode(btn.getAttribute("data-jump-node"));
           });
         });
         return;

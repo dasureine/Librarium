@@ -16,6 +16,7 @@ import os
 import re
 import sys
 import threading
+import time
 import traceback
 import uuid
 from datetime import datetime, time as dtime, timedelta, timezone
@@ -50,6 +51,19 @@ NODE_H = 128
 COL_GAP = 440
 ROW_GAP = 260
 MAX_COLS = 3
+
+# ===== 两阶段学术拆书参数（Pass 1 原著解剖 / Pass 2 图谱建构） =====
+# 单章正文不超过该字数时一次解剖；超过则按段落与页码边界分块 Map-Reduce，
+# 每片约 PASS1_CHUNK_SIZE 字、相邻重叠 PASS1_CHUNK_OVERLAP 字，绝不静默丢弃后半章。
+PASS1_DIRECT_LIMIT = 24000
+PASS1_CHUNK_SIZE = 18000
+PASS1_CHUNK_OVERLAP = 600
+
+# DeepSeek / OpenAI 兼容接口的深度思考开关注入位置（接口不支持时自动降级）。
+THINKING_EXTRA_BODY = {"thinking": {"type": "enabled"}}
+
+# 章节笔记固定的四节小标题，供标题层级矫正与总览取真实章名时排除。
+NOTE_SECTIONS = ("核心问题意识", "论证结构与推进", "关键概念界定", "章节衔接与张力")
 
 
 def load_env() -> None:
@@ -160,6 +174,24 @@ def extract_json(text: str) -> str:
     return text
 
 
+_TRANSIENT_STATUS = {408, 409, 425, 429, 500, 502, 503, 504}
+
+
+def _is_transient_llm_error(exc: Exception) -> bool:
+    """判定网络超时、限流与 5xx 等可退避重试的临时错误。"""
+    status = getattr(exc, "status_code", None)
+    if isinstance(status, int) and status in _TRANSIENT_STATUS:
+        return True
+    name = type(exc).__name__.lower()
+    for kw in ("timeout", "connection", "internalserver", "ratelimit", "overloaded"):
+        if kw in name:
+            return True
+    msg = str(exc).lower()
+    for kw in ("timed out", "timeout", "connection reset", "connection aborted",
+               "temporarily unavailable", "overloaded", "502", "503", "504", "429"):
+        if kw in msg:
+            return True
+    return False
 class LLM:
     """官方 openai SDK 封装，兼容 OpenAI 接口（DeepSeek 等）。"""
 
@@ -172,6 +204,7 @@ class LLM:
             "1", "true", "yes", "on",
         )
         self._client = None
+        self.last_mode = "plain"
 
     @property
     def configured(self) -> bool:
@@ -189,37 +222,66 @@ class LLM:
     def chat(self, model: str, system: str, user: str,
              json_mode: bool = False, temperature: Optional[float] = None,
              max_tokens: Optional[int] = None):
-        """发起一次对话补全，返回 (文本, usage 字典)。"""
+        """发起一次对话补全，返回 (文本, usage 字典)。
+
+        候选参数按「response_format + thinking」→「仅 thinking」→「仅 response_format」
+        →「两者都不带」逐级降级：JSON 已有 extract_json + parse_json_robust 兜底，
+        因此优先保住深度思考；不兼容接口只会降级，不会中断流水线。
+        网络超时与 5xx 临时错误最多重试 2 次（退避 2s / 5s）。
+        """
         messages = [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ]
-        kwargs = {"model": model, "messages": messages}
+        base = {"model": model, "messages": messages}
         if temperature is not None:
-            kwargs["temperature"] = temperature
+            base["temperature"] = temperature
         if max_tokens:
-            kwargs["max_tokens"] = max_tokens
-        if json_mode:
-            kwargs["response_format"] = {"type": "json_object"}
-            try:
-                resp = self.client.chat.completions.create(**kwargs)
-            except Exception:
-                # 部分兼容接口不支持 response_format，降级重试一次
-                kwargs.pop("response_format", None)
-                resp = self.client.chat.completions.create(**kwargs)
+            base["max_tokens"] = max_tokens
+
+        want_thinking = bool(self.enable_thinking) and model == self.model_pro
+        candidates = []
+        if json_mode and want_thinking:
+            candidates = [
+                ("json+thinking", True, True),
+                ("thinking", False, True),
+                ("json", True, False),
+                ("plain", False, False),
+            ]
+        elif json_mode:
+            candidates = [("json", True, False), ("plain", False, False)]
+        elif want_thinking:
+            candidates = [("thinking", False, True), ("plain", False, False)]
         else:
-            resp = self.client.chat.completions.create(**kwargs)
+            candidates = [("plain", False, False)]
 
-        text = (resp.choices[0].message.content or "") if resp.choices else ""
-        usage = getattr(resp, "usage", None)
-        u = {
-            "prompt": getattr(usage, "prompt_tokens", 0) or 0,
-            "completion": getattr(usage, "completion_tokens", 0) or 0,
-            "total": getattr(usage, "total_tokens", 0) or 0,
-        }
-        return text, u
-
-
+        last_error = None
+        for label, use_json, use_thinking in candidates:
+            kwargs = dict(base)
+            if use_json:
+                kwargs["response_format"] = {"type": "json_object"}
+            if use_thinking:
+                kwargs["extra_body"] = dict(THINKING_EXTRA_BODY)
+            for attempt in range(3):
+                try:
+                    resp = self.client.chat.completions.create(**kwargs)
+                    self.last_mode = label
+                    text = (resp.choices[0].message.content or "") if resp.choices else ""
+                    usage = getattr(resp, "usage", None)
+                    return text, {
+                        "prompt": getattr(usage, "prompt_tokens", 0) or 0,
+                        "completion": getattr(usage, "completion_tokens", 0) or 0,
+                        "total": getattr(usage, "total_tokens", 0) or 0,
+                    }
+                except Exception as exc:
+                    last_error = exc
+                    if attempt < 2 and _is_transient_llm_error(exc):
+                        time.sleep(2 if attempt == 0 else 5)
+                        continue
+                    break
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError("LLM 调用失败：未获得任何可用响应")
 class JobState:
     """一次制书任务的实时状态（线程安全）。"""
 
@@ -238,6 +300,7 @@ class JobState:
         self.error = None
         self.result = None
         self.cancel_event = threading.Event()
+        self.merged_note_path = None
         self._lock = threading.Lock()
 
     def log(self, msg: str) -> str:
@@ -332,7 +395,8 @@ def split_precheck(slug: str, book_path: Path, page_map: Optional[str] = None, l
     chapters_dir = workspace / "chapters"
     notes_dir = workspace / "chapter_notes"
     maps_dir = workspace / "chapter_maps"
-    for d in (workspace, chapters_dir, notes_dir, maps_dir):
+    chapter_ir_dir = workspace / "chapter_ir"
+    for d in (workspace, chapters_dir, notes_dir, maps_dir, chapter_ir_dir):
         d.mkdir(parents=True, exist_ok=True)
     glossary = workspace / "glossary.md"
     if not glossary.exists():
@@ -384,10 +448,17 @@ def split_precheck(slug: str, book_path: Path, page_map: Optional[str] = None, l
             end = min(page_count, max(end, start + 1))
             if start >= page_count:
                 continue
-            parts = [doc.load_page(pno).get_text() for pno in range(start, end)]
+            # 逐页写入轻量页码锚点 [[p.N]]，供 Pass 1 精读做页码溯源；
+            # 字符统计仍按原始正文计算，避免页码标记干扰平均字数与扫描版判定。
+            parts = []
+            raw_chars = 0
+            for pno in range(start, end):
+                page_text = doc.load_page(pno).get_text() or ""
+                raw_chars += len(page_text)
+                parts.append(f"[[p.{pno + 1}]]\n{page_text}")
             text = "\n".join(parts).strip()
             total_pages += end - start
-            total_chars += len(text)
+            total_chars += raw_chars
             global_idx = idx + max(0, int(offset or 0))
             filename = f"{global_idx:02d}_{split_book.to_filename(title) or '未命名章节'}.txt"
             (chapters_dir / filename).write_text(text, encoding="utf-8")
@@ -395,7 +466,7 @@ def split_precheck(slug: str, book_path: Path, page_map: Optional[str] = None, l
                 "index": global_idx,
                 "filename": filename,
                 "title": title or "未命名章节",
-                "chars": len(text),
+                "chars": raw_chars,
                 "pages": end - start,
             })
 
@@ -497,44 +568,644 @@ def load_style_system() -> str:
     )
 
 
-def build_chapter_prompt(ch: dict, text: str) -> str:
-    max_chars = 24000
-    excerpt = text if len(text) <= max_chars else text[:max_chars] + "\n……（章节过长，已截断）"
-    return (
-        "请精读下面这一章，并严格输出一个 JSON 对象（不要输出任何 JSON 之外的文字）。\n\n"
-        f"章节编号：{ch['index']:02d}\n章节标题：{ch['title']}\n\n"
-        f"【原文】\n{excerpt}\n\n"
-        "JSON 字段如下：\n"
-        '{\n'
-        '  "note": "...",\n'
-        '  "glossary": ["概念 | 一句话界定与要点", ...3到5条],\n'
-        '  "map": {"nodes": [...], "edges": [...]}\n'
-        '}\n\n'
-        "1. note：本章学术精读笔记（Markdown），必须固定包含四部分：核心问题意识、论证结构与推进、关键概念界定、章节衔接与张力。\n"
-        "2. glossary：本章 3-5 条核心概念，每条格式为「概念 | 一句话界定与要点」。\n"
-        "3. map.nodes：本章概念/论点节点数组，每项含 id、category、title、brief、summary、subPoints（label+text 数组）、perspectivesNote（label+text 数组，可空数组）。\n"
-        "4. map.edges：本章节点间因果/张力连线数组，每项含 id、source（节点id）、target（节点id）、label、detail。\n"
-        f"节点 id 用 c{ch['index']:02d}n1、c{ch['index']:02d}n2… 递增；连线 id 用 c{ch['index']:02d}e1、c{ch['index']:02d}e2… 递增。\n"
+STYLE_REDLINES = (
+    "\n\n【全站文风红线（Pass 1 与 Pass 2 共同遵守）】\n"
+    "1. 使用简单平和的书面中文，直接主谓宾陈述句，忠于原稿，不寒暄、不抒情。\n"
+    "2. 严禁使用「不是……而是……」「并非……而是……」句式。\n"
+    "3. 严禁防御性表述（「需要指出的是」「不可否认」「在某种程度上」「众所周知」等）。\n"
+    "4. 严禁比喻、口语寒暄与空洞套话（「影响深远」「具有重要意义」「有着深刻启示」等）。\n"
+    "5. 术语首次出现给出原文括注，后文保持同一译名。\n"
+)
+
+
+def chapter_heading(ch: dict) -> str:
+    """章节标题：标题已含「第X章」时直接复用，避免拼出「第2章 第二章」。"""
+    title = str(ch.get("title") or "").strip()
+    index = int(ch.get("index") or 0)
+    if not title:
+        return f"第{index}章"
+    if re.match(r"^第\s*[0-9一二三四五六七八九十百千零〇两]+\s*章", title):
+        return title
+    return f"第{index}章 {title}"
+
+
+def _chapter_context(ch: dict, job: JobState) -> dict:
+    ctx = dict(ch)
+    ctx["book_title"] = job.title
+    ctx["book_author"] = job.author
+    return ctx
+
+
+def _page_range_of(text: str) -> str:
+    pages = re.findall(r"\[\[p\.(\d+)\]\]", text or "")
+    if not pages:
+        return ""
+    if pages[0] == pages[-1]:
+        return f"p.{pages[0]}"
+    return f"p.{pages[0]}-p.{pages[-1]}"
+
+
+def chunk_chapter_text(text: str, size: int = PASS1_CHUNK_SIZE,
+                       overlap: int = PASS1_CHUNK_OVERLAP) -> list:
+    """按页码锚点与段落边界把长章切为约 size 字的片段，相邻保留 overlap 字重叠。"""
+    text = str(text or "")
+    if not text:
+        return []
+    if len(text) <= size:
+        return [text]
+
+    units = []
+    buf = []
+    for line in text.splitlines(keepends=True):
+        if line.startswith("[[p."):
+            if buf:
+                units.append("".join(buf))
+                buf = []
+            units.append(line)
+        else:
+            buf.append(line)
+    if buf:
+        units.append("".join(buf))
+
+    flat = []
+    for unit in units:
+        if len(unit) <= size:
+            flat.append(unit)
+        else:
+            for i in range(0, len(unit), size):
+                flat.append(unit[i:i + size])
+
+    chunks = []
+    current = ""
+    for unit in flat:
+        if current and len(current) + len(unit) > size:
+            chunks.append(current)
+            current = (current[-overlap:] if overlap > 0 else "") + unit
+        else:
+            current += unit
+    if current:
+        chunks.append(current)
+    return [c for c in chunks if c.strip()]
+GLOSSARY_HEADER = split_book.GLOSSARY_HEADER
+
+
+def _canonical_term(term) -> str:
+    """术语去重键：去掉括注与空白并转小写，「本原（arche）」与「本原」视为同一术语。"""
+    s = str(term or "").strip()
+    s = re.sub(r"[（(][^）)]*[）)]", "", s)
+    s = re.sub(r"\s+", "", s)
+    return s.lower()
+
+
+_CN_DIGITS = "零一二三四五六七八九"
+
+
+def _cn_int(s: str) -> int:
+    """把中文/阿拉伯章节序号转为整数（用于术语表章节出处去重与排序）。"""
+    s = str(s).strip()
+    if not s:
+        return 0
+    if s.isdigit():
+        return int(s)
+    if s == "十":
+        return 10
+    if s.endswith("十"):
+        return (_CN_DIGITS.index(s[0]) if s[0] in _CN_DIGITS else 0) * 10
+    if "十" in s:
+        a, b = s.split("十", 1)
+        return (_CN_DIGITS.index(a) if a in _CN_DIGITS else 1) * 10 + (_CN_DIGITS.index(b) if b in _CN_DIGITS else 0)
+    v = 0
+    for ch in s:
+        if ch in _CN_DIGITS:
+            v = v * 10 + _CN_DIGITS.index(ch)
+    return v
+
+
+def _parse_glossary_md(path: Path) -> list:
+    """从既有 glossary.md 表格回填结构化术语，首次升级时不丢旧章术语。"""
+    entries = []
+    if not path.exists():
+        return entries
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
+        line = line.strip()
+        if not line.startswith("|") or line.startswith("| ---"):
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if len(cells) < 3:
+            continue
+        term, chapters, definition = cells[0], cells[1], cells[2]
+        if not term or term == "核心概念":
+            continue
+        chapter_list = []
+        for part in re.split(r"[、,，;；\s]+", chapters):
+            part = part.strip()
+            if not part:
+                continue
+            m = re.match(r"^第\s*([0-9零一二三四五六七八九十百千〇两]+)\s*章$", part)
+            chapter_list.append({
+                "index": _cn_int(m.group(1)) if m else 0,
+                "title": part,
+                "definition": "",
+            })
+        key = _canonical_term(term)
+        existing = next((e for e in entries if _canonical_term(e.get("term")) == key), None)
+        if existing is not None:
+            for c in chapter_list:
+                dup = any(int(x.get("index") or 0) == int(c.get("index") or 0) and x.get("title") == c.get("title") for x in existing["chapters"])
+                if not dup:
+                    existing["chapters"].append(c)
+            if definition and definition != existing.get("definition"):
+                note = f"{chapters}：{definition}".strip("：")
+                if note and note not in existing["evolution"]:
+                    existing["evolution"].append(note)
+            continue
+        entries.append({
+            "term": term,
+            "original": "",
+            "definition": definition,
+            "scope": "",
+            "related_existing_terms": [],
+            "chapters": chapter_list,
+            "evolution": [],
+        })
+    return entries
+
+
+def load_glossary_entries(workspace: Path) -> list:
+    """读取 glossary.json；缺失时从 glossary.md 表格回填。"""
+    json_path = workspace / "glossary.json"
+    if json_path.exists():
+        try:
+            data = json.loads(json_path.read_text(encoding="utf-8"))
+            if isinstance(data, list):
+                return [e for e in data if isinstance(e, dict)]
+        except Exception:
+            pass
+    return _parse_glossary_md(workspace / "glossary.md")
+
+
+def save_glossary_entries(workspace: Path, entries: list) -> Path:
+    out = workspace / "glossary.json"
+    out.write_text(json.dumps(entries, ensure_ascii=False, indent=2), encoding="utf-8")
+    return out
+
+
+def _chapter_label(index: int, title: str) -> str:
+    title = str(title or "").strip()
+    if not title:
+        return f"第{index}章" if index else ""
+    if re.match(r"^第\s*[0-9一二三四五六七八九十百千零〇两]+\s*章", title):
+        return title
+    return f"第{index}章 {title}".strip() if index else title
+
+
+def merge_glossary_entries(entries: list, new_items, chapter: dict) -> list:
+    """按规范术语名去重合并：同章重跑覆盖更新该章条目，跨章出现合并章节与演进说明。"""
+    index_by_key = {}
+    for i, entry in enumerate(entries):
+        index_by_key.setdefault(_canonical_term(entry.get("term")), i)
+    idx = int(chapter.get("index") or 0)
+    label = _chapter_label(idx, chapter.get("title", ""))
+    for item in (new_items or []):
+        if isinstance(item, str):
+            term, _, definition = str(item).partition("|")
+            item = {"term": term, "definition": definition}
+        if not isinstance(item, dict):
+            continue
+        term = str(item.get("term", "")).strip()
+        if not term:
+            continue
+        key = _canonical_term(term)
+        definition = str(item.get("definition", "")).strip()
+        scope = str(item.get("scope", "")).strip()
+        original = str(item.get("original", "")).strip()
+        related = [str(r).strip() for r in (item.get("related_existing_terms") or []) if str(r).strip()]
+
+        entry = entries[index_by_key[key]] if key in index_by_key else None
+        if entry is None:
+            entry = {
+                "term": term,
+                "original": original,
+                "definition": definition,
+                "scope": scope,
+                "related_existing_terms": [],
+                "chapters": [],
+                "evolution": [],
+            }
+            index_by_key[key] = len(entries)
+            entries.append(entry)
+        else:
+            if original and not str(entry.get("original") or "").strip():
+                entry["original"] = original
+            if scope and not str(entry.get("scope") or "").strip():
+                entry["scope"] = scope
+            if definition and not str(entry.get("definition") or "").strip():
+                entry["definition"] = definition
+
+        for r in related:
+            if r not in entry["related_existing_terms"]:
+                entry["related_existing_terms"].append(r)
+
+        chapters = entry.setdefault("chapters", [])
+        same = None
+        if idx:
+            same = next((c for c in chapters if int(c.get("index") or 0) == idx), None)
+        if same is None:
+            chapters.append({"index": idx, "title": label, "definition": definition})
+        else:
+            same["title"] = label
+            if definition:
+                same["definition"] = definition
+        if len(chapters) > 1 and definition and definition != str(entry.get("definition") or "").strip():
+            note = f"{label}：{definition}"
+            evolution = entry.setdefault("evolution", [])
+            if note not in evolution:
+                evolution.append(note)
+    return entries
+
+
+def render_glossary_md(workspace: Path, entries: list) -> Path:
+    """按结构化术语列表重写 glossary.md 表格（每个术语只保留一行）。"""
+    lines = [GLOSSARY_HEADER.rstrip("\n"), ""]
+    for entry in entries:
+        term = str(entry.get("term", "")).strip()
+        if not term:
+            continue
+        labels = []
+        for c in entry.get("chapters") or []:
+            label = _chapter_label(int(c.get("index") or 0), c.get("title", ""))
+            if label and label not in labels:
+                labels.append(label)
+        definition = str(entry.get("definition", "")).strip()
+        evolution = []
+        for item in (entry.get("evolution") or []):
+            item = str(item).strip()
+            if item and item not in evolution:
+                evolution.append(item)
+        if evolution:
+            extra = "；".join(evolution)
+            definition = f"{definition}；{extra}" if definition else extra
+        lines.append(f"| {term} | {'、'.join(labels)} | {definition} |")
+    out = workspace / "glossary.md"
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return out
+def build_pass1_system() -> str:
+    return load_style_system() + STYLE_REDLINES + (
+        "\n\n【本阶段职责】忠实精读原著：只还原原文的论证关节，不画图，不补充原文未提及的外部学术史。\n"
+        "每次只输出一个 JSON 对象，不要输出 JSON 之外的任何文字、注释或代码块。\n"
     )
 
 
-def append_glossary(glossary_path: Path, concepts, chapter: dict) -> None:
-    if not concepts:
-        return
+def build_pass1_prompt(ch: dict, text: str, glossary_terms: list) -> str:
+    terms = "、".join([t for t in (glossary_terms or []) if t][:80]) or "（暂无）"
+    return (
+        "请精读下面这一章，按五条铁律输出一个 JSON 对象（不要输出 JSON 之外的文字）。\n\n"
+        f"书名：{ch.get('book_title', '')}\n"
+        f"作者：{ch.get('book_author', '')}\n"
+        f"章号：{ch['index']:02d}\n"
+        f"章名：{ch['title']}\n\n"
+        f"【全书已有术语名清单】\n{terms}\n\n"
+        "【五条铁律】\n"
+        "1. 还原推演关节：先写反对什么问题，再写用什么机制推导，最后写暴露何种内在两难。不要写成结论清单。\n"
+        "2. 区分两类言说：被讨论思想家或核心对象的原论，与本书作者或原文引述的评述、批判，必须分开记录。\n"
+        "3. 严禁脑补关系：verified_relations 只记录原文明确交代了批评、继承、综合、对立、辩护、回应关系的双方，"
+        "并在 evidence 摘录原文依据；原文仅平行阐述者只能标为「平行对照」，严禁标为「继承」或「转向」。\n"
+        "4. 静默清洗明显 OCR 乱码与页眉页码；正文因扫描缺字导致论证残缺时标注【原文OCR残缺】；"
+        "原文含 [[p.XX]] 页码标记时，在依据中保留页码线索。\n"
+        "5. note 从 ### 标题起步，固定四节：### 核心问题意识、### 论证结构与推进、"
+        "### 关键概念界定、### 章节衔接与张力。\n\n"
+        "【输出 JSON 字段】\n"
+        "{\n"
+        '  "chapter_core_question": "2-3 句交代本章核心问题",\n'
+        '  "note": "Markdown 精读正文，从 ### 核心问题意识 开始，固定四节",\n'
+        '  "glossary": [{"term": "...", "original": "...", "definition": "...", "scope": "...", "related_existing_terms": []}],\n'
+        '  "units": [{"name": "...", "problem_addressed": "...", "core_argument": "...", "key_distinctions": [], "internal_tensions": [], "author_comments": [], "primary_sources": []}],\n'
+        '  "verified_relations": [{"from": "...", "to": "...", "relation_type": "批评|继承|综合|对立|辩护|回应|平行对照", "evidence": "原文依据摘录"}],\n'
+        '  "chapter_framework": "本章是否存在贯穿全局的分类轴或逻辑框架，没有则为空字符串"\n'
+        "}\n\n"
+        f"【本章原文】\n{text}\n"
+    )
+
+
+def build_pass1_chunk_prompt(ch: dict, chunk_text: str, page_range: str, part: int, total: int) -> str:
+    return (
+        f"下面是第 {ch['index']:02d} 章（{ch['title']}）的第 {part}/{total} 片原文"
+        f"{('，页码范围 ' + page_range) if page_range else ''}。\n"
+        "请只处理这一片，输出一个 JSON 对象，不要输出 JSON 之外的文字。\n\n"
+        "【铁律】\n"
+        "1. 只忠实还原本片原文的论证关节，不补充外部学术史，不画图。\n"
+        "2. 区分原论与作者评述；verified_relations 只记录原文明确交代的关系并摘录依据。\n"
+        "3. 静默清洗 OCR 乱码与页眉页码；论证残缺处标注【原文OCR残缺】；保留 [[p.XX]] 页码线索。\n"
+        "4. note_fragment 从 ### 标题起步，只写本片涉及的小节，不要重复章标题。\n\n"
+        "【输出 JSON 字段】\n"
+        "{\n"
+        '  "page_range": "本片页码范围",\n'
+        '  "chapter_core_question": "本片涉及的核心问题",\n'
+        '  "note_fragment": "本片对应的 Markdown 小节",\n'
+        '  "glossary": [{"term": "...", "original": "...", "definition": "...", "scope": "...", "related_existing_terms": []}],\n'
+        '  "units": [{"name": "...", "problem_addressed": "...", "core_argument": "...", "key_distinctions": [], "internal_tensions": [], "author_comments": [], "primary_sources": []}],\n'
+        '  "verified_relations": [{"from": "...", "to": "...", "relation_type": "...", "evidence": "..."}],\n'
+        '  "chapter_framework": "本片是否出现贯穿全局的分类轴"\n'
+        "}\n\n"
+        f"【本片原文】\n{chunk_text}\n"
+    )
+
+
+def build_pass1_merge_prompt(ch: dict, partials: list) -> str:
+    return (
+        f"下面是第 {ch['index']:02d} 章（{ch['title']}）分片精读得到的 {len(partials)} 份中间结果。\n"
+        "请把它们合并成一份完整的本章解剖 JSON，只输出 JSON，不要输出其他文字。\n\n"
+        "【合并规则】\n"
+        "1. 只使用中间结果已有的事实，不得引入其中未出现的内容。\n"
+        "2. units 按原文顺序合并去重，保留全部页码线索。\n"
+        "3. glossary 同一术语只保留一条，合并界定与出处。\n"
+        "4. verified_relations 去重，保留每条的原文依据。\n"
+        "5. note 合并全部 note_fragment，从 ### 标题起步，固定四节："
+        "### 核心问题意识、### 论证结构与推进、### 关键概念界定、### 章节衔接与张力；"
+        "不得只保留前半章内容。\n\n"
+        "【输出 JSON 字段】\n"
+        "{\n"
+        '  "chapter_core_question": "2-3 句交代本章核心问题",\n'
+        '  "note": "Markdown 精读正文，固定四节",\n'
+        '  "glossary": [...],\n'
+        '  "units": [...],\n'
+        '  "verified_relations": [...],\n'
+        '  "chapter_framework": "..."\n'
+        "}\n\n"
+        "【分片中间结果】\n"
+        + json.dumps(partials, ensure_ascii=False, indent=1)
+        + "\n"
+    )
+
+
+def normalize_note_markdown(note: str) -> str:
+    """把 Pass 1 的 note 规范为「### 四节」结构，去掉重复章标题与越级标题。"""
+    text = str(note or "").strip()
+    if not text:
+        return "### 核心问题意识\n\n【原文OCR残缺】本章精读笔记缺失。\n"
     lines = []
-    for item in concepts:
-        item = str(item).strip()
-        if not item:
+    for line in text.splitlines():
+        stripped = line.strip()
+        if re.match(r"^#{1,2}\s*第\s*[0-9一二三四五六七八九十百千零〇两]+\s*章", stripped):
             continue
-        if "|" in item:
-            name, rest = item.split("|", 1)
-            lines.append(f"| {name.strip()} | {chapter['title']} | {rest.strip()} |")
+        if re.match(r"^#{1,2}\s+\S", stripped) and not stripped.startswith("###"):
+            line = re.sub(r"^#{1,2}\s+", "### ", line)
+        lines.append(line)
+    body = "\n".join(lines).strip()
+    for section in NOTE_SECTIONS:
+        if not re.search(rf"^###\s*{section}", body, flags=re.MULTILINE):
+            body += f"\n\n### {section}\n\n本章原文未明确交代。"
+    return body.strip()
+
+
+def run_pass1(job: JobState, llm: LLM, ch: dict, text: str, glossary_terms: list) -> dict:
+    """Pass 1：原著解剖。短章直接解剖，长章分块 Map-Reduce 后合并，绝不截断。"""
+    system = build_pass1_system()
+    if len(text) <= PASS1_DIRECT_LIMIT:
+        job.log(f"  Pass 1 直接解剖：{len(text)} 字（阈值 {PASS1_DIRECT_LIMIT} 字）")
+        raw, usage = llm.chat(llm.model_pro, system,
+                              build_pass1_prompt(ch, text, glossary_terms), json_mode=True)
+        job.add_usage(usage)
+        job.log(f"  Pass 1 调用模式：{llm.last_mode}")
+        return parse_json_robust(raw, llm, job)
+
+    chunks = chunk_chapter_text(text)
+    job.log(
+        f"  Pass 1 分块 Map-Reduce：{len(text)} 字 -> {len(chunks)} 片"
+        f"（每片约 {PASS1_CHUNK_SIZE} 字，重叠 {PASS1_CHUNK_OVERLAP} 字）"
+    )
+    partials = []
+    for i, chunk in enumerate(chunks, start=1):
+        if job.cancel_event.is_set():
+            raise JobCancelled()
+        page_range = _page_range_of(chunk)
+        job.log(f"  Pass 1 分块 {i}/{len(chunks)}：{page_range or '无页码锚点'}")
+        raw, usage = llm.chat(
+            llm.model_pro, system,
+            build_pass1_chunk_prompt(ch, chunk, page_range, i, len(chunks)),
+            json_mode=True,
+        )
+        job.add_usage(usage)
+        data = parse_json_robust(raw, llm, job)
+        if isinstance(data, dict):
+            data.setdefault("page_range", page_range)
+            partials.append(data)
+    if not partials:
+        raise RuntimeError(f"第 {ch['index']} 章分块精读未获得任何中间结果")
+    job.log(f"  Pass 1 合并 {len(partials)} 片中间结果")
+    raw, usage = llm.chat(llm.model_pro, system,
+                          build_pass1_merge_prompt(ch, partials), json_mode=True)
+    job.add_usage(usage)
+    job.log(f"  Pass 1 合并调用模式：{llm.last_mode}")
+    return parse_json_robust(raw, llm, job)
+def build_pass2_system() -> str:
+    return load_style_system() + STYLE_REDLINES + (
+        "\n\n【本阶段职责】把 Pass 1 的原著解剖抽象为本章知识图谱，并补充原书未展开的学术延伸。\n"
+        "唯一原著事实源是 Pass 1 的 chapter_ir JSON，严禁超出它虚构原著内容。\n"
+        "每次只输出一个 JSON 对象，不要输出 JSON 之外的任何文字、注释或代码块。\n"
+    )
+
+
+def build_pass2_prompt(ch: dict, ir: dict, book_anchors: list,
+                       other_books: list, glossary_entries: list) -> str:
+    anchors = json.dumps(book_anchors[-6:], ensure_ascii=False, indent=1) if book_anchors else "（本章是本次处理的第一章，暂无前章锚点）"
+    books = json.dumps(other_books[:8], ensure_ascii=False, indent=1) if other_books else "（书架暂无其他书目）"
+    terms = "、".join([str(e.get("term", "")) for e in glossary_entries if e.get("term")][:80]) or "（暂无）"
+    return (
+        "请基于下面的 Pass 1 原著解剖，建构本章知识图谱并输出一个 JSON 对象。\n\n"
+        f"章号：{ch['index']:02d}\n章名：{ch['title']}\n\n"
+        f"【Pass 1 原著解剖 JSON（唯一原著事实源）】\n{json.dumps(ir, ensure_ascii=False, indent=1)}\n\n"
+        f"【本书已完成章节的精简锚点】\n{anchors}\n\n"
+        f"【书架其他书目（用于跨书锚点）】\n{books}\n\n"
+        f"【全书术语名】\n{terms}\n\n"
+        "【六条硬规范】\n"
+        "1. 禁止按教材小节 1:1 排流水账：节点控制在 7-10 个；递进紧密的早期探索合并为高密度演进节点，"
+        "具有独立理论转折意义者拆分为独立节点。\n"
+        "2. 严格遵守表层字数红线：title 严格 ≤12 字；brief 严格 8-11 字（确保单行显示，防止「01 · 起点」卡片折行切字），"
+        "禁止写完整长句，禁止与 summary 重复；coreIdea 20-40 字（一句话论证判断）；"
+        "summary 60-120 字（交代困境 → 推演机制 → 理论落点）。\n"
+        "3. subPoints 每节点 3-4 条，只使用四个语义槽位：核心论证、关键区分、内在两难、原典锚点；"
+        "只要 Pass 1 提取出内在矛盾，必须输出「内在两难」。\n"
+        "4. perspectivesNote 每节点 2-3 条，严禁留空数组，只用三层来源标签：\n"
+        "   【原书评述】严格取自 Pass 1 的 author_comments，保留评价主体；\n"
+        "   【学术延伸】补充原书未展开但具解释力的学术史脉络、后世哲学家或学者回应、理论争论，"
+        "40-80 字，必须具名学者或具体概念，绝不混充原著；\n"
+        "   【跨章锚点】或【跨书锚点】与前章或书架其他书目呼应，写明概念演进或张力。\n"
+        "5. 防伪边与双视角铁律：每条 edge 必须严格对应 Pass 1 的 verified_relations；"
+        "无直接师承关系者严禁使用「转向」「继承」「发展」，改用「立场对立」「平行对比」或指向真实共同影响对象；"
+        "除 all 外必须提炼 2 个贯穿本章的分析视角，分别对应 lineClass 的 primary 与 secondary，"
+        "并把大多数 edge 的 perspective 精准归类为对应视角 id；\"both\" 仅用于极少数同时承载双重视角的主干边，"
+        "不超过总边数的 25%，以保证两个视角切换有明显区分度；严禁输出 x/y 坐标，curve 一律填 0。\n"
+        "6. 必须输出 readingGuide（coreQuestion 为本章核心问题，recommendedPath 给 3-5 个节点）"
+        "与 4-5 步逻辑推演 steps。\n"
+        "7. 当 Pass 1 的 chapter_framework 非空时，在 7-10 个节点上限内优先保留一个「框架收束」节点，"
+        "把该分类轴或逻辑框架落为一个贯穿全章的收束性判断。\n\n"
+        "【节点 category 要求】category 为 4-8 字的「理论结构定位」，刻画该节点在论证结构中承担的角色，"
+        "例如「感性始基」「逻辑本体」「微观折中」「问题框架」；"
+        "严禁使用「学说」「概念」「论点」「理论」这类泛称。\n\n"
+        "【输出 JSON 结构】\n"
+        "{\n"
+        f'  "chapter_id": "{ch["index"]:02d}",\n'
+        f'  "chapter_title": "{ch["title"]}",\n'
+        '  "chapter_core_question": "...",\n'
+        '  "meta": {"title": "...", "subtitle": "...", "overview": "..."},\n'
+        '  "perspectives": [\n'
+        '    {"id": "all", "label": "全景互锁", "legendLabel": "本章结构", "lineClass": "both"},\n'
+        '    {"id": "...", "label": "...", "legendLabel": "...", "lineClass": "primary"},\n'
+        '    {"id": "...", "label": "...", "legendLabel": "...", "lineClass": "secondary"}\n'
+        "  ],\n"
+        '  "readingGuide": {"coreQuestion": "...", "startNodeId": "n1", "recommendedPath": [{"id": "n1", "label": "..."}]},\n'
+        '  "nodes": [{"id": "n1", "category": "...", "title": "...", "brief": "...", "coreIdea": "...", "summary": "...",\n'
+        '             "subPoints": [{"label": "核心论证", "text": "..."}],\n'
+        '             "perspectivesNote": [{"label": "【原书评述】", "text": "..."}]}],\n'
+        '  "edges": [{"id": "e1", "source": "n1", "target": "n2", "perspective": "both", "label": "...", "curve": 0, "labelT": 0.5, "detail": "..."}],\n'
+        '  "steps": [{"title": "步骤 1 / N：...", "description": "...", "activeNodes": ["n1"], "activeEdges": ["e1"]}]\n'
+        "}\n"
+    )
+
+
+def ensure_perspectives_notes(data: dict, ir: dict, book_anchors: list,
+                              scope_word: str = "本章") -> tuple:
+    """补填缺失的 perspectivesNote：只用 Pass 1 原书评述与前章锚点，绝不虚构学者。"""
+    nodes = data.get("nodes") if isinstance(data.get("nodes"), list) else []
+    units = [u for u in (ir.get("units") or []) if isinstance(u, dict)]
+    core_question = str(ir.get("chapter_core_question", "")).strip()
+    cross_text = ""
+    if book_anchors:
+        prev = book_anchors[-1]
+        prev_title = str(prev.get("chapter_title", "")).strip()
+        prev_nodes = "、".join([t for t in (prev.get("nodes") or []) if t][:3])
+        if prev_title or prev_nodes:
+            cross_text = f"承接{prev_title}的{prev_nodes}，本章把它们推进到新的问题层面。"
+    filled = 0
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        notes = node.get("perspectivesNote")
+        if isinstance(notes, list) and any(
+            isinstance(x, dict) and str(x.get("text", "")).strip() for x in notes
+        ):
+            continue
+        title = str(node.get("title", "")).strip()
+        notes = []
+        comment = ""
+        for unit in units:
+            comments = unit.get("author_comments") or []
+            if isinstance(comments, str):
+                comments = [comments]
+            comments = [str(c).strip() for c in comments if str(c).strip()]
+            if not comments:
+                continue
+            if title and title in str(unit.get("name", "")):
+                comment = comments[0]
+                break
+            if not comment:
+                comment = comments[0]
+        if comment:
+            notes.append({"label": "【原书评述】", "text": comment})
         else:
-            lines.append(f"| {item} | {chapter['title']} | |")
-    with glossary_path.open("a", encoding="utf-8") as f:
-        f.write("\n".join(lines) + "\n")
+            source = ""
+            for unit in units:
+                sources = unit.get("primary_sources") or []
+                if isinstance(sources, str):
+                    sources = [sources]
+                sources = [str(s).strip() for s in sources if str(s).strip()]
+                if sources:
+                    source = sources[0]
+                    break
+            text = f"原文出处：{source}" if source else f"{scope_word}原文对该节点只作平行阐述，未给出明确评价。"
+            notes.append({"label": "【原书评述】", "text": text})
+        anchor = cross_text or (
+            f"与{scope_word}核心问题「{core_question[:40]}」互为支点。" if core_question
+            else f"与{scope_word}核心问题互为支点，等待后续章节补全。"
+        )
+        notes.append({"label": "【跨章锚点】", "text": anchor})
+        node["perspectivesNote"] = notes
+        filled += 1
+    return data, filled
 
 
+def _pass2_ready(map_path: Path) -> bool:
+    """Pass 2 断点判据：地图已含非空 steps 或 2 个以上 perspectives。"""
+    if not map_path.exists():
+        return False
+    try:
+        data = json.loads(map_path.read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    if not isinstance(data, dict):
+        return False
+    steps = data.get("steps")
+    if isinstance(steps, list) and len(steps) > 0:
+        return True
+    perspectives = data.get("perspectives")
+    if isinstance(perspectives, list):
+        return len([p for p in perspectives if isinstance(p, dict)]) >= 2
+    return False
+
+
+def _read_note_as_ir(note_path: Path, ch: dict) -> dict:
+    body = note_path.read_text(encoding="utf-8-sig").strip() if note_path.exists() else ""
+    return {
+        "chapter_core_question": "",
+        "note": body or f"### 核心问题意识\n\n【原文OCR残缺】第{ch['index']}章笔记缺失。",
+        "glossary": [],
+        "units": [],
+        "verified_relations": [],
+        "chapter_framework": "",
+    }
+
+
+def _chapter_anchor(ch: dict, cmap: dict, glossary_entries: list) -> dict:
+    """本章精简锚点：只保留章号、节点标题与术语，供下一章 Pass 2 做跨章呼应。"""
+    titles = []
+    for n in (cmap.get("nodes") or []):
+        if isinstance(n, dict):
+            t = str(n.get("title", "")).strip()
+            if t and t not in titles:
+                titles.append(t)
+    idx = int(ch.get("index") or 0)
+    terms = []
+    for entry in glossary_entries:
+        for c in (entry.get("chapters") or []):
+            if int(c.get("index") or 0) == idx:
+                term = str(entry.get("term", "")).strip()
+                if term and term not in terms:
+                    terms.append(term)
+                break
+    return {
+        "chapter_id": f"{idx:02d}",
+        "chapter_title": str(ch.get("title", "")).strip(),
+        "nodes": titles[:10],
+        "terms": terms[:10],
+    }
+
+
+def run_pass2(job: JobState, llm: LLM, ch: dict, ir: dict,
+              book_anchors: list, glossary_entries: list) -> dict:
+    """Pass 2：图谱建构与学术延伸，输出本章 MAP_DATA 原始结构。"""
+    other_books = []
+    for book in load_books():
+        if not isinstance(book, dict):
+            continue
+        if str(book.get("id") or "") == job.slug:
+            continue
+        other_books.append({
+            "title": str(book.get("title", "")).strip(),
+            "tags": book.get("tags") or [],
+            "summary": str(book.get("summary", "")).strip()[:120],
+        })
+    prompt = build_pass2_prompt(ch, ir, book_anchors, other_books, glossary_entries)
+    raw, usage = llm.chat(llm.model_pro, build_pass2_system(), prompt, json_mode=True)
+    job.add_usage(usage)
+    job.log(f"  Pass 2 调用模式：{llm.last_mode}")
+    data = parse_json_robust(raw, llm, job)
+    if not isinstance(data, dict):
+        data = {}
+    data, filled = ensure_perspectives_notes(data, ir, book_anchors)
+    if filled:
+        job.log(f"  Pass 2 兜底补填 perspectivesNote：{filled} 个节点")
+    return data
 def parse_json_robust(raw: str, llm: LLM, job: JobState) -> dict:
     """解析模型 JSON，失败则用 MODEL_FLASH 自动修复。"""
     try:
@@ -552,21 +1223,21 @@ def parse_json_robust(raw: str, llm: LLM, job: JobState) -> dict:
 
 
 def stage2_chapters(job: JobState, llm: LLM, chapters: list) -> None:
-    """阶段2：逐章生成笔记 + 图谱 + 术语表（断点续跑，绝不重复扣费）。"""
+    """阶段2：逐章两阶段学术拆书（Pass 1 原著解剖 → Pass 2 图谱建构），断点续跑。"""
     job.set(stage="chapters")
     workspace = WORKSPACE / job.slug
     chapters_dir = workspace / "chapters"
     notes_dir = workspace / "chapter_notes"
     maps_dir = workspace / "chapter_maps"
-    glossary_path = workspace / "glossary.md"
-    for d in (notes_dir, maps_dir):
+    ir_dir = workspace / "chapter_ir"
+    for d in (notes_dir, maps_dir, ir_dir):
         d.mkdir(parents=True, exist_ok=True)
+    glossary_path = workspace / "glossary.md"
+    if not glossary_path.exists():
+        glossary_path.write_text(split_book.GLOSSARY_HEADER, encoding="utf-8")
+    glossary_entries = load_glossary_entries(workspace)
 
-    chapter_system = load_style_system() + (
-        "\n\n输出要求：每次只输出一个 JSON 对象（含 note、glossary、map 三个字段），"
-        "不要输出任何 JSON 之外的文字、注释或代码块。"
-    )
-
+    book_anchors = []
     total = len(chapters)
     job.set(total_chapters=total)
     for done, ch in enumerate(chapters, start=0):
@@ -575,42 +1246,91 @@ def stage2_chapters(job: JobState, llm: LLM, chapters: list) -> None:
         job.set(done_chapters=done)
         job.log(f"处理第 {ch['index']}/{total} 章：{ch['title']}")
         base = ch["filename"][: -len(".txt")]
+        ir_path = ir_dir / f"{base}.json"
         note_path = notes_dir / f"{base}.md"
         map_path = maps_dir / f"{base}.json"
-        if note_path.exists() and map_path.exists():
-            job.log("  已存在，跳过（断点续跑，不重复扣费）")
-            job.set(done_chapters=done + 1)
-            continue
 
-        text = (chapters_dir / ch["filename"]).read_text(encoding="utf-8")
-        raw, usage = llm.chat(llm.model_pro, chapter_system, build_chapter_prompt(ch, text), json_mode=True)
-        job.add_usage(usage)
-        data = parse_json_robust(raw, llm, job)
+        text_path = chapters_dir / ch["filename"]
+        text = text_path.read_text(encoding="utf-8") if text_path.exists() else ""
+        ctx = _chapter_context(ch, job)
 
-        note = str(data.get("note", "") or "").strip()
-        note_path.write_text(note + "\n", encoding="utf-8")
+        # ---- Pass 1：原著解剖（ir_path 与 note_path 同时存在则跳过）----
+        if ir_path.exists() and note_path.exists():
+            job.log("  Pass 1 已存在，读取 chapter_ir（断点续跑）")
+            try:
+                ir = json.loads(ir_path.read_text(encoding="utf-8"))
+            except Exception:
+                ir = {}
+            if not isinstance(ir, dict) or not ir:
+                ir = _read_note_as_ir(note_path, ch)
+        elif not text.strip():
+            job.log("  警告：本章切分文本为空，写入残缺占位（不调用模型）")
+            ir = {
+                "chapter_core_question": "",
+                "note": f"### 核心问题意识\n\n【原文OCR残缺】第{ch['index']}章切分文本为空。",
+                "glossary": [],
+                "units": [],
+                "verified_relations": [],
+                "chapter_framework": "",
+            }
+            ir_path.write_text(json.dumps(ir, ensure_ascii=False, indent=2), encoding="utf-8")
+            note_path.write_text(f"## {chapter_heading(ch)}\n\n{ir['note']}\n", encoding="utf-8")
+        else:
+            ir = run_pass1(job, llm, ctx, text,
+                           [e.get("term", "") for e in glossary_entries if e.get("term")])
+            if not isinstance(ir, dict):
+                ir = {}
+            ir_path.write_text(json.dumps(ir, ensure_ascii=False, indent=2), encoding="utf-8")
+            note_body = normalize_note_markdown(ir.get("note", ""))
+            note_path.write_text(f"## {chapter_heading(ch)}\n\n{note_body}\n", encoding="utf-8")
+            job.log("  Pass 1 完成：chapter_ir + chapter_notes 已写入")
 
-        append_glossary(glossary_path, data.get("glossary", []), ch)
+        # 术语表去重合并（幂等：同章重跑只覆盖，不重复追加）
+        glossary_entries = merge_glossary_entries(glossary_entries, ir.get("glossary") or [], ch)
+        save_glossary_entries(workspace, glossary_entries)
+        render_glossary_md(workspace, glossary_entries)
 
-        cmap = data.get("map") if isinstance(data.get("map"), dict) else {}
+        # ---- Pass 2：图谱建构与学术延伸 ----
+        pass2_skipped = False
+        cmap = None
+        if _pass2_ready(map_path):
+            try:
+                loaded = json.loads(map_path.read_text(encoding="utf-8"))
+            except Exception:
+                loaded = None
+            if isinstance(loaded, dict):
+                cmap = loaded
+                pass2_skipped = True
+        if cmap is None:
+            cmap = run_pass2(job, llm, ctx, ir, book_anchors, glossary_entries)
+        else:
+            job.log("  Pass 2 已存在（含 steps 或双视角），跳过模型调用")
+
         cmap.setdefault("chapter_id", f"{ch['index']:02d}")
         cmap.setdefault("chapter_title", ch["title"])
-        map_path.write_text(json.dumps(cmap, ensure_ascii=False, indent=2), encoding="utf-8")
+        if not pass2_skipped:
+            map_path.write_text(json.dumps(cmap, ensure_ascii=False, indent=2), encoding="utf-8")
+            job.log(f"  Pass 2 完成：chapter_maps 已写入（{len(cmap.get('nodes') or [])} 节点）")
 
-        # 顺手用母版把本章 JSON 直接固化为独立分章地图，供整书总图下钻。
-        try:
-            chapter_html = inject_chapter_map(job.slug, ch["index"], cmap, job.title,
-                                              has_parent=(not job.chapter_range) or (MAPS_DIR / f"{job.slug}.html").exists())
-            job.log(f"  分章地图已生成：{chapter_html}")
-        except Exception as e:
-            job.log(f"  分章地图生成失败：{e}")
+        chapter_html = MAPS_DIR / job.slug / f"ch{ch['index']:02d}.html"
+        if (not pass2_skipped) or (not chapter_html.exists()):
+            try:
+                has_parent = (not job.chapter_range) or (MAPS_DIR / f"{job.slug}.html").exists()
+                out = inject_chapter_map(job.slug, ch["index"], cmap, job.title, has_parent=has_parent)
+                job.log(f"  分章地图已生成：{out}")
+            except Exception as e:
+                job.log(f"  分章地图生成失败：{e}")
+        else:
+            job.log("  分章地图已存在，跳过生成")
 
+        book_anchors.append(_chapter_anchor(ch, cmap, glossary_entries))
         job.set(done_chapters=done + 1)
-        job.log(f"  完成第 {ch['index']} 章（笔记 + 图谱 + 术语表 + 分章地图）")
+        job.log(f"  完成第 {ch['index']} 章（Pass 1 + Pass 2）")
+def merge_notes_into(slug: str, title: str, job: Optional[JobState] = None) -> tuple:
+    """复用 merge_notes.py 逻辑：overview + 逐章笔记 -> notes/<slug>.md。
 
-
-def merge_notes_into(slug: str, title: str) -> tuple:
-    """复用 merge_notes.py 逻辑：overview + 逐章笔记 -> notes/<slug>.md。"""
+    notes/*.md 属用户只读原稿，若已存在严禁覆盖，改写到 workspace/<slug>/<slug>_merged.md。
+    """
     workspace = WORKSPACE / slug
     notes_dir = workspace / "chapter_notes"
     overview = workspace / "overview.md"
@@ -623,14 +1343,41 @@ def merge_notes_into(slug: str, title: str) -> tuple:
     for f in chapter_files:
         parts.append(f.read_text(encoding="utf-8-sig").rstrip("\n"))
     content = "\n\n".join(p for p in parts if p) + "\n"
-    NOTES_DIR.mkdir(parents=True, exist_ok=True)
-    out = NOTES_DIR / f"{slug}.md"
+
+    notes_out = NOTES_DIR / f"{slug}.md"
+    if notes_out.exists():
+        out = WORKSPACE / slug / f"{slug}_merged.md"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        if job is not None:
+            job.log(f"检测到 notes/{slug}.md 已存在（只读原稿），已改写到 {out}，请手动比对合并。")
+    else:
+        NOTES_DIR.mkdir(parents=True, exist_ok=True)
+        out = notes_out
     out.write_text(content, encoding="utf-8")
     return out, len(chapter_files), len(content)
+def note_heading(path: Path) -> str:
+    """从章节笔记首行提取真实章节标题，避开四节固定小标题。"""
+    try:
+        head_lines = path.read_text(encoding="utf-8-sig").splitlines()[:10]
+    except Exception:
+        return ""
+    for line in head_lines:
+        stripped = line.strip()
+        m = re.match(r"^#{1,3}\s*(第\s*[0-9一二三四五六七八九十百千零〇两]+\s*章.*)$", stripped)
+        if m:
+            return m.group(1).strip()
+    for line in head_lines:
+        stripped = line.strip()
+        if stripped.startswith("## "):
+            content = stripped[3:].strip()
+            if content and content not in NOTE_SECTIONS:
+                return content
+    m = re.match(r"^\d+_(.+)$", path.stem)
+    return m.group(1).replace("_", " ").strip() if m else path.stem
 
 
 def stage3_overview(job: JobState, llm: LLM) -> Path:
-    """阶段3：生成全书总览 overview.md，并无损合并输出 notes/<slug>.md。"""
+    """阶段3：生成全书总览 overview.md，并无损合并输出章节笔记。"""
     job.set(stage="overview")
     job.log("阶段3：全书总览与无损合并")
     workspace = WORKSPACE / job.slug
@@ -640,8 +1387,7 @@ def stage3_overview(job: JobState, llm: LLM) -> Path:
     titles = []
     if notes_dir.is_dir():
         for f in sorted(notes_dir.glob("*.md"), key=natural_key):
-            head = f.read_text(encoding="utf-8-sig").split("\n", 1)[0].strip()
-            titles.append(head)
+            titles.append(note_heading(f))
 
     system = load_style_system()
     user = (
@@ -652,21 +1398,83 @@ def stage3_overview(job: JobState, llm: LLM) -> Path:
     )
     raw, usage = llm.chat(llm.model_pro, system, user)
     job.add_usage(usage)
+    job.log(f"总览调用模式：{llm.last_mode}")
     overview_path = workspace / "overview.md"
     overview_path.write_text(raw.strip() + "\n", encoding="utf-8")
 
-    out, n, size = merge_notes_into(job.slug, job.title)
+    out, n, size = merge_notes_into(job.slug, job.title, job)
+    job.set(merged_note_path=str(out))
     job.log(f"总览完成，合并 {n} 章笔记 -> {out}（{size} 字）")
     return out
+def build_chapter_summaries(chapter_maps: list) -> list:
+    """把各章图谱压成干净摘要对象：只保留章号、核心问题、节点 id/标题/核心判断与核心边。"""
+    summaries = []
+    for cmap in chapter_maps or []:
+        if not isinstance(cmap, dict):
+            continue
+        nodes = []
+        for n in (cmap.get("nodes") or []):
+            if not isinstance(n, dict):
+                continue
+            nodes.append({
+                "id": str(n.get("id") or "").strip(),
+                "title": str(n.get("title") or "").strip(),
+                "coreIdea": str(n.get("coreIdea") or "").strip(),
+            })
+        node_ids = {n["id"] for n in nodes if n["id"]}
+        edges = []
+        for e in (cmap.get("edges") or []):
+            if not isinstance(e, dict):
+                continue
+            source = str(e.get("source") or "").strip()
+            target = str(e.get("target") or "").strip()
+            if source not in node_ids or target not in node_ids:
+                continue
+            edges.append({
+                "source": source,
+                "target": target,
+                "label": str(e.get("label") or "").strip(),
+            })
+        guide = cmap.get("readingGuide") if isinstance(cmap.get("readingGuide"), dict) else {}
+        summaries.append({
+            "chapter_id": str(cmap.get("chapter_id") or "").strip(),
+            "chapter_title": str(cmap.get("chapter_title") or "").strip(),
+            "coreQuestion": str(guide.get("coreQuestion") or cmap.get("chapter_core_question") or "").strip(),
+            "nodes": nodes,
+            "edges": edges,
+        })
+    return summaries
+
+
+def build_map_system() -> str:
+    return load_style_system() + STYLE_REDLINES + (
+        "\n\n【本阶段职责】把各章已校验的结构化摘要综合为整书知识图谱，并补充原书未展开的学术延伸；"
+        "唯一事实源是各章图谱摘要与全书术语表，严禁虚构原著内容。\n"
+        "每次只输出一个 JSON 对象，不要输出 JSON 之外的任何文字、注释或代码块。\n"
+    )
 
 
 def build_map_prompt(job: JobState, overview: str, glossary: str, chapter_maps: list) -> str:
-    cmap_parts = [json.dumps(cm, ensure_ascii=False)[:8000] for cm in chapter_maps]
+    summaries = build_chapter_summaries(chapter_maps)
+    other_books = []
+    for book in load_books():
+        if not isinstance(book, dict):
+            continue
+        if str(book.get("id") or "") == job.slug:
+            continue
+        other_books.append({
+            "title": str(book.get("title", "")).strip(),
+            "tags": book.get("tags") or [],
+            "summary": str(book.get("summary", "")).strip()[:120],
+        })
+    books_text = json.dumps(other_books[:8], ensure_ascii=False, indent=1) if other_books else "（书架暂无其他书目）"
     return (
         "你是知识图谱工程师。请把以下资料综合成一份信息密度与 templates/map-template.html 所载范例相当的整书知识地图 JSON。\n\n"
         f"【全书总览】\n{overview[:6000]}\n\n"
         f"【术语表】\n{glossary[:6000]}\n\n"
-        f"【各章结构化图谱】\n{json.dumps(cmap_parts, ensure_ascii=False)}\n\n"
+        "【各章结构化摘要】\n"
+        f"{json.dumps(summaries, ensure_ascii=False, indent=2)}\n\n"
+        f"【书架其他书目（用于跨书锚点）】\n{books_text}\n\n"
         "严格输出一个 JSON 对象（不要输出任何 JSON 之外的文字、注释或 Markdown 代码块），结构如下：\n"
         "{\n"
         '  "meta": {"title": "...", "subtitle": "...", "overview": "..."},\n'
@@ -678,8 +1486,8 @@ def build_map_prompt(job: JobState, overview: str, glossary: str, chapter_maps: 
         '  "readingGuide": {"coreQuestion": "...", "startNodeId": "n1", "recommendedPath": [{"id": "n1", "label": "..."}]},\n'
         '  "nodes": [\n'
         '    {"id": "n1", "category": "...", "title": "...", "brief": "...", "coreIdea": "...", "summary": "...",\n'
-        '     "subPoints": [{"label": "...", "text": "..."}],\n'
-        '     "perspectivesNote": [{"label": "...", "text": "..."}]}\n'
+        '     "subPoints": [{"label": "核心论证", "text": "..."}],\n'
+        '     "perspectivesNote": [{"label": "【原书评述】", "text": "..."}]}\n'
         '  ],\n'
         '  "edges": [\n'
         '    {"id": "e1", "source": "n1", "target": "n2", "perspective": "both", "label": "...", "curve": 0, "labelT": 0.5, "detail": "..."}\n'
@@ -690,14 +1498,16 @@ def build_map_prompt(job: JobState, overview: str, glossary: str, chapter_maps: 
         "}\n\n"
         "硬性要求：\n"
         "1. 只输出纯 JSON，键名与上述完全一致，值用中文。\n"
-        "2. 节点数量控制在 6-10 个，覆盖全书核心论点群；每节点 title 严格 ≤12 字、brief 严格 ≤16 字（brief 只放关键词锚点，严禁写长句）、coreIdea 为 20-40 字的一句话核心结论、summary 60-120 字，所有详细解释全部放进 subPoints/perspectivesNote，保证右侧阅读栏解析详实。\n"
-        "3. 严禁输出任何 x/y 坐标：节点坐标由后端 Python 按层级网格/蛇形递进算法自动计算，杜绝重叠。\n"
-        '4. edges 的 perspective 取值必须是 "both" 或 perspectives 中某个 id；curve 为 -200~200 整数（0 为直线），labelT 为 0~1；label 短，detail 为 40-90 字深度解析。\n'
-        "5. steps 给 4-6 步，按逻辑顺序覆盖因果链，activeNodes/activeEdges 引用上面 id。\n"
-        "6. readingGuide.coreQuestion 用 2-3 句直白的话交代本部分核心问题；startNodeId 指向逻辑起点节点；recommendedPath 给 3-5 个按顺序编号的关键节点（含 id 与简短 label）。\n"
-        '7. 除 "all" 外再给出 2 个分析视角（简短英文/拼音 id），分别对应 lineClass 的 primary 与 secondary。\n'
+        "2. 节点数量控制在 6-10 个，覆盖全书核心论点群；每节点 title 严格 ≤12 字、brief 严格 8-11 字（只放关键词锚点，确保单行显示、防止卡片折行切字）、coreIdea 为 20-40 字的一句话核心结论、summary 60-120 字，所有详细解释全部放进 subPoints/perspectivesNote，保证右侧阅读栏解析详实。\n"
+        "3. 节点 category 为 4-8 字的「理论结构定位」，刻画该节点在论证结构中承担的角色，例如「感性始基」「逻辑本体」「微观折中」「问题框架」，严禁使用「学说」「概念」「论点」「理论」这类泛称。\n"
+        "4. subPoints 每节点 3-4 条，只使用四个语义槽位：核心论证、关键区分、内在两难、原典锚点。\n"
+        "5. perspectivesNote 每节点 2-3 条，严禁留空数组，只用三层来源标签：【原书评述】取自各章作者评述、【学术延伸】具名学者或具体概念的学术史脉络（40-80 字）、【跨章锚点】或【跨书锚点】与前章或书架其他书目呼应。\n"
+        "6. 严禁输出任何 x/y 坐标：节点坐标由后端 Python 按层级网格/蛇形递进算法自动计算，杜绝重叠。\n"
+        '7. edges 的 perspective 取值必须是 "both" 或 perspectives 中某个 id；大多数连线精准归入两个分析视角之一，"both" 仅用于极少数同时承载双重视角的主干边（不超过总边数的 25%）；curve 一律填 0，labelT 为 0~1；label 短，detail 为 40-90 字深度解析。\n'
+        "8. steps 给 4-6 步，按逻辑顺序覆盖因果链，activeNodes/activeEdges 引用上面 id。\n"
+        "9. readingGuide.coreQuestion 用 2-3 句直白的话交代本部分核心问题；startNodeId 指向逻辑起点节点；recommendedPath 给 3-5 个按顺序编号的关键节点（含 id 与简短 label）。\n"
+        '10. 除 "all" 外再给出 2 个分析视角（简短英文/拼音 id），分别对应 lineClass 的 primary 与 secondary。\n'
     )
-
 
 def _as_int(value, fallback=0):
     try:
@@ -748,25 +1558,32 @@ def build_deterministic_layout(nodes: list, col_gap: int = COL_GAP, row_gap: int
     return nodes
 
 
-def normalize_map_data(data: dict, job: JobState) -> dict:
+def normalize_map_data(data: dict, job: Optional[JobState] = None,
+                       fallback_title: str = "") -> dict:
     """把模型输出的 MAP_DATA 规范化为母版渲染引擎所需结构。
 
     这是「LLM 只输出结构化 JSON → Python 确定性防重叠布局 → 注入模板」流程中的
     唯一确定性后处理关卡：模型绝不直接写 HTML/CSS，任何字段都必须在此被校验、
-    截断与兜底后，才能由 inject_map() 注入 templates/map-template.html。
+    截断、去悬空边、去无效步骤引用与兜底后，才能由 inject_map() 注入母版。
     """
     data = data if isinstance(data, dict) else {}
     meta = data.get("meta") or {}
-    title = str(meta.get("title", job.title or "")).strip() or job.title
+    default_title = (job.title if job is not None else "") or fallback_title
+    title = str(meta.get("title", default_title or "")).strip() or default_title
     subtitle = str(meta.get("subtitle", "")).strip()
     overview = str(meta.get("overview", "")).strip()
 
     perspectives = []
+    seen_persp = set()
     for p in (data.get("perspectives") or []):
         if not isinstance(p, dict):
             continue
+        pid = str(p.get("id", "")).strip()
+        if not pid or pid in seen_persp:
+            continue
+        seen_persp.add(pid)
         perspectives.append({
-            "id": str(p.get("id", "")).strip(),
+            "id": pid,
             "label": str(p.get("label", "")).strip(),
             "legendLabel": str(p.get("legendLabel", "")).strip(),
             "lineClass": p.get("lineClass") if p.get("lineClass") in ("both", "primary", "secondary") else "both",
@@ -775,21 +1592,23 @@ def normalize_map_data(data: dict, job: JobState) -> dict:
         perspectives.insert(0, {"id": "all", "label": "全景互锁", "legendLabel": "全书共用结构", "lineClass": "both"})
 
     nodes = []
+    seen_node = set()
     for i, n in enumerate(data.get("nodes") or []):
         if not isinstance(n, dict):
             continue
-        # 卡片标题 ≤12 字，超长自动截断（用独立变量名，避免遮蔽外层 meta.title）。
         node_title = truncate_cjk(n.get("title"), 12)
-        # 卡片副标题（brief）≤16 字：超长时把完整原文前置保留到右侧正文，
-        # 卡片只保留 16 字以内精简锚点，彻底杜绝长句塞进卡片撑爆布局。
         raw_brief = str(n.get("brief", "")).strip()
         brief = truncate_cjk(raw_brief, 16)
         summary = str(n.get("summary", "")).strip()
         if len(raw_brief) > 16 and raw_brief not in summary:
             summary = f"{raw_brief}。{summary}".strip()
         core_idea = str(n.get("coreIdea", "")).strip() or first_sentence(summary)
+        node_id = str(n.get("id") or f"n{i + 1}").strip() or f"n{i + 1}"
+        if node_id in seen_node:
+            node_id = f"{node_id}-{i + 1}"
+        seen_node.add(node_id)
         node_obj = {
-            "id": str(n.get("id") or f"n{i + 1}"),
+            "id": node_id,
             "x": 0,
             "y": 0,
             "category": str(n.get("category", "")).strip(),
@@ -812,17 +1631,40 @@ def normalize_map_data(data: dict, job: JobState) -> dict:
     nodes = build_deterministic_layout(nodes)
 
     perspective_ids = {p["id"] for p in perspectives}
+    perspective_aliases = {}
+    for p in perspectives:
+        pid = p["id"]
+        perspective_aliases.setdefault(pid, pid)
+        perspective_aliases.setdefault(pid.lower(), pid)
+        lc = str(p.get("lineClass", "")).strip().lower()
+        if lc in ("primary", "secondary"):
+            perspective_aliases.setdefault(lc, pid)
+            for key in (str(p.get("label", "")).strip(), str(p.get("legendLabel", "")).strip()):
+                if key:
+                    perspective_aliases.setdefault(key, pid)
+                    perspective_aliases.setdefault(key.lower(), pid)
+    node_ids = {n["id"] for n in nodes}
     edges = []
+    seen_edge = set()
     for i, e in enumerate(data.get("edges") or []):
         if not isinstance(e, dict):
             continue
+        source = str(e.get("source", "")).strip()
+        target = str(e.get("target", "")).strip()
+        # 过滤悬空边与自环边
+        if source not in node_ids or target not in node_ids or source == target:
+            continue
+        edge_id = str(e.get("id") or f"e{i + 1}").strip() or f"e{i + 1}"
+        if edge_id in seen_edge:
+            edge_id = f"{edge_id}-{i + 1}"
+        seen_edge.add(edge_id)
         persp = str(e.get("perspective", "both")).strip()
         if persp not in perspective_ids:
-            persp = "both"
+            persp = perspective_aliases.get(persp, perspective_aliases.get(persp.lower(), "both"))
         edges.append({
-            "id": str(e.get("id") or f"e{i + 1}"),
-            "source": str(e.get("source", "")).strip(),
-            "target": str(e.get("target", "")).strip(),
+            "id": edge_id,
+            "source": source,
+            "target": target,
             "perspective": persp,
             "label": str(e.get("label", "")).strip(),
             "curve": _as_int(e.get("curve"), 0),
@@ -830,34 +1672,56 @@ def normalize_map_data(data: dict, job: JobState) -> dict:
             "detail": str(e.get("detail", "")).strip(),
         })
 
+    valid_edge_ids = {e["id"] for e in edges}
     steps = []
     for s in (data.get("steps") or []):
         if not isinstance(s, dict):
             continue
+        active_nodes = []
+        for x in (s.get("activeNodes") or []):
+            x = str(x).strip()
+            if x in node_ids and x not in active_nodes:
+                active_nodes.append(x)
+        active_edges = []
+        for x in (s.get("activeEdges") or []):
+            x = str(x).strip()
+            if x in valid_edge_ids and x not in active_edges:
+                active_edges.append(x)
+        if not active_nodes and not active_edges:
+            continue
         steps.append({
             "title": str(s.get("title", "")).strip(),
             "description": str(s.get("description", "")).strip(),
-            "activeNodes": [str(x) for x in (s.get("activeNodes") or [])],
-            "activeEdges": [str(x) for x in (s.get("activeEdges") or [])],
+            "activeNodes": active_nodes,
+            "activeEdges": active_edges,
         })
 
     guide = data.get("readingGuide") or {}
     start_node_id = str(guide.get("startNodeId", "")).strip()
+    if start_node_id not in node_ids:
+        start_node_id = nodes[0]["id"] if nodes else ""
     recommended_path = []
     for rp in (guide.get("recommendedPath") or []):
         if isinstance(rp, dict):
-            recommended_path.append({"id": str(rp.get("id", "")).strip(), "label": str(rp.get("label", "")).strip()})
+            rid = str(rp.get("id", "")).strip()
+            label = str(rp.get("label", "")).strip()
         elif isinstance(rp, str):
-            recommended_path.append({"id": rp.strip(), "label": ""})
-    # 硬性兜底：每本书都必须有新手导览，绝不允许空 startNodeId / 空推荐路线。
-    node_ids = {n["id"] for n in nodes}
-    if not start_node_id or start_node_id not in node_ids:
-        start_node_id = nodes[0]["id"] if nodes else ""
-    recommended_path = [rp for rp in recommended_path if rp["id"] in node_ids]
-    if not recommended_path and nodes:
-        recommended_path = [{"id": n["id"], "label": n["title"]} for n in nodes[:5]]
+            rid, label = rp.strip(), ""
+        else:
+            continue
+        if rid in node_ids and all(x["id"] != rid for x in recommended_path):
+            recommended_path.append({"id": rid, "label": label})
+    if len(recommended_path) > 5:
+        recommended_path = recommended_path[:5]
+    if len(recommended_path) < 3 and nodes:
+        for n in nodes:
+            if len(recommended_path) >= 5:
+                break
+            if all(x["id"] != n["id"] for x in recommended_path):
+                recommended_path.append({"id": n["id"], "label": n["title"]})
+    core_question = str(guide.get("coreQuestion", "")).strip()
     reading_guide = {
-        "coreQuestion": str(guide.get("coreQuestion", "")).strip(),
+        "coreQuestion": core_question,
         "startNodeId": start_node_id,
         "recommendedPath": recommended_path,
     }
@@ -865,14 +1729,11 @@ def normalize_map_data(data: dict, job: JobState) -> dict:
     result = {"meta": {"title": title, "subtitle": subtitle, "overview": overview},
               "perspectives": perspectives, "nodes": nodes, "edges": edges, "steps": steps,
               "readingGuide": reading_guide}
-    # 整书总图下钻分章 / 分章返回整书的双向跳转字段（可选，原样透传）
     if isinstance(data.get("subMaps"), list):
         result["subMaps"] = data["subMaps"]
     if isinstance(data.get("parentMap"), dict):
         result["parentMap"] = data["parentMap"]
     return result
-
-
 def generate_metadata(job: JobState, llm: LLM, map_data: dict) -> dict:
     """用 MODEL_FLASH 生成 books.json 精炼元数据条目。"""
     system = (
@@ -1021,6 +1882,11 @@ def merge_book_entry(old: dict, new: dict) -> dict:
     return merged
 
 
+def _skip_books_json() -> bool:
+    """SKIP_BOOKS_JSON=1 时禁止写入 books.json（试验田专用，不影响返回值结构）。"""
+    return os.getenv("SKIP_BOOKS_JSON", "").strip().lower() in ("1", "true", "yes", "on")
+
+
 def update_books_json(entry: dict) -> Path:
     """按 slug/id 无损合并写入 books.json。
 
@@ -1036,6 +1902,9 @@ def update_books_json(entry: dict) -> Path:
         entry["url"] = map_path  # 首页 Atlas 读取的是 book.url
     else:
         entry.pop("url", None)  # 整书未完篇：不生成 url，保持 mapPath 为空
+
+    if _skip_books_json():
+        return BOOKS_JSON
 
     data = load_books()
     target_id = entry.get("id")
@@ -1059,8 +1928,6 @@ def update_books_json(entry: dict) -> Path:
         # 索引同步失败不应阻断制书流程，仅静默降级。
         pass
     return BOOKS_JSON
-
-
 def inject_map_to(slug: str, map_data: dict, out_dir: Path = None) -> Path:
     """把标题与 MAP_DATA 精准注入母版，生成 out_dir/<slug>.html。
 
@@ -1100,87 +1967,37 @@ def inject_map(slug: str, map_data: dict) -> Path:
 def build_chapter_map_data(chapter_map: dict, book_title: str, parent_path: str,
                            order: int, chapter_title: str = None,
                            subtitle: str = "", overview: str = "") -> dict:
-    """把单章 chapter_maps/xx.json（nodes/edges）确定性包装为完整 MAP_DATA。
+    """把单章 chapter_maps/xx.json 完整包装为 MAP_DATA。
 
-    复用 build_deterministic_layout 计算无重叠坐标；自动注入 parentMap 指向整书总图，
-    使分章地图左上角出现「← 返回整书总图」按钮。
+    复用 normalize_map_data() 完整保留 Pass 2 产出的双视角、步骤与导览，
+    再补充 parentMap 指向整书总图与 subMaps: []。
     """
     cmap = chapter_map if isinstance(chapter_map, dict) else {}
     raw_chapter_title = str(cmap.get("chapter_title") or "").strip()
     chapter_title = (chapter_title or raw_chapter_title or f"第{order}章").strip()
+    cmap_meta = cmap.get("meta") if isinstance(cmap.get("meta"), dict) else {}
+    chapter_core_question = str(
+        cmap.get("chapter_core_question") or cmap.get("coreQuestion") or ""
+    ).strip()
 
-    nodes = []
-    for i, n in enumerate(cmap.get("nodes") or []):
-        if not isinstance(n, dict):
-            continue
-        raw_brief = str(n.get("brief", "")).strip()
-        brief = truncate_cjk(raw_brief, 16)
-        summary = str(n.get("summary", "")).strip()
-        if len(raw_brief) > 16 and raw_brief not in summary:
-            summary = f"{raw_brief}。{summary}".strip()
-        core_idea = str(n.get("coreIdea", "")).strip() or first_sentence(summary)
-        nodes.append({
-            "id": str(n.get("id") or f"n{i + 1}"),
-            "x": 0,
-            "y": 0,
-            "category": str(n.get("category", "")).strip(),
-            "title": truncate_cjk(n.get("title"), 12),
-            "brief": brief,
-            "coreIdea": truncate_cjk(core_idea, 60),
-            "summary": summary,
-            "subPoints": [
-                {"label": str(sp.get("label", "")).strip(), "text": str(sp.get("text", "")).strip()}
-                for sp in (n.get("subPoints") or []) if isinstance(sp, dict)
-            ],
-            "perspectivesNote": [
-                {"label": str(pn.get("label", "")).strip(), "text": str(pn.get("text", "")).strip()}
-                for pn in (n.get("perspectivesNote") or []) if isinstance(pn, dict)
-            ],
-        })
-    nodes = build_deterministic_layout(nodes)
-
-    edges = []
-    for i, e in enumerate(cmap.get("edges") or []):
-        if not isinstance(e, dict):
-            continue
-        edges.append({
-            "id": str(e.get("id") or f"e{i + 1}"),
-            "source": str(e.get("source", "")).strip(),
-            "target": str(e.get("target", "")).strip(),
-            "perspective": "both",
-            "label": str(e.get("label", "")).strip(),
-            "curve": _as_int(e.get("curve"), 0),
-            "labelT": _as_float(e.get("labelT"), 0.5),
-            "detail": str(e.get("detail", "")).strip(),
-        })
-
-    start_node_id = nodes[0]["id"] if nodes else ""
-    recommended_path = [{"id": n["id"], "label": n["title"]} for n in nodes[:5]]
-    overview = overview or (first_sentence(nodes[0]["summary"]) if nodes else "")
-    title = f"{book_title} · {chapter_title}" if book_title else chapter_title
-
-    return {
+    data = {
         "meta": {
-            "title": title,
-            "subtitle": subtitle,
-            "overview": overview,
+            "title": f"{book_title} · {chapter_title}" if book_title else chapter_title,
+            "subtitle": subtitle or str(cmap_meta.get("subtitle", "")).strip(),
+            "overview": overview or str(cmap_meta.get("overview", "")).strip() or chapter_core_question,
         },
-        "perspectives": [
-            {"id": "all", "label": "全景互锁", "legendLabel": "本章结构", "lineClass": "both"},
-        ],
-        "nodes": nodes,
-        "edges": edges,
-        "steps": [],
-        "readingGuide": {
-            "coreQuestion": overview,
-            "startNodeId": start_node_id,
-            "recommendedPath": recommended_path,
-        },
-        "parentMap": {"title": book_title, "path": parent_path},
-        "subMaps": [],
+        "perspectives": cmap.get("perspectives"),
+        "nodes": cmap.get("nodes"),
+        "edges": cmap.get("edges"),
+        "steps": cmap.get("steps"),
+        "readingGuide": cmap.get("readingGuide") or {"coreQuestion": chapter_core_question},
     }
-
-
+    normalized = normalize_map_data(data, fallback_title=chapter_title)
+    if not normalized["readingGuide"]["coreQuestion"]:
+        normalized["readingGuide"]["coreQuestion"] = chapter_core_question
+    normalized["parentMap"] = {"title": book_title, "path": parent_path}
+    normalized["subMaps"] = []
+    return normalized
 def inject_chapter_map(slug: str, order: int, chapter_map: dict, book_title: str,
                        chapter_title: str = None, subtitle: str = "",
                        overview: str = "", has_parent: bool = True) -> Path:
@@ -1250,10 +2067,11 @@ def stage2_partial_finish(job: JobState) -> Path:
         "chapters": chapters,
     }
     out = update_books_json(entry)
-    job.log("已上架 books.json（无损合并）")
+    if _skip_books_json():
+        job.log("SKIP_BOOKS_JSON=1：已跳过 books.json 写入")
+    else:
+        job.log("已上架 books.json（无损合并）")
     return out
-
-
 def stage4_map(job: JobState, llm: LLM) -> tuple:
     """阶段4a：综合 overview + glossary + 全部 chapter_maps 生成完整 MAP_DATA。"""
     job.set(stage="map")
@@ -1270,10 +2088,13 @@ def stage4_map(job: JobState, llm: LLM) -> tuple:
             except Exception:
                 continue
 
-    system = "你是知识图谱工程师。只输出一个合法 JSON 对象，绝不输出 HTML、Markdown 代码块或解释文字。"
-    raw, usage = llm.chat(llm.model_pro, system, build_map_prompt(job, overview, glossary, chapter_maps), json_mode=True)
+    raw, usage = llm.chat(llm.model_pro, build_map_system(), build_map_prompt(job, overview, glossary, chapter_maps), json_mode=True)
     job.add_usage(usage)
+    job.log(f"  MAP_DATA 调用模式：{llm.last_mode}")
     data = parse_json_robust(raw, llm, job)
+    data, filled = ensure_perspectives_notes(data, {}, [], scope_word="全书")
+    if filled:
+        job.log(f"  MAP_DATA 兜底补填 perspectivesNote：{filled} 个节点")
     map_data = normalize_map_data(data, job)
     job.log(f"MAP_DATA 生成完成：{len(map_data['nodes'])} 节点 / {len(map_data['edges'])} 连线 / {len(map_data['steps'])} 步")
 
@@ -1292,10 +2113,12 @@ def stage4_inject(job: JobState, map_data: dict, meta_entry: dict) -> tuple:
     out = inject_map(job.slug, map_data)
     job.log(f"地图已生成：{out}")
     update_books_json(meta_entry)
-    job.log("已上架 books.json（无损合并）")
-    return str(out), str(NOTES_DIR / f"{job.slug}.md")
-
-
+    if _skip_books_json():
+        job.log("SKIP_BOOKS_JSON=1：已跳过 books.json 写入")
+    else:
+        job.log("已上架 books.json（无损合并）")
+    note_path = getattr(job, "merged_note_path", None) or str(NOTES_DIR / f"{job.slug}.md")
+    return str(out), str(note_path)
 def run_pipeline(job: JobState) -> None:
     """制书流水线主入口（在后台线程中运行）。"""
     llm = LLM()
