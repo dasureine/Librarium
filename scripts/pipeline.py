@@ -859,28 +859,36 @@ def build_pass1_system() -> str:
 def build_pass1_prompt(ch: dict, text: str, glossary_terms: list) -> str:
     terms = "、".join([t for t in (glossary_terms or []) if t][:80]) or "（暂无）"
     return (
-        "请精读下面这一章，按五条铁律输出一个 JSON 对象（不要输出 JSON 之外的文字）。\n\n"
+        "请精读下面这一章，按六条铁律输出一个 JSON 对象（不要输出 JSON 之外的文字）。\n\n"
         f"书名：{ch.get('book_title', '')}\n"
         f"作者：{ch.get('book_author', '')}\n"
         f"章号：{ch['index']:02d}\n"
         f"章名：{ch['title']}\n\n"
         f"【全书已有术语名清单】\n{terms}\n\n"
-        "【五条铁律】\n"
+        "【六条铁律】\n"
         "1. 还原推演关节：先写反对什么问题，再写用什么机制推导，最后写暴露何种内在两难。不要写成结论清单。\n"
         "2. 区分两类言说：被讨论思想家或核心对象的原论，与本书作者或原文引述的评述、批判，必须分开记录。\n"
-        "3. 严禁脑补关系：verified_relations 只记录原文明确交代了批评、继承、综合、对立、辩护、回应关系的双方，"
-        "并在 evidence 摘录原文依据；原文仅平行阐述者只能标为「平行对照」，严禁标为「继承」或「转向」。\n"
+        "3. 严禁脑补关系：verified_relations 只记录原文明确交代关系的双方，并在 evidence 摘录原文依据。\n"
+        "   关系类型分两类：\n"
+        "   · 跨学派/跨阵营关系：批评、继承、综合、对立、辩护、回应、平行对照；\n"
+        "   · 同体系/同思想家内部逻辑关系：前提奠基、推论展开、方法支撑、极端推进、归结收束。\n"
+        "   当原文围绕同一思想家或同一思潮展开多个命题、原则或方法时（如苏格拉底的「认识你自己 → 德性即知识 / 助产术与反诘」，"
+        "或智者内部的「自然与约定 → 相对主义 → 怀疑论 → 危机」），必须提取它们在原文中的逻辑推导、方法支撑或因果收束关系并附原文依据，"
+        "不得只抽跨学派冲突。原文仅平行阐述者只能标为「平行对照」，严禁标为「继承」或「转向」。\n"
         "4. 静默清洗明显 OCR 乱码与页眉页码；正文因扫描缺字导致论证残缺时标注【原文OCR残缺】；"
         "原文含 [[p.XX]] 页码标记时，在依据中保留页码线索。\n"
         "5. note 从 ### 标题起步，固定四节：### 核心问题意识、### 论证结构与推进、"
-        "### 关键概念界定、### 章节衔接与张力。\n\n"
+        "### 关键概念界定、### 章节衔接与张力。\n"
+        "6. 属种边界保真：当原文明确交代了「上位总称与下位子派/独立成员的包含关系」，或「某几位思想家仅在分析上归为同一大类、历史上并无直接师承」时，"
+        "必须如实记入 units 各对象的 parent_group（上位学派、总思潮、大流派或上位概念框架）与 sub_group（下位子学派、细分流派或独立身份），"
+        "严禁在扁平化提取时抹掉这层属种区分；原文无上位或细分归属时分别留空字符串 \"\"。\n\n"
         "【输出 JSON 字段】\n"
         "{\n"
         '  "chapter_core_question": "2-3 句交代本章核心问题",\n'
         '  "note": "Markdown 精读正文，从 ### 核心问题意识 开始，固定四节",\n'
         '  "glossary": [{"term": "...", "original": "...", "definition": "...", "scope": "...", "related_existing_terms": []}],\n'
-        '  "units": [{"name": "...", "problem_addressed": "...", "core_argument": "...", "key_distinctions": [], "internal_tensions": [], "author_comments": [], "primary_sources": []}],\n'
-        '  "verified_relations": [{"from": "...", "to": "...", "relation_type": "批评|继承|综合|对立|辩护|回应|平行对照", "evidence": "原文依据摘录"}],\n'
+        '  "units": [{"name": "...", "parent_group": "...", "sub_group": "...", "problem_addressed": "...", "core_argument": "...", "key_distinctions": [], "internal_tensions": [], "author_comments": [], "primary_sources": []}],\n'
+        '  "verified_relations": [{"from": "...", "to": "...", "relation_type": "批评|继承|综合|对立|辩护|回应|平行对照|前提奠基|推论展开|方法支撑|极端推进|归结收束", "evidence": "原文依据摘录"}],\n'
         '  "chapter_framework": "本章是否存在贯穿全局的分类轴或逻辑框架，没有则为空字符串"\n'
         "}\n\n"
         f"【本章原文】\n{text}\n"
@@ -894,17 +902,21 @@ def build_pass1_chunk_prompt(ch: dict, chunk_text: str, page_range: str, part: i
         "请只处理这一片，输出一个 JSON 对象，不要输出 JSON 之外的文字。\n\n"
         "【铁律】\n"
         "1. 只忠实还原本片原文的论证关节，不补充外部学术史，不画图。\n"
-        "2. 区分原论与作者评述；verified_relations 只记录原文明确交代的关系并摘录依据。\n"
+        "2. 区分原论与作者评述；verified_relations 只记录原文明确交代的关系并摘录依据，"
+        "既包括跨学派/跨阵营的批评、继承、综合、对立、辩护、回应、平行对照，也包括同体系内部的"
+        "前提奠基、推论展开、方法支撑、极端推进、归结收束等逻辑推进关系。\n"
         "3. 静默清洗 OCR 乱码与页眉页码；论证残缺处标注【原文OCR残缺】；保留 [[p.XX]] 页码线索。\n"
-        "4. note_fragment 从 ### 标题起步，只写本片涉及的小节，不要重复章标题。\n\n"
+        "4. note_fragment 从 ### 标题起步，只写本片涉及的小节，不要重复章标题。\n"
+        "5. 属种边界保真：如实记入 units 各对象的 parent_group（上位学派/总思潮/大流派/上位概念框架）与 sub_group（下位子学派/细分流派/独立身份），"
+        "保留上位归属与下位细分，不得在扁平化提取时抹掉属种区分；原文无上位或细分归属时分别留空字符串 \"\"。\n\n"
         "【输出 JSON 字段】\n"
         "{\n"
         '  "page_range": "本片页码范围",\n'
         '  "chapter_core_question": "本片涉及的核心问题",\n'
         '  "note_fragment": "本片对应的 Markdown 小节",\n'
         '  "glossary": [{"term": "...", "original": "...", "definition": "...", "scope": "...", "related_existing_terms": []}],\n'
-        '  "units": [{"name": "...", "problem_addressed": "...", "core_argument": "...", "key_distinctions": [], "internal_tensions": [], "author_comments": [], "primary_sources": []}],\n'
-        '  "verified_relations": [{"from": "...", "to": "...", "relation_type": "...", "evidence": "..."}],\n'
+        '  "units": [{"name": "...", "parent_group": "...", "sub_group": "...", "problem_addressed": "...", "core_argument": "...", "key_distinctions": [], "internal_tensions": [], "author_comments": [], "primary_sources": []}],\n'
+        '  "verified_relations": [{"from": "...", "to": "...", "relation_type": "批评|继承|综合|对立|辩护|回应|平行对照|前提奠基|推论展开|方法支撑|极端推进|归结收束", "evidence": "..."}],\n'
         '  "chapter_framework": "本片是否出现贯穿全局的分类轴"\n'
         "}\n\n"
         f"【本片原文】\n{chunk_text}\n"
@@ -919,10 +931,13 @@ def build_pass1_merge_prompt(ch: dict, partials: list) -> str:
         "1. 只使用中间结果已有的事实，不得引入其中未出现的内容。\n"
         "2. units 按原文顺序合并去重，保留全部页码线索。\n"
         "3. glossary 同一术语只保留一条，合并界定与出处。\n"
-        "4. verified_relations 去重，保留每条的原文依据。\n"
+        "4. verified_relations 去重，保留每条的原文依据；既保留跨学派/跨阵营关系，也保留同体系内部的"
+        "前提奠基、推论展开、方法支撑、极端推进、归结收束等逻辑推进关系，不得只保留跨学派冲突。\n"
         "5. note 合并全部 note_fragment，从 ### 标题起步，固定四节："
         "### 核心问题意识、### 论证结构与推进、### 关键概念界定、### 章节衔接与张力；"
-        "不得只保留前半章内容。\n\n"
+        "不得只保留前半章内容。\n"
+        "6. 合并 units 时必须完整保留并统一每个单元的 parent_group（上位学派/总思潮/上位概念框架）与 sub_group（下位子学派/细分流派/独立身份），"
+        "不得丢失任何单元的层级归属；同一上位归属在不同分片中的不同表述应统一为一致名称。\n\n"
         "【输出 JSON 字段】\n"
         "{\n"
         '  "chapter_core_question": "2-3 句交代本章核心问题",\n'
@@ -1018,10 +1033,10 @@ def build_pass2_prompt(ch: dict, ir: dict, book_anchors: list,
         f"【本书已完成章节的精简锚点】\n{anchors}\n\n"
         f"【书架其他书目（用于跨书锚点）】\n{books}\n\n"
         f"【全书术语名】\n{terms}\n\n"
-        "【六条硬规范】\n"
+        "【九条硬规范】\n"
         "1. 禁止按教材小节 1:1 排流水账：节点控制在 7-10 个；递进紧密的早期探索合并为高密度演进节点，"
         "具有独立理论转折意义者拆分为独立节点。\n"
-        "2. 严格遵守表层字数红线：title 严格 ≤12 字；brief 严格 8-11 字（确保单行显示，防止「01 · 起点」卡片折行切字），"
+        "2. 严格遵守表层字数红线：title 严格 ≤12 字；brief 严格 ≤10 个汉字（确保单行显示，如「知善必行、无人作恶」「承认无知与反诘」，防止「01 · 起点」卡片折行切字），"
         "禁止写完整长句，禁止与 summary 重复；coreIdea 20-40 字（一句话论证判断）；"
         "summary 60-120 字（交代困境 → 推演机制 → 理论落点）。\n"
         "3. subPoints 每节点 3-4 条，只使用四个语义槽位：核心论证、关键区分、内在两难、原典锚点；"
@@ -1034,12 +1049,23 @@ def build_pass2_prompt(ch: dict, ir: dict, book_anchors: list,
         "5. 防伪边与双视角铁律：每条 edge 必须严格对应 Pass 1 的 verified_relations；"
         "无直接师承关系者严禁使用「转向」「继承」「发展」，改用「立场对立」「平行对比」或指向真实共同影响对象；"
         "除 all 外必须提炼 2 个贯穿本章的分析视角，分别对应 lineClass 的 primary 与 secondary，"
-        "并把大多数 edge 的 perspective 精准归类为对应视角 id；\"both\" 仅用于极少数同时承载双重视角的主干边，"
-        "不超过总边数的 25%，以保证两个视角切换有明显区分度；严禁输出 x/y 坐标，curve 一律填 0。\n"
+        "并把大多数 edge 的 perspective 精准归类为对应视角 id；\"both\" 仅可用于真正横跨两个分析视角的交叉桥接边，"
+        "完全发生在同一学派或同一思想家内部的逻辑推导边（如同一哲学家的不同核心命题之间）一律归入该方专属视角，严禁标为 \"both\"，"
+        "且 \"both\" 不超过总边数的 25%，以保证两个视角切换有明显区分度；任意两个节点之间在同一方向（相同 source 与 target）"
+        "最多只允许建立 1 条边，存在复合关系（如同时包含批评与继承）时合并为 1 条边并在 label（如「批判与继承」）与 detail 中一并说明；"
+        "严禁输出 x/y 坐标，curve 一律填 0。\n"
         "6. 必须输出 readingGuide（coreQuestion 为本章核心问题，recommendedPath 给 3-5 个节点）"
         "与 4-5 步逻辑推演 steps。\n"
         "7. 当 Pass 1 的 chapter_framework 非空时，在 7-10 个节点上限内优先保留一个「框架收束」节点，"
-        "把该分类轴或逻辑框架落为一个贯穿全章的收束性判断。\n\n"
+        "把该分类轴或逻辑框架落为一个贯穿全章的收束性判断。\n"
+        "8. 零孤立节点硬规则：图谱严禁出现没有任何连线的孤立节点；每个节点至少应有 1 条有原文依据的连线，"
+        "既包括跨学派交锋，也包括同一思想体系内部的逻辑推进与方法支撑（如苏格拉底「认识你自己 → 德性即知识 → 助产术与反诘」、"
+        "智者「自然与约定 → 相对主义 → 怀疑论 → 危机」）；仍严禁杜撰无依据的跨学派历时师承。\n"
+        "9. 属种命名不越界与集合外延自检：\n"
+        "   a. 只有当单个节点完整囊括了该 parent_group 在本章的全部核心成员或子派时，才允许使用 parent_group 的上位总称作为该节点 title；\n"
+        "   b. 一旦同一个 parent_group（同一上位学派、思潮或总概念）被拆分到 2 个及以上并列节点中，严禁让其中任何一个局部节点在 title 里独占上位总称，"
+        "每个并列节点必须改用各自的 sub_group、具体思想家名或精确子论题命名，并在 summary 或 perspectivesNote 中交代它们共同隶属的 parent_group；\n"
+        "   c. 输出 JSON 前必须横向复查所有并列节点的 title，确保任意两个并列节点之间不存在「一个占用了上位总名、另一个实为其下位成员」的属种错位。\n\n"
         "【节点 category 要求】category 为 4-8 字的「理论结构定位」，刻画该节点在论证结构中承担的角色，"
         "例如「感性始基」「逻辑本体」「微观折中」「问题框架」；"
         "严禁使用「学说」「概念」「论点」「理论」这类泛称。\n\n"
@@ -1222,6 +1248,49 @@ def parse_json_robust(raw: str, llm: LLM, job: JobState) -> dict:
         return json.loads(extract_json(fixed))
 
 
+def warn_taxonomy_naming(ir: dict, map_data: dict, job: JobState) -> None:
+    """只读告警：检测 Pass 1 的属种层级在图谱节点命名中是否越界。
+
+    统计 Pass 1 units 中同一 parent_group 下被拆成多个不同 sub_group/单元的集合；
+    若某 parent_group 的成员在图谱中被拆成多个节点，而其中某个节点的 title 直接
+    包含了该 parent_group 名称（疑似独占上位总称），仅记录日志警告，不抛异常、
+    不强行改写节点标题。
+    """
+    units = [u for u in (ir.get("units") or []) if isinstance(u, dict)]
+    nodes = [n for n in (map_data.get("nodes") or []) if isinstance(n, dict)]
+    if not units or not nodes:
+        return
+
+    pg_to_children = {}
+    for u in units:
+        pg = str(u.get("parent_group") or "").strip()
+        if not pg:
+            continue
+        child = str(u.get("sub_group") or u.get("name") or "").strip()
+        pg_to_children.setdefault(pg, set())
+        if child:
+            pg_to_children[pg].add(child)
+
+    for pg, children in pg_to_children.items():
+        if len(children) < 2:
+            continue
+        title_hits = [n["id"] for n in nodes if pg and pg in str(n.get("title") or "")]
+        if not title_hits:
+            continue
+        sibling_hits = []
+        for n in nodes:
+            if n.get("id") in title_hits:
+                continue
+            title = str(n.get("title") or "").strip()
+            if any(c and c in title for c in children):
+                sibling_hits.append(n["id"])
+        if sibling_hits:
+            job.log(
+                f"[校验警告] 疑似属种命名越界：上位总称「{pg}」对应多个下位成员，"
+                f"节点 {'、'.join(title_hits)} 疑似独占上位名，并列成员节点 {'、'.join(sibling_hits)} 未归并于其中。"
+            )
+
+
 def stage2_chapters(job: JobState, llm: LLM, chapters: list) -> None:
     """阶段2：逐章两阶段学术拆书（Pass 1 原著解剖 → Pass 2 图谱建构），断点续跑。"""
     job.set(stage="chapters")
@@ -1311,6 +1380,9 @@ def stage2_chapters(job: JobState, llm: LLM, chapters: list) -> None:
         if not pass2_skipped:
             map_path.write_text(json.dumps(cmap, ensure_ascii=False, indent=2), encoding="utf-8")
             job.log(f"  Pass 2 完成：chapter_maps 已写入（{len(cmap.get('nodes') or [])} 节点）")
+
+        # 轻量只读告警：属种层级在图谱节点命名中是否越界（不篡改数据、不中断任务）。
+        warn_taxonomy_naming(ir, cmap, job)
 
         chapter_html = MAPS_DIR / job.slug / f"ch{ch['index']:02d}.html"
         if (not pass2_skipped) or (not chapter_html.exists()):
@@ -1498,15 +1570,17 @@ def build_map_prompt(job: JobState, overview: str, glossary: str, chapter_maps: 
         "}\n\n"
         "硬性要求：\n"
         "1. 只输出纯 JSON，键名与上述完全一致，值用中文。\n"
-        "2. 节点数量控制在 6-10 个，覆盖全书核心论点群；每节点 title 严格 ≤12 字、brief 严格 8-11 字（只放关键词锚点，确保单行显示、防止卡片折行切字）、coreIdea 为 20-40 字的一句话核心结论、summary 60-120 字，所有详细解释全部放进 subPoints/perspectivesNote，保证右侧阅读栏解析详实。\n"
+        "2. 节点数量控制在 6-10 个，覆盖全书核心论点群；每节点 title 严格 ≤12 字、brief 严格 ≤10 个汉字（只放关键词锚点，如「知善必行、无人作恶」「承认无知与反诘」，确保单行显示、防止卡片折行切字）、coreIdea 为 20-40 字的一句话核心结论、summary 60-120 字，所有详细解释全部放进 subPoints/perspectivesNote，保证右侧阅读栏解析详实。\n"
         "3. 节点 category 为 4-8 字的「理论结构定位」，刻画该节点在论证结构中承担的角色，例如「感性始基」「逻辑本体」「微观折中」「问题框架」，严禁使用「学说」「概念」「论点」「理论」这类泛称。\n"
         "4. subPoints 每节点 3-4 条，只使用四个语义槽位：核心论证、关键区分、内在两难、原典锚点。\n"
         "5. perspectivesNote 每节点 2-3 条，严禁留空数组，只用三层来源标签：【原书评述】取自各章作者评述、【学术延伸】具名学者或具体概念的学术史脉络（40-80 字）、【跨章锚点】或【跨书锚点】与前章或书架其他书目呼应。\n"
         "6. 严禁输出任何 x/y 坐标：节点坐标由后端 Python 按层级网格/蛇形递进算法自动计算，杜绝重叠。\n"
-        '7. edges 的 perspective 取值必须是 "both" 或 perspectives 中某个 id；大多数连线精准归入两个分析视角之一，"both" 仅用于极少数同时承载双重视角的主干边（不超过总边数的 25%）；curve 一律填 0，labelT 为 0~1；label 短，detail 为 40-90 字深度解析。\n'
+        '7. edges 的 perspective 取值必须是 "both" 或 perspectives 中某个 id；大多数连线精准归入两个分析视角之一；"both" 仅可用于真正横跨两个分析视角的交叉桥接边，完全发生在同一学派或同一思想家内部的逻辑推导边（如同一哲学家的不同核心命题之间）一律归入该方专属视角，严禁标为 "both"，且 "both" 不超过总边数的 25%；任意两个节点之间在同一方向（相同 source 与 target）最多只允许建立 1 条边，存在复合关系（如同时包含批评与继承）时合并为 1 条边并在 label（如「批判与继承」）与 detail 中一并说明；curve 一律填 0，labelT 为 0~1；label 短，detail 为 40-90 字深度解析。\n'
         "8. steps 给 4-6 步，按逻辑顺序覆盖因果链，activeNodes/activeEdges 引用上面 id。\n"
         "9. readingGuide.coreQuestion 用 2-3 句直白的话交代本部分核心问题；startNodeId 指向逻辑起点节点；recommendedPath 给 3-5 个按顺序编号的关键节点（含 id 与简短 label）。\n"
         '10. 除 "all" 外再给出 2 个分析视角（简短英文/拼音 id），分别对应 lineClass 的 primary 与 secondary。\n'
+        "11. 零孤立节点硬规则：图谱严禁出现没有任何连线的孤立节点；每个节点至少应有 1 条有原文依据的连线，既包括跨学派交锋，也包括同一思想体系内部的逻辑推进与方法支撑；仍严禁杜撰无依据的跨学派历时师承。\n"
+        "12. 属种命名不越界：综合全书节点时，若同一理论传统、流派或大概念被拆分为多个并列节点，严禁任一局部节点独占上位总称，所有并列节点必须在同一抽象层级上准确命名。\n"
     )
 
 def _as_int(value, fallback=0):
@@ -1733,6 +1807,19 @@ def normalize_map_data(data: dict, job: Optional[JobState] = None,
         result["subMaps"] = data["subMaps"]
     if isinstance(data.get("parentMap"), dict):
         result["parentMap"] = data["parentMap"]
+
+    # 零孤立节点校验：过滤悬空边后，度数（入度+出度）为 0 的节点必须显式告警，不静默吞掉。
+    degree = {n["id"]: 0 for n in nodes}
+    for e in edges:
+        degree[e["source"]] = degree.get(e["source"], 0) + 1
+        degree[e["target"]] = degree.get(e["target"], 0) + 1
+    isolated = [nid for nid, d in degree.items() if d == 0]
+    if isolated:
+        warning = f"[校验警告] 存在孤立节点：{'、'.join(isolated)}"
+        if job is not None:
+            job.log(warning)
+        else:
+            print(warning, file=sys.stderr)
     return result
 def generate_metadata(job: JobState, llm: LLM, map_data: dict) -> dict:
     """用 MODEL_FLASH 生成 books.json 精炼元数据条目。"""

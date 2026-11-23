@@ -622,11 +622,90 @@ textarea.lr-input {
 }
 .lr-progress-label {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   font-size: 12px;
   color: var(--mist, #9bb0a5);
   margin-bottom: 16px;
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 迷你旋转小花指示器（运行态 / 暂停 / 完成 / 出错） ---------- */
+.lr-status-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.lr-flower-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  transition: opacity 0.4s var(--ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+.lr-flower {
+  display: block;
+  width: 18px;
+  height: 18px;
+  color: #85a897;
+  will-change: transform, opacity;
+}
+.lr-elapsed {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: #8aa097;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+.lr-elapsed[hidden] {
+  display: none;
+}
+
+/* 运行中：匀速慢转 + 柔和呼吸微光（动画仅驱动 transform / opacity） */
+.lr-progress-label.is-run .lr-flower {
+  color: #ede9df;
+  animation: lrFlowerSpin 10s linear infinite,
+             lrFlowerBreathe 2.6s ease-in-out infinite;
+}
+.lr-progress-label.is-run .lr-flower-box {
+  filter: drop-shadow(0 0 3px rgba(133, 168, 151, 0.4));
+}
+/* 暂停刷新：冻结动画并降低透明度（恢复后继续旋转） */
+.lr-progress-label.is-run.is-paused .lr-flower {
+  animation-play-state: paused;
+}
+.lr-progress-label.is-run.is-paused .lr-flower-box {
+  opacity: 0.4;
+}
+/* 完成：停止旋转，稳定定格为清晰苔绿 */
+.lr-progress-label.is-done .lr-flower {
+  color: #85a897;
+  animation: none;
+}
+.lr-progress-label.is-done .lr-flower-box {
+  opacity: 1;
+  filter: none;
+}
+/* 出错 / 中止：停止旋转，淡退 */
+.lr-progress-label.is-error .lr-flower {
+  color: #85a897;
+  animation: none;
+}
+.lr-progress-label.is-error .lr-flower-box {
+  opacity: 0.3;
+  filter: none;
+}
+
+@keyframes lrFlowerSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes lrFlowerBreathe {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.95; }
 }
 
 .lr-tokens {

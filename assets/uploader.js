@@ -24,6 +24,19 @@
     { key: 'inject', label: '上架' }
   ];
 
+  // 迷你花徽：复刻主页中央那朵放射状六瓣线稿花（art-lily 的尖拱花瓣几何）
+  var FLOWER_SVG =
+    '<svg class="lr-flower" viewBox="272 127 256 256" aria-hidden="true" focusable="false">' +
+      '<g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">' +
+        '<g transform="rotate(0 400 255)"><path d="M400 255 C 424 219 470 222 520 255 C 470 288 424 291 400 255 Z"/></g>' +
+        '<g transform="rotate(60 400 255)"><path d="M400 255 C 424 219 470 222 520 255 C 470 288 424 291 400 255 Z"/></g>' +
+        '<g transform="rotate(120 400 255)"><path d="M400 255 C 424 219 470 222 520 255 C 470 288 424 291 400 255 Z"/></g>' +
+        '<g transform="rotate(180 400 255)"><path d="M400 255 C 424 219 470 222 520 255 C 470 288 424 291 400 255 Z"/></g>' +
+        '<g transform="rotate(240 400 255)"><path d="M400 255 C 424 219 470 222 520 255 C 470 288 424 291 400 255 Z"/></g>' +
+        '<g transform="rotate(300 400 255)"><path d="M400 255 C 424 219 470 222 520 255 C 470 288 424 291 400 255 Z"/></g>' +
+      '</g>' +
+    '</svg>';
+
   var health = null;
   var step = 1;
   var selectedFile = null;
@@ -35,6 +48,9 @@
   var jobStatus = null;
   var pollTimer = null;
   var paused = false;
+  var elapsedStartedAt = null;
+  var elapsedTimer = null;
+  var elapsedSeconds = 0;
   var renderedLogs = 0;
   var activeTag = '全部';
 
@@ -451,6 +467,9 @@
     paused = false;
     renderedLogs = 0;
     stopPolling();
+    stopElapsedTimer();
+    elapsedStartedAt = null;
+    elapsedSeconds = 0;
     mode = 'new';
     resumeBook = null;
     offsetMode = 'none';
@@ -909,8 +928,10 @@
       .then(function (data) {
         jobId = data.job_id;
         jobStatus = data.status || 'queued';
+        elapsedStartedAt = Date.now();
         goStep(3);
         startPolling();
+        startElapsedTimer();
       })
       .catch(function (err) {
         btn.disabled = false;
@@ -933,7 +954,11 @@
       '<div class="lr-stagebar" id="lrStagebar">' + stagesHtml + '</div>' +
       '<div class="lr-progress"><div class="lr-progress-bar" id="lrProgressBar"></div></div>' +
       '<div class="lr-progress-label">' +
-        '<span id="lrProgressText">准备中…</span>' +
+        '<span class="lr-status-text">' +
+          '<span class="lr-flower-box">' + FLOWER_SVG + '</span>' +
+          '<span id="lrProgressText">准备中…</span>' +
+          '<span class="lr-elapsed" id="lrElapsed" hidden></span>' +
+        '</span>' +
         '<span id="lrChapterCount"></span>' +
       '</div>' +
       '<div class="lr-tokens" id="lrTokens">已用 tokens：<b>0</b></div>' +
@@ -945,6 +970,8 @@
       '<button class="lr-btn lr-btn-danger" type="button" id="lrCancelBtn">中止生成</button>';
 
     wireStepC();
+    applyFlowerState();
+    updateElapsedDisplay();
   }
 
   function wireStepC() {
@@ -987,12 +1014,69 @@
     return s === 'done' || s === 'error' || s === 'cancelled';
   }
 
+  function isRunningStatus(s) {
+    return s === 'queued' || s === 'running';
+  }
+
+  function formatElapsed(total) {
+    total = Math.max(0, Math.floor(total || 0));
+    var m = Math.floor(total / 60);
+    var s = total % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function updateElapsedDisplay() {
+    var el = bodyEl && bodyEl.querySelector('#lrElapsed');
+    if (!el) return;
+    if (isRunningStatus(jobStatus)) {
+      el.hidden = false;
+      el.textContent = '· ' + formatElapsed(elapsedSeconds);
+    } else {
+      el.hidden = true;
+    }
+  }
+
+  function tickElapsed() {
+    if (elapsedStartedAt) elapsedSeconds = (Date.now() - elapsedStartedAt) / 1000;
+    updateElapsedDisplay();
+  }
+
+  function startElapsedTimer() {
+    stopElapsedTimer();
+    elapsedSeconds = 0;
+    tickElapsed();
+    elapsedTimer = setInterval(function () {
+      if (paused) return;
+      tickElapsed();
+    }, 1000);
+  }
+
+  function stopElapsedTimer() {
+    if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+  }
+
+  function applyFlowerState() {
+    var label = bodyEl && bodyEl.querySelector('.lr-progress-label');
+    if (!label) return;
+    label.classList.remove('is-run', 'is-paused', 'is-done', 'is-error');
+    if (jobStatus === 'done') {
+      label.classList.add('is-done');
+    } else if (jobStatus === 'error' || jobStatus === 'cancelled') {
+      label.classList.add('is-error');
+    } else if (isRunningStatus(jobStatus)) {
+      label.classList.add('is-run');
+      if (paused) label.classList.add('is-paused');
+    }
+  }
+
   function applyStatus(data) {
     if (!data) { schedulePoll(1500); return; }
     jobStatus = data.status;
     renderStatus(data);
+    applyFlowerState();
     if (isTerminal(jobStatus)) {
       stopPolling();
+      stopElapsedTimer();
       finalize(data);
     } else {
       schedulePoll(1500);
@@ -1068,6 +1152,8 @@
     var btn = footEl.querySelector('#lrPauseBtn');
     if (btn) btn.textContent = paused ? '继续刷新' : '暂停刷新';
     if (!paused) schedulePoll(0);
+    applyFlowerState();
+    if (!paused) tickElapsed();
   }
 
   function cancelJob() {
