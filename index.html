@@ -433,6 +433,7 @@
   <link rel="stylesheet" href="./assets/uploader.css">
   <link rel="stylesheet" href="./assets/home-views.css">
   <link rel="stylesheet" href="./assets/home-atmosphere.css">
+  <link rel="stylesheet" href="./assets/ai-workbench.css">
 </head>
 <body>
   <svg class="noise" aria-hidden="true">
@@ -450,6 +451,16 @@
   <div class="intro-stage" id="introStage" aria-hidden="true">
     <svg id="introSvg" preserveAspectRatio="none"></svg>
   </div>
+
+  <div id="aiWorkbench" aria-hidden="true"></div>
+
+  <script>
+    /* 思考状态钩子：主页大花缩放旋转，表示「正在思考」。 */
+    window.__librariumThinking = function (on) {
+      var lily = document.getElementById("artLily");
+      if (lily) lily.classList.toggle("ai-thinking", !!on);
+    };
+  </script>
 
   <main class="layout">
     <aside class="art-board" id="artBoard">
@@ -999,5 +1010,6 @@
   <script src="./assets/uploader.js" defer></script>
   <script src="./assets/home-views.js" defer></script>
   <script src="./assets/home-atmosphere.js" defer></script>
+  <script src="./assets/ai-workbench.js" defer></script>
 </body>
 </html>

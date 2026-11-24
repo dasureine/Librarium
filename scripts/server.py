@@ -8,6 +8,7 @@
 启动后访问 http://localhost:8000 展示主页与地图页。
 """
 
+import json
 import os
 import shutil
 import subprocess
@@ -20,8 +21,10 @@ from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import assistant
 import pipeline
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import Body, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -119,6 +122,212 @@ def cancel(job_id: str):
 @app.get("/api/books")
 def list_books():
     return pipeline.list_jobs()
+
+
+# ---------- 内置 AI 学术工作台（阶段 1） ----------
+
+@app.get("/api/corpus/overview")
+def corpus_overview():
+    return assistant.overview()
+
+
+@app.post("/api/chat")
+def chat(payload: dict = Body(...)):
+    query = str(payload.get("query") or "").strip()
+    if not query:
+        raise HTTPException(status_code=400, detail="query 不能为空")
+    scope = payload.get("scope") or []
+    mode = str(payload.get("mode") or "qa")
+    external = str(payload.get("external") or "closed")
+    web = bool(payload.get("web"))
+    top_k = int(payload.get("top_k") or 10)
+
+    system, user, sources = assistant.assemble(
+        query=query, scope=scope, mode=mode, external=external, web=web, top_k=top_k
+    )
+
+    llm = pipeline.LLM()
+    if not llm.configured:
+        raise HTTPException(status_code=500, detail="未配置 API_KEY（.env），无法调用内置 AI")
+
+    def sse(obj):
+        return "data: " + json.dumps(obj, ensure_ascii=False) + "\n\n"
+
+    def gen():
+        yield sse({"type": "meta", "sources": sources, "mode": mode,
+                   "external": external, "web": web, "source_count": len(sources)})
+        try:
+            for delta in llm.chat_stream(llm.model_pro, system, user):
+                yield sse({"type": "delta", "content": delta})
+        except Exception as exc:  # noqa: BLE001
+            yield sse({"type": "error", "message": f"内置 AI 调用失败：{exc}"})
+        else:
+            yield sse({"type": "done"})
+
+    return StreamingResponse(gen(), media_type="text/event-stream")
+
+
+@app.get("/api/corpus/segment/{segment_id}")
+def corpus_segment(segment_id: str):
+    seg = assistant.get_segment(segment_id)
+    if not seg:
+        raise HTTPException(status_code=404, detail="片段不存在")
+    return seg
+
+
+@app.post("/api/quiz/ledger")
+def quiz_ledger(payload: dict = Body(...)):
+    scope = payload.get("scope") or []
+    top_k = int(payload.get("top_k") or 24)
+    corpus = assistant.load_corpus()
+    book_tags = assistant.load_book_tags()
+    docs, terms = assistant.resolve_scope(corpus, scope, book_tags)
+    selected = assistant.sample_spread(docs, top_k)
+    sources, parts = assistant._sources_and_parts(selected)
+
+    system = assistant.build_ledger_system()
+    user = "请根据以下资料生成知识点清单。\n\n【可溯源资料】\n" + "\n\n".join(parts)
+    gloss = assistant.build_glossary(terms)
+    if gloss:
+        user += "\n\n" + gloss
+
+    llm = pipeline.LLM()
+    if not llm.configured:
+        raise HTTPException(status_code=500, detail="未配置 API_KEY（.env），无法调用内置 AI")
+    raw, _u = llm.chat(llm.model_pro, system, user, json_mode=True, max_tokens=8000, thinking=False)
+    data = json.loads(pipeline.extract_json(raw))
+    points = data.get("points") if isinstance(data, dict) else None
+    if not isinstance(points, list):
+        raise HTTPException(status_code=500, detail="知识点清单解析失败，请重试")
+
+    marker_to_seg = {s["marker"]: s["id"] for s in sources}
+    state = assistant.get_quiz_state(scope)
+    state["points"] = []
+    for i, p in enumerate(points, start=1):
+        m = str(p.get("source") or "").strip()
+        state["points"].append({
+            "id": f"k{i}",
+            "name": str(p.get("name") or "").strip(),
+            "source_marker": m,
+            "segment_id": marker_to_seg.get(m),
+        })
+    state["covered"] = []
+    state["questions"] = []
+    assistant.set_quiz_state(scope, state)
+    return {
+        "scope_key": state["scope_key"],
+        "points": state["points"],
+        "sources": sources,
+        "progress": {"covered": 0, "total": len(state["points"])},
+    }
+
+
+@app.post("/api/quiz/generate")
+def quiz_generate(payload: dict = Body(...)):
+    scope = payload.get("scope") or []
+    count = int(payload.get("count") or 5)
+    qtype = str(payload.get("qtype") or "简答/选择混合")
+    state = assistant.get_quiz_state(scope)
+    points = state.get("points") or []
+    covered = set(state.get("covered") or [])
+    uncovered = [p for p in points if p.get("id") not in covered]
+    if not points:
+        raise HTTPException(status_code=400, detail="请先生成知识点清单")
+    if not uncovered:
+        return {"done": True, "questions": [], "sources": [],
+                "progress": {"covered": len(covered), "total": len(points)}}
+
+    seen, docs = set(), []
+    for p in uncovered:
+        sid = p.get("segment_id")
+        if sid and sid not in seen:
+            seg = assistant.get_segment(sid)
+            if seg:
+                seen.add(sid)
+                docs.append(seg)
+    if not docs:
+        raise HTTPException(status_code=500, detail="未覆盖知识点的原文片段缺失")
+
+    sources, parts = assistant._sources_and_parts(docs)
+    system = assistant.build_generate_system(uncovered, count, qtype)
+    user = "请根据以下资料出题。\n\n【可溯源资料】\n" + "\n\n".join(parts)
+
+    llm = pipeline.LLM()
+    raw, _u = llm.chat(llm.model_pro, system, user, json_mode=True, max_tokens=8000, thinking=False)
+    data = json.loads(pipeline.extract_json(raw))
+    qs = data.get("questions") if isinstance(data, dict) else None
+    if not isinstance(qs, list):
+        raise HTTPException(status_code=500, detail="出题解析失败，请重试")
+
+    marker_to_seg = {s["marker"]: s["id"] for s in sources}
+    seg_to_point = {p["segment_id"]: p["id"] for p in uncovered if p.get("segment_id")}
+    base = len(state.get("questions") or [])
+    new_qs = []
+    for j, q in enumerate(qs, start=1):
+        m = str(q.get("source") or "").strip()
+        sid = marker_to_seg.get(m)
+        new_qs.append({
+            "id": f"q{base + j}",
+            "question": str(q.get("question") or ""),
+            "answer": str(q.get("answer") or ""),
+            "analysis": str(q.get("analysis") or ""),
+            "source": m,
+            "point_id": seg_to_point.get(sid) if sid else None,
+            "mastered": False,
+            "favorited": False,
+        })
+    state["questions"] = (state.get("questions") or []) + new_qs
+    assistant.set_quiz_state(scope, state)
+    return {"done": False, "questions": new_qs, "sources": sources,
+            "progress": {"covered": len(covered), "total": len(points)}}
+
+
+@app.post("/api/quiz/mark")
+def quiz_mark(payload: dict = Body(...)):
+    scope = payload.get("scope") or []
+    question_id = str(payload.get("question_id") or "")
+    mastered = bool(payload.get("mastered"))
+    state = assistant.get_quiz_state(scope)
+    q = next((x for x in state.get("questions") or [] if x.get("id") == question_id), None)
+    if not q:
+        raise HTTPException(status_code=404, detail="题目不存在")
+    q["mastered"] = mastered
+    covered = list(state.get("covered") or [])
+    if mastered:
+        if q.get("point_id") and q["point_id"] not in covered:
+            covered.append(q["point_id"])
+    else:
+        if q.get("point_id") and q["point_id"] in covered:
+            covered.remove(q["point_id"])
+    state["covered"] = covered
+    assistant.set_quiz_state(scope, state)
+    return {"progress": {"covered": len(covered), "total": len(state.get("points") or [])},
+            "mastered": mastered}
+
+
+@app.post("/api/quiz/favorite")
+def quiz_favorite(payload: dict = Body(...)):
+    scope = payload.get("scope") or []
+    question_id = str(payload.get("question_id") or "")
+    state = assistant.get_quiz_state(scope)
+    q = next((x for x in state.get("questions") or [] if x.get("id") == question_id), None)
+    if not q:
+        raise HTTPException(status_code=404, detail="题目不存在")
+    q["favorited"] = not bool(q.get("favorited"))
+    assistant.set_quiz_state(scope, state)
+    return {"favorited": q["favorited"]}
+
+
+@app.post("/api/quiz/state")
+def quiz_state(payload: dict = Body(...)):
+    scope = payload.get("scope") or []
+    state = assistant.get_quiz_state(scope)
+    return {
+        "points": state.get("points") or [],
+        "questions": state.get("questions") or [],
+        "covered": state.get("covered") or [],
+        "progress": {"covered": len(state.get("covered") or []), "total": len(state.get("points") or [])},
+    }
 
 
 # ---------- 本机专用：一键同步 GitHub 与休眠服务 ----------

@@ -61,6 +61,7 @@ PASS1_CHUNK_OVERLAP = 600
 
 # DeepSeek / OpenAI 兼容接口的深度思考开关注入位置（接口不支持时自动降级）。
 THINKING_EXTRA_BODY = {"thinking": {"type": "enabled"}}
+THINKING_DISABLED_BODY = {"thinking": {"type": "disabled"}}
 
 # 章节笔记固定的四节小标题，供标题层级矫正与总览取真实章名时排除。
 NOTE_SECTIONS = ("核心问题意识", "论证结构与推进", "关键概念界定", "章节衔接与张力")
@@ -221,12 +222,13 @@ class LLM:
 
     def chat(self, model: str, system: str, user: str,
              json_mode: bool = False, temperature: Optional[float] = None,
-             max_tokens: Optional[int] = None):
+             max_tokens: Optional[int] = None, thinking: Optional[bool] = None):
         """发起一次对话补全，返回 (文本, usage 字典)。
 
         候选参数按「response_format + thinking」→「仅 thinking」→「仅 response_format」
         →「两者都不带」逐级降级：JSON 已有 extract_json + parse_json_robust 兜底，
         因此优先保住深度思考；不兼容接口只会降级，不会中断流水线。
+        thinking 显式传 False 时注入「disabled」关闭深度思考（供出题/清单等快速结构化生成）。
         网络超时与 5xx 临时错误最多重试 2 次（退避 2s / 5s）。
         """
         messages = [
@@ -239,7 +241,7 @@ class LLM:
         if max_tokens:
             base["max_tokens"] = max_tokens
 
-        want_thinking = bool(self.enable_thinking) and model == self.model_pro
+        want_thinking = (bool(self.enable_thinking) and model == self.model_pro) if thinking is None else bool(thinking)
         candidates = []
         if json_mode and want_thinking:
             candidates = [
@@ -262,6 +264,8 @@ class LLM:
                 kwargs["response_format"] = {"type": "json_object"}
             if use_thinking:
                 kwargs["extra_body"] = dict(THINKING_EXTRA_BODY)
+            elif thinking is False:
+                kwargs["extra_body"] = dict(THINKING_DISABLED_BODY)
             for attempt in range(3):
                 try:
                     resp = self.client.chat.completions.create(**kwargs)
@@ -282,6 +286,34 @@ class LLM:
         if last_error is not None:
             raise last_error
         raise RuntimeError("LLM 调用失败：未获得任何可用响应")
+
+    def chat_stream(self, model: str, system: str, user: str,
+                    temperature: Optional[float] = None, max_tokens: Optional[int] = None):
+        """流式对话补全，逐段产出 content 增量（生成器，供内置 AI 问答使用）。
+
+        复用同一 OpenAI 兼容客户端；流式模式不重试（失败由调用方捕获），
+        避免 SSE 中断后重复输出。
+        """
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ]
+        kwargs = {"model": model, "messages": messages, "stream": True}
+        if temperature is not None:
+            kwargs["temperature"] = temperature
+        if max_tokens:
+            kwargs["max_tokens"] = max_tokens
+        if self.enable_thinking and model == self.model_pro:
+            kwargs["extra_body"] = dict(THINKING_EXTRA_BODY)
+        stream = self.client.chat.completions.create(**kwargs)
+        for chunk in stream:
+            if not chunk.choices:
+                continue
+            delta = chunk.choices[0].delta
+            # 推理模型的思考增量走 reasoning_content，正文走 content；内置 AI 只回传正文。
+            content = getattr(delta, "content", None)
+            if content:
+                yield content
 class JobState:
     """一次制书任务的实时状态（线程安全）。"""
 

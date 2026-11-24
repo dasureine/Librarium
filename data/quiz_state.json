@@ -1,0 +1,308 @@
+{
+  "[[\"chapter\", \"xifangzhexueshi:2\"]]": {
+    "scope_key": "[[\"chapter\", \"xifangzhexueshi:2\"]]",
+    "points": [
+      {
+        "id": "k1",
+        "name": "伊奥尼亚派的形成与代表人物",
+        "source_marker": "S1",
+        "segment_id": "xifangzhexueshi:2:1"
+      },
+      {
+        "id": "k2",
+        "name": "泰利斯首位哲学家地位与水本原说",
+        "source_marker": "S1",
+        "segment_id": "xifangzhexueshi:2:1"
+      },
+      {
+        "id": "k3",
+        "name": "泰利斯水本原说的经验理由",
+        "source_marker": "S2",
+        "segment_id": "xifangzhexueshi:2:2"
+      },
+      {
+        "id": "k4",
+        "name": "泰利斯的神话背景与地震解释",
+        "source_marker": "S2",
+        "segment_id": "xifangzhexueshi:2:2"
+      },
+      {
+        "id": "k5",
+        "name": "阿那克西曼德无定本原与生成消亡",
+        "source_marker": "S3",
+        "segment_id": "xifangzhexueshi:2:4"
+      },
+      {
+        "id": "k6",
+        "name": "补偿原则与循环因果观",
+        "source_marker": "S3",
+        "segment_id": "xifangzhexueshi:2:4"
+      },
+      {
+        "id": "k7",
+        "name": "赫拉克利特火本原说的两层含义",
+        "source_marker": "S4",
+        "segment_id": "xifangzhexueshi:2:6"
+      },
+      {
+        "id": "k8",
+        "name": "赫拉克利特的内在本原与逻各斯",
+        "source_marker": "S5",
+        "segment_id": "xifangzhexueshi:2:8"
+      },
+      {
+        "id": "k9",
+        "name": "逻各斯不可感与思想认识",
+        "source_marker": "S6",
+        "segment_id": "xifangzhexueshi:2:9"
+      },
+      {
+        "id": "k10",
+        "name": "火作为逻各斯本性的解释",
+        "source_marker": "S6",
+        "segment_id": "xifangzhexueshi:2:9"
+      },
+      {
+        "id": "k11",
+        "name": "生成辩证法的对立统一关系",
+        "source_marker": "S7",
+        "segment_id": "xifangzhexueshi:2:11"
+      },
+      {
+        "id": "k12",
+        "name": "灵魂净化与数的和谐",
+        "source_marker": "S8",
+        "segment_id": "xifangzhexueshi:2:13"
+      },
+      {
+        "id": "k13",
+        "name": "毕达哥拉斯数本原说的理由",
+        "source_marker": "S8",
+        "segment_id": "xifangzhexueshi:2:13"
+      },
+      {
+        "id": "k14",
+        "name": "世界几何生成与无公度矛盾",
+        "source_marker": "S9",
+        "segment_id": "xifangzhexueshi:2:15"
+      },
+      {
+        "id": "k15",
+        "name": "克塞诺芬尼对拟人神的批判",
+        "source_marker": "S10",
+        "segment_id": "xifangzhexueshi:2:17"
+      },
+      {
+        "id": "k16",
+        "name": "唯一神的绝对性与不变性",
+        "source_marker": "S11",
+        "segment_id": "xifangzhexueshi:2:18"
+      },
+      {
+        "id": "k17",
+        "name": "理神论与有神论的区别",
+        "source_marker": "S11",
+        "segment_id": "xifangzhexueshi:2:18"
+      },
+      {
+        "id": "k18",
+        "name": "巴门尼德的是者与真理之路",
+        "source_marker": "S12",
+        "segment_id": "xifangzhexueshi:2:20"
+      },
+      {
+        "id": "k19",
+        "name": "是者的不生不灭性质",
+        "source_marker": "S13",
+        "segment_id": "xifangzhexueshi:2:22"
+      },
+      {
+        "id": "k20",
+        "name": "是者的连续性与完满性",
+        "source_marker": "S13",
+        "segment_id": "xifangzhexueshi:2:22"
+      },
+      {
+        "id": "k21",
+        "name": "芝诺悖论的辩护策略",
+        "source_marker": "S14",
+        "segment_id": "xifangzhexueshi:2:24"
+      },
+      {
+        "id": "k22",
+        "name": "芝诺悖论的数学与哲学意义",
+        "source_marker": "S15",
+        "segment_id": "xifangzhexueshi:2:26"
+      },
+      {
+        "id": "k23",
+        "name": "元素概念与四根说",
+        "source_marker": "S16",
+        "segment_id": "xifangzhexueshi:2:27"
+      },
+      {
+        "id": "k24",
+        "name": "爱与恨作为动力及善恶本原",
+        "source_marker": "S17",
+        "segment_id": "xifangzhexueshi:2:29"
+      },
+      {
+        "id": "k25",
+        "name": "流射说与感觉主义认识论",
+        "source_marker": "S18",
+        "segment_id": "xifangzhexueshi:2:31"
+      },
+      {
+        "id": "k26",
+        "name": "种子说与心灵概念的提出",
+        "source_marker": "S19",
+        "segment_id": "xifangzhexueshi:2:33"
+      },
+      {
+        "id": "k27",
+        "name": "异类相知说与感觉中的思想",
+        "source_marker": "S20",
+        "segment_id": "xifangzhexueshi:2:35"
+      },
+      {
+        "id": "k28",
+        "name": "原子与虚空作为本原",
+        "source_marker": "S21",
+        "segment_id": "xifangzhexueshi:2:36"
+      },
+      {
+        "id": "k29",
+        "name": "原子的性质与漩涡运动",
+        "source_marker": "S22",
+        "segment_id": "xifangzhexueshi:2:38"
+      },
+      {
+        "id": "k30",
+        "name": "原子的几何属性与思辨局限",
+        "source_marker": "S23",
+        "segment_id": "xifangzhexueshi:2:40"
+      },
+      {
+        "id": "k31",
+        "name": "感觉的流射说与约定论",
+        "source_marker": "S23",
+        "segment_id": "xifangzhexueshi:2:40"
+      },
+      {
+        "id": "k32",
+        "name": "理智与感觉的区分",
+        "source_marker": "S24",
+        "segment_id": "xifangzhexueshi:2:42"
+      }
+    ],
+    "questions": [
+      {
+        "id": "q1",
+        "question": "泰利斯被公认为西方哲学史上第一位哲学家，他提出的“什么是世界本原”问题有何哲学意义？他的回答是什么？",
+        "answer": "哲学意义在于他第一个提出了“什么是世界本原”这个有意义的哲学问题，并试图借助经验观察和理性思维来解释世界。他的回答是：水是万物的本原。",
+        "analysis": "考点是泰利斯首位哲学家地位与水本原说（S1）。",
+        "source": "S1",
+        "point_id": "k2",
+        "mastered": true,
+        "favorited": false
+      },
+      {
+        "id": "q2",
+        "question": "泰利斯为“水是万物的本原”提出了哪两方面的经验理由？他的地震解释与古代哪个民族的神话背景有关？",
+        "answer": "两方面经验理由：一是万物都以湿的东西为养料，热从湿气里产生并靠湿气维持；二是万物的种子都有潮湿的本性，水是潮湿本性的来源。地震解释与古埃及人的大地飘浮在水上的神话图式有关，他用水的摇晃解释地震现象。",
+        "analysis": "考点是泰利斯水本原说的经验理由与神话背景、地震解释（S2）。",
+        "source": "S2",
+        "point_id": "k4",
+        "mastered": false,
+        "favorited": false
+      },
+      {
+        "id": "q3",
+        "question": "阿那克西曼德认为万物的本原是什么？他如何用“补偿原则”解释生成与消亡的关系？",
+        "answer": "本原是“无定”（apeiron），即无差别、无规定的状态。从“无定”中分离出事物的生成过程是对“无定”的损害，因而要使一些事物回归“无定”作为补偿，这是“时间的安排”和“报应”，根据必然性而发生，体现了循环往复的因果观。",
+        "analysis": "考点是阿那克西曼德无定本原与生成消亡、补偿原则（S3）。",
+        "source": "S3",
+        "point_id": "k6",
+        "mastered": false,
+        "favorited": false
+      },
+      {
+        "id": "q4",
+        "question": "赫拉克利特说：“世界秩序不是任何神或人所创造的，它过去、现在、未来永远是永恒的活火，在一定分寸上燃烧，在一定分寸上熄灭。”这句话体现了“火本原”的哪两层含义？",
+        "answer": "两层含义：一是火的活动状态（活火），即火的燃烧和熄灭，这是外在的本原，可生可灭，变动不居；二是内在的本原，符合火的本性的原则，决定世界运动的方向、节奏，支配火与万物之间的转化，是不变的同一原则。",
+        "analysis": "考点是赫拉克利特火本原说的两层含义（S4）。",
+        "source": "S4",
+        "point_id": "k7",
+        "mastered": true,
+        "favorited": false
+      },
+      {
+        "id": "q5",
+        "question": "芝诺提出悖论的主要目的是什么？他的辩护策略是什么？",
+        "answer": "主要目的是维护巴门尼德所强调的存在不变、是者唯一的真理。辩护策略是“以其人之道还治其人之身”：如果承认存在是变化的，那么也会得出事物不能运动的结论，并且这是与前提相矛盾的悖论，更加荒谬。",
+        "analysis": "考点是芝诺悖论的辩护策略（S14）。",
+        "source": "S14",
+        "point_id": "k21",
+        "mastered": false,
+        "favorited": false
+      },
+      {
+        "id": "q6",
+        "question": "泰利斯为水本原说提出的经验理由包括：\nA. 万物都以湿的东西为养料，热从湿气中产生\nB. 万物的种子都有潮湿的本性\nC. 水是潮湿本性的来源\nD. 以上都是",
+        "answer": "D",
+        "analysis": "考查泰利斯水本原说的经验理由，出自S2，需根据亚里士多德的记述选择全部理由。",
+        "source": "S2",
+        "point_id": "k4",
+        "mastered": true,
+        "favorited": false
+      },
+      {
+        "id": "q7",
+        "question": "阿那克西曼德提出“补偿原则”来说明什么？\nA. 从无定分离出事物的生成过程是对无定的损害，需一些事物回归无定作为补偿\nB. 万物由水生成并复归于水\nC. 爱与恨是生成和消亡的动力\nD. 数目的和谐决定万物的性质",
+        "answer": "A",
+        "analysis": "考查补偿原则的内容，出自S3，该原则首次表达运动必然性和循环因果观。",
+        "source": "S3",
+        "point_id": "k6",
+        "mastered": true,
+        "favorited": false
+      },
+      {
+        "id": "q8",
+        "question": "简述赫拉克利特“逻各斯”的不可感性及其与思想的关系。",
+        "answer": "赫拉克利特认为逻各斯是支配可感运动的不可感的内在原则，自然喜欢隐藏自己；只有思想才能发现它，智慧就在于说出真理并按自然行事。",
+        "analysis": "考查逻各斯不可感与思想认识的关系，出自S5，强调逻各斯只能由理性把握。",
+        "source": "S5",
+        "point_id": "k10",
+        "mastered": false,
+        "favorited": false
+      },
+      {
+        "id": "q9",
+        "question": "毕达哥拉斯派提出数本原说的理由包括：\nA. 一切事物的性质都可以被归结为数的规定性\nB. 在数目中可以发现许多与存在事物相似的特点\nC. 数是众多的、不变的\nD. 以上都是",
+        "answer": "D",
+        "analysis": "考查毕达哥拉斯数本原说的理由，出自S7，需综合其主要论据。",
+        "source": "S7",
+        "point_id": "k13",
+        "mastered": false,
+        "favorited": false
+      },
+      {
+        "id": "q10",
+        "question": "芝诺悖论的“辩护策略”是什么？",
+        "answer": "芝诺采用“以其人之道还治其人之身”的策略：如果承认存在是不变的一，会得出事物不能运动的结论；如果承认存在是变化的，则也会得出事物不能运动的结论，且是与前提矛盾的悖论，更加荒谬。",
+        "analysis": "考查芝诺悖论的辩护方法，出自S13，强调其反诘难和悖论论证的特点。",
+        "source": "S13",
+        "point_id": "k21",
+        "mastered": true,
+        "favorited": false
+      }
+    ],
+    "covered": [
+      "k2",
+      "k7",
+      "k4",
+      "k21",
+      "k6"
+    ]
+  }
+}

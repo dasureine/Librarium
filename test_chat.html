@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Librarium · 内置 AI 测试台</title>
+<!-- 临时测试页 v5：出题自测（知识点清单→出题→进度→会/不会→收藏）。阶段 2 嵌入主页。 -->
+<style>
+  :root {
+    --ink-0:#141c1a; --ink-1:#1a2422; --ink-2:#202c28; --ink-3:#2c3b36;
+    --paper:#ede9df; --mist:#9bb0a5; --moss:#85a897; --moss-bright:#a7c8b8;
+    --card:rgba(34,46,42,0.82); --border:rgba(178,198,188,0.22);
+    --serif:"Source Han Serif SC","Noto Serif SC","Songti SC","STSong",Georgia,serif;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    min-height:100vh; font-family:var(--serif); color:var(--paper);
+    background:
+      radial-gradient(1000px 700px at 78% 12%, var(--ink-3) 0%, transparent 56%),
+      linear-gradient(158deg, var(--ink-0) 0%, var(--ink-1) 46%, var(--ink-2) 100%);
+    padding:44px 20px 60px;
+  }
+  .wrap { max-width:880px; margin:0 auto; }
+  h1 { font-size:28px; font-weight:500; letter-spacing:1px; }
+  .sub { color:var(--mist); font-size:14px; margin:8px 0 24px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:22px 24px; backdrop-filter:blur(12px); margin-bottom:16px; }
+  .row { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:14px; align-items:flex-end; }
+  .row label { display:flex; flex-direction:column; gap:6px; font-size:13px; color:var(--mist); }
+  select, textarea, input[type=text] {
+    background:#1a2422; color:var(--paper); border:1px solid var(--border);
+    border-radius:8px; padding:8px 10px; font-family:var(--serif); font-size:14px;
+  }
+  select { min-width:150px; }
+  textarea { width:100%; min-height:64px; line-height:1.7; font-size:15px; resize:vertical; }
+  .chk { flex-direction:row !important; align-items:center; gap:8px !important; }
+  button {
+    background:var(--moss); color:#0f1614; border:none; border-radius:10px;
+    padding:10px 22px; font-family:var(--serif); font-size:15px; cursor:pointer; font-weight:600;
+  }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  button.ghost { background:transparent; border:1px solid var(--border); color:var(--mist); font-weight:400; font-size:13px; padding:5px 14px; }
+  button.on { background:var(--moss); color:#0f1614; border-color:var(--moss); font-weight:600; }
+
+  .scope-panel { border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:14px; }
+  .scope-toggle { width:100%; display:flex; align-items:center; gap:10px; justify-content:flex-start; background:rgba(20,28,26,0.4); color:var(--paper); border:none; padding:11px 14px; font-size:14px; font-weight:500; border-radius:0; cursor:pointer; }
+  .scope-toggle .arrow { margin-left:auto; color:var(--moss); transition:transform .2s; }
+  .scope-toggle.open .arrow { transform:rotate(180deg); }
+  .scope-count { color:var(--mist); font-size:12px; font-weight:400; }
+  .scope-body { display:none; border-top:1px solid var(--border); padding:12px 14px; background:rgba(20,28,26,0.28); }
+  .scope-search { width:100%; margin-bottom:8px; }
+  .scope-list { max-height:280px; overflow:auto; }
+  .grp { font-size:12px; color:var(--mist); margin:10px 0 4px; letter-spacing:1px; }
+  .grp:first-child { margin-top:0; }
+  .grp-fold { cursor:pointer; user-select:none; display:flex; align-items:center; gap:6px; }
+  .grp-fold:hover { color:var(--moss-bright); }
+  .scope-item { display:flex; align-items:center; gap:8px; padding:2px 0; font-size:14px; color:var(--paper); cursor:pointer; }
+  .scope-item.sub { margin-left:24px; color:var(--mist); }
+  .scope-item input { accent-color:var(--moss); }
+  .book-row { display:flex; align-items:center; gap:6px; padding:2px 0; }
+  .book-title { cursor:pointer; font-size:14px; color:var(--paper); }
+  .fold { cursor:pointer; color:var(--moss); width:14px; text-align:center; user-select:none; }
+  .chapter-list { margin-left:12px; }
+  .empty { color:var(--mist); font-size:13px; padding:6px 0; }
+
+  #status { color:var(--mist); font-size:13px; margin-top:10px; min-height:18px; }
+  #answer { margin-top:16px; line-height:1.9; font-size:16px; background:rgba(20,28,26,0.5); border:1px solid var(--border); border-radius:10px; padding:16px 18px; min-height:90px; }
+  .cite { display:inline-block; color:#0f1614; background:var(--moss); border-radius:4px; padding:0 5px; font-weight:700; cursor:pointer; font-size:0.92em; }
+  .cite:hover { background:var(--moss-bright); }
+  .loc { color:var(--moss-bright); font-weight:600; }
+  .cursor { color:var(--moss); animation:blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity:0; } }
+
+  /* 学习进度 */
+  #studyArea { display:none; }
+  .progress-wrap { margin:16px 0 6px; }
+  .progress-label { display:flex; justify-content:space-between; font-size:13px; color:var(--mist); margin-bottom:6px; }
+  .progress-track { height:10px; background:rgba(20,28,26,0.6); border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+  .progress-fill { height:100%; width:0; background:linear-gradient(90deg, var(--moss), var(--moss-bright)); transition:width .5s cubic-bezier(0.22,1,0.36,1); }
+  .section-head { display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; color:var(--mist); font-size:13px; margin:14px 0 6px; }
+  .section-head:hover { color:var(--moss-bright); }
+  .points-list { display:none; flex-wrap:wrap; gap:6px; margin-bottom:6px; }
+  .point-item { display:inline-flex; align-items:center; gap:6px; background:rgba(133,168,151,0.08); border:1px solid var(--border); border-radius:8px; padding:3px 10px; font-size:13px; color:var(--mist); }
+  .point-item .dot { color:var(--mist); }
+  .point-item.done { background:rgba(133,168,151,0.2); color:var(--paper); }
+  .point-item.done .dot { color:var(--moss-bright); }
+
+  .qcard { border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:12px; background:rgba(20,28,26,0.4); }
+  .q { font-size:16px; margin-bottom:10px; }
+  .qbtns { display:flex; gap:10px; margin-bottom:8px; flex-wrap:wrap; }
+  .qans { margin-top:10px; border-top:1px dashed var(--border); padding-top:10px; }
+  .qa, .qx { font-size:15px; margin-bottom:8px; }
+  .qa b, .qx b { color:var(--moss-bright); }
+  .qacts { display:flex; gap:10px; margin-top:8px; flex-wrap:wrap; }
+  .qbadge { display:inline-block; font-size:12px; color:var(--moss-bright); margin-left:8px; }
+
+  #sources { margin-top:14px; display:none; }
+  #sources h3 { font-size:14px; color:var(--mist); font-weight:500; margin-bottom:8px; }
+  .src { display:inline-block; background:rgba(133,168,151,0.12); border:1px solid var(--border); border-radius:8px; padding:4px 10px; margin:0 8px 8px 0; font-size:13px; color:var(--paper); cursor:pointer; }
+  .src:hover { background:rgba(133,168,151,0.22); }
+  .src b { color:var(--moss); font-weight:600; }
+  #modal { display:none; position:fixed; inset:0; z-index:100; background:rgba(10,14,13,0.6); align-items:center; justify-content:center; padding:24px; }
+  #modal .panel { background:#1c2623; border:1px solid var(--border); border-radius:14px; max-width:680px; width:100%; max-height:80vh; overflow:auto; padding:22px 24px; box-shadow:0 24px 60px rgba(0,0,0,0.5); }
+  #modal .head { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  #modal .head h3 { font-size:15px; color:var(--mist); font-weight:500; }
+  #modal pre { white-space:pre-wrap; line-height:1.9; font-size:15px; font-family:var(--serif); color:var(--paper); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Librarium · 内置 AI 测试台 <span style="font-size:12px;color:var(--mist);font-weight:400;">v5</span></h1>
+  <div class="sub">选择范围 → 出题自测：知识点清单 → 出题 → 进度 → 会/不会 → 收藏。</div>
+
+  <div class="card">
+    <div class="row">
+      <label>模式
+        <select id="mode">
+          <option value="qa">问答</option>
+          <option value="inspire">学术启发</option>
+          <option value="quiz">出题自测</option>
+          <option value="verbatim">逐字精读</option>
+        </select>
+      </label>
+      <label>外源
+        <select id="external">
+          <option value="closed">闭卷（仅书内）</option>
+          <option value="semi">半开卷（书内+通识）</option>
+          <option value="open">全开卷（+外部）</option>
+        </select>
+      </label>
+      <label class="chk"><input type="checkbox" id="web"> 联网搜索</label>
+    </div>
+
+    <div class="scope-panel">
+      <button class="scope-toggle" id="scopeToggle" type="button">选择范围 <span class="scope-count" id="scopeCount">已选 0 项</span><span class="arrow">▾</span></button>
+      <div class="scope-body" id="scopeBody">
+        <input type="text" class="scope-search" id="scopeSearch" placeholder="搜索书名 / 章节 / 标签…">
+        <div class="scope-list" id="scopeList"><span class="empty">加载范围中…</span></div>
+        <button class="ghost" id="clearScope" type="button" style="margin-top:10px;">清空已选</button>
+      </div>
+    </div>
+
+    <textarea id="query" placeholder="输入问题，例如：泰利斯为什么提出水是万物的本原？"></textarea>
+    <div class="row" style="margin-top:14px; margin-bottom:0;">
+      <button id="send">发送</button>
+    </div>
+    <div id="status"></div>
+
+    <div id="studyArea">
+      <div class="section-head" id="pointsToggle"><span class="fold">▸</span> 知识点清单</div>
+      <div class="points-list" id="pointsList"></div>
+      <div id="quizCards"></div>
+      <div class="progress-wrap">
+        <div class="progress-label"><span>知识点覆盖进度</span><span id="progressText">0%（0/0 知识点）</span></div>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <button id="moreBtn" class="ghost">再来五题</button>
+      </div>
+      <div class="section-head" id="favToggle"><span class="fold">▸</span> 收藏列表</div>
+      <div class="points-list" id="favList" style="display:none;"></div>
+    </div>
+
+    <div id="answer"></div>
+    <div id="sources"><h3>引用来源（点击查看原文）</h3><div id="srcList"></div></div>
+  </div>
+</div>
+
+<div id="modal"><div class="panel">
+  <div class="head"><h3 id="modalTitle">片段原文</h3><button class="ghost" id="modalClose" type="button">关闭</button></div>
+  <pre id="modalText"></pre>
+</div></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const answer = $('answer'), sources = $('sources'), srcList = $('srcList');
+
+let sourceByMarker = {};
+let ov = null;
+let checked = new Set(), expanded = new Set();
+let booksOpen = true, tagsOpen = true, filter = '';
+let study = { scope: [], points: [], questions: [], covered: new Set(), marked: {}, favorited: {} };
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function normalizeMarker(s) { const m = String(s || '').match(/S\d+/); return m ? m[0] : ''; }
+
+function renderText(s) {
+  let html = escapeHtml(s || '');
+  html = html.replace(/\[S(\d+)\]/g, (m, n) => `<span class="cite" data-marker="S${n}">${m}</span>`);
+  html = html.replace(/\n/g, '<br>');
+  return html;
+}
+function renderAnswer(raw) {
+  let html = escapeHtml(raw);
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  html = html.replace(/\[S(\d+)\]/g, (m, n) => `<span class="cite" data-marker="S${n}">${m}</span>`);
+  html = html.replace(/(第[0-9一二三四五六七八九十百]+章)/g, '<span class="loc">$1</span>');
+  html = html.replace(/(片段\d+)/g, '<span class="loc">$1</span>');
+  html = html.replace(/\bp\.\d+\b/g, '<span class="loc">$&</span>');
+  html = html.replace(/\n/g, '<br>');
+  return html;
+}
+
+function renderScope() {
+  const q = filter.trim().toLowerCase(); let html = '', booksHtml = '';
+  for (const b of (ov?.books || [])) {
+    const slug = b.slug, bTitle = (b.title || '').toLowerCase(), chapters = b.chapters || [];
+    let chMatch = chapters;
+    if (q) chMatch = chapters.filter(c => (c.title || '').toLowerCase().includes(q) || ('第' + c.index + '章').includes(q));
+    const bookMatch = !q || bTitle.includes(q) || slug.toLowerCase().includes(q);
+    if (!bookMatch && !(q && chMatch.length)) continue;
+    const showChapters = q ? chMatch : chapters;
+    const isOpen = expanded.has(slug) || (q && chMatch.length > 0);
+    booksHtml += `<div class="book-item">
+      <div class="book-row">
+        <span class="fold" data-fold="${slug}">${isOpen ? '▾' : '▸'}</span>
+        <label class="scope-item"><input type="checkbox" class="scope-cb" value="book:${slug}" ${checked.has('book:' + slug) ? 'checked' : ''}> 整书</label>
+        <span class="book-title" data-fold="${slug}">《${escapeHtml(b.title)}》</span>
+      </div>
+      <div class="chapter-list" style="${isOpen ? '' : 'display:none'}">
+        ${showChapters.map(c => `<label class="scope-item sub"><input type="checkbox" class="scope-cb" value="chapter:${slug}:${c.index}" ${checked.has('chapter:' + slug + ':' + c.index) ? 'checked' : ''}> ${escapeHtml(c.title || ('第' + c.index + '章'))}</label>`).join('')}
+      </div></div>`;
+  }
+  if (booksHtml) { html += `<div class="grp grp-fold" data-sec="books"><span class="fold">${booksOpen ? '▾' : '▸'}</span> 书籍</div>` + (booksOpen ? booksHtml : ''); }
+  let tagsHtml = '';
+  for (const t of (ov?.tags || [])) {
+    if (q && !t.tag.toLowerCase().includes(q)) continue;
+    tagsHtml += `<label class="scope-item"><input type="checkbox" class="scope-cb" value="tag:${t.tag}" ${checked.has('tag:' + t.tag) ? 'checked' : ''}> ${escapeHtml(t.tag)}</label>`;
+  }
+  if (tagsHtml) { html += `<div class="grp grp-fold" data-sec="tags"><span class="fold">${tagsOpen ? '▾' : '▸'}</span> 标签</div>` + (tagsOpen ? tagsHtml : ''); }
+  if (!html) html = '<div class="empty">无匹配结果</div>';
+  $('scopeList').innerHTML = html; updateScopeCount();
+}
+async function loadOverview() { try { ov = await (await fetch('/api/corpus/overview')).json(); } catch (e) { ov = { books: [], tags: [] }; $('status').textContent = '无法连接后端：' + e; } renderScope(); }
+function updateScopeCount() { $('scopeCount').textContent = '已选 ' + checked.size + ' 项'; }
+function collectScope() {
+  const scope = [];
+  for (const v of checked) { const i = v.indexOf(':'); const type = v.slice(0, i), value = v.slice(i + 1);
+    if (type === 'book') scope.push({ type: 'book', value });
+    else if (type === 'chapter') scope.push({ type: 'chapter', value });
+    else if (type === 'tag') scope.push({ type: 'tag', value }); }
+  return scope;
+}
+
+async function showSegment(marker) {
+  const src = sourceByMarker[marker];
+  if (!src) { $('modalTitle').textContent = marker; $('modalText').textContent = '未找到该引用来源。'; $('modal').style.display = 'flex'; return; }
+  $('modalTitle').textContent = src.label + (src.page ? ` · p.${src.page}` : '');
+  $('modalText').textContent = '加载原文中…'; $('modal').style.display = 'flex';
+  try {
+    const r = await fetch('/api/corpus/segment/' + encodeURIComponent(src.id));
+    if (r.ok) { const seg = await r.json();
+      $('modalTitle').textContent = `${seg.book_title} · ${seg.chapter_title || ('第' + seg.chapter_index + '章')} · 片段${seg.seq}` + (seg.printed_page || seg.file_page ? ` · p.${seg.printed_page || seg.file_page}` : '');
+      $('modalText').textContent = seg.text;
+    } else { $('modalText').textContent = '未找到该片段的原文。'; }
+  } catch (e) { $('modalText').textContent = '加载原文失败：' + e; }
+}
+
+// ===== 学习会话（出题自测） =====
+function progressPct() { const t = study.points.length, c = study.covered.size; return t ? Math.round(c / t * 100) : 0; }
+function renderProgress() { $('progressFill').style.width = progressPct() + '%'; $('progressText').textContent = `${progressPct()}%（${study.covered.size}/${study.points.length} 知识点）`; }
+function renderPoints() {
+  const html = study.points.map(p => { const done = study.covered.has(p.id); return `<span class="point-item ${done ? 'done' : ''}"><span class="dot">${done ? '●' : '○'}</span>${escapeHtml(p.name)}</span>`; }).join('');
+  $('pointsList').innerHTML = html || '<span class="empty">暂无知识点</span>';
+}
+function renderFavorites() {
+  const favs = study.questions.filter(q => study.favorited[q.id]);
+  const html = favs.length ? favs.map(q => `<div class="qcard" style="margin-bottom:8px;"><div class="q">${renderText(q.question)}</div><div class="qx">${renderText(q.answer)}</div></div>`).join('') : '<span class="empty">暂无收藏</span>';
+  $('favList').innerHTML = html;
+}
+function renderCards() {
+  const html = study.questions.map(q => {
+    const marker = normalizeMarker(q.source);
+    const mk = study.marked[q.id]; const yesOn = mk === 'yes', noOn = mk === 'no';
+    return `<div class="qcard" data-qid="${q.id}">
+      <div class="q"><b>${q.id.replace('q','')}.</b> ${renderText(q.question)}</div>
+      <div class="qbtns">
+        <button class="ghost reveal" data-qid="${q.id}">查看答案及解析</button>
+        ${marker ? `<button class="ghost srclink" data-marker="${marker}">查看原文</button>` : ''}
+        ${yesOn ? '<span class="qbadge">✓ 已掌握</span>' : ''}${noOn ? '<span class="qbadge">✗ 还不熟</span>' : ''}
+      </div>
+      <div class="qans" style="display:none;">
+        <div class="qa"><b>答案</b>：${renderText(q.answer)}</div>
+        <div class="qx"><b>解析</b>：${renderText(q.analysis)}</div>
+        <div class="qacts">
+          <button class="ghost act-yes ${yesOn ? 'on' : ''}" data-qid="${q.id}">会</button>
+          <button class="ghost act-no ${noOn ? 'on' : ''}" data-qid="${q.id}">不会</button>
+          <button class="ghost act-fav ${study.favorited[q.id] ? 'on' : ''}" data-qid="${q.id}">${study.favorited[q.id] ? '★ 已收藏' : '☆ 收藏'}</button>
+        </div>
+      </div></div>`;
+  }).join('');
+  $('quizCards').innerHTML = html || '<div class="empty">还没有题目，点「开始学习」。</div>';
+}
+
+async function startStudy() {
+  const scope = collectScope();
+  if (!scope.length) { $('status').textContent = '请先勾选范围。'; return; }
+  study = { scope, points: [], questions: [], covered: new Set(), marked: {}, favorited: {} };
+  $('studyArea').style.display = 'block'; answer.innerHTML = ''; sources.style.display = 'none';
+  const btn = $('send'); btn.disabled = true; $('status').textContent = '生成知识点清单…';
+  try {
+    let r = await fetch('/api/quiz/ledger', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scope }) });
+    if (!r.ok) { $('status').textContent = 'HTTP ' + r.status + '：' + (await r.text()); return; }
+    const led = await r.json();
+    study.points = led.points || [];
+    renderProgress(); renderPoints(); renderCards();
+    $('status').textContent = '已生成 ' + study.points.length + ' 个知识点，出题中…';
+
+    r = await fetch('/api/quiz/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scope, count: 5 }) });
+    if (!r.ok) { $('status').textContent = 'HTTP ' + r.status + '：' + (await r.text()); return; }
+    const gen = await r.json();
+    sourceByMarker = {}; (gen.sources || []).forEach(s => { sourceByMarker[s.marker] = s; });
+    if (gen.done) { $('status').textContent = '所有知识点已覆盖！可「再来五题」重做或复习收藏。'; renderCards(); return; }
+    study.questions = gen.questions || [];
+    renderCards();
+    $('status').textContent = '已出 ' + study.questions.length + ' 题。';
+  } catch (e) { $('status').textContent = '开始学习失败：' + e; }
+  finally { btn.disabled = false; }
+}
+
+async function moreQuestions() {
+  if (!study.scope.length) return;
+  const btn = $('moreBtn'); btn.disabled = true; $('status').textContent = '出题中…';
+  try {
+    const r = await fetch('/api/quiz/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scope: study.scope, count: 5 }) });
+    if (!r.ok) { $('status').textContent = 'HTTP ' + r.status + '：' + (await r.text()); return; }
+    const gen = await r.json();
+    sourceByMarker = {}; (gen.sources || []).forEach(s => { sourceByMarker[s.marker] = s; });
+    if (gen.done) { $('status').textContent = '所有知识点已覆盖！可重做旧题或复习收藏。'; renderCards(); return; }
+    study.questions = study.questions.concat(gen.questions || []);
+    renderCards();
+    $('status').textContent = '又出 ' + (gen.questions || []).length + ' 题。';
+  } catch (e) { $('status').textContent = '出题失败：' + e; }
+  finally { btn.disabled = false; }
+}
+
+async function markQuestion(qid, mastered) {
+  try {
+    const r = await fetch('/api/quiz/mark', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scope: study.scope, question_id: qid, mastered }) });
+    if (!r.ok) { $('status').textContent = 'HTTP ' + r.status; return; }
+    const res = await r.json();
+    study.marked[qid] = mastered ? 'yes' : 'no';
+    const q = study.questions.find(x => x.id === qid);
+    if (q && q.point_id) { mastered ? study.covered.add(q.point_id) : study.covered.delete(q.point_id); }
+    renderProgress(); renderPoints(); renderCards();
+  } catch (e) { $('status').textContent = '标记失败：' + e; }
+}
+async function favQuestion(qid) {
+  try {
+    const r = await fetch('/api/quiz/favorite', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scope: study.scope, question_id: qid }) });
+    if (!r.ok) { $('status').textContent = 'HTTP ' + r.status; return; }
+    const res = await r.json();
+    study.favorited[qid] = res.favorited;
+    renderCards(); renderFavorites();
+  } catch (e) { $('status').textContent = '收藏失败：' + e; }
+}
+
+// ===== 聊天（问答/启发/逐字） =====
+async function chat() {
+  const mode = $('mode').value, external = $('external').value, web = $('web').checked;
+  let query = $('query').value.trim();
+  if (mode === 'verbatim' && !query) query = '请开始逐字精读：先输出本范围的知识点清单。';
+  if (!query) { $('status').textContent = '请输入问题（逐字精读可留空直接开始）。'; return; }
+  const payload = { query, scope: collectScope(), mode, external, web };
+  const btn = $('send'); btn.disabled = true;
+  answer.innerHTML = ''; sources.style.display = 'none'; srcList.innerHTML = ''; sourceByMarker = {};
+  $('status').textContent = '思考中…';
+  try {
+    const resp = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!resp.ok) { $('status').textContent = 'HTTP ' + resp.status + '：' + (await resp.text()); return; }
+    const reader = resp.body.getReader(); const decoder = new TextDecoder(); let buf = '', raw = '';
+    while (true) {
+      const { done, value } = await reader.read(); if (done) break;
+      buf += decoder.decode(value, { stream: true }); let i;
+      while ((i = buf.indexOf('\n\n')) !== -1) {
+        const chunk = buf.slice(0, i); buf = buf.slice(i + 2); const line = chunk.trim();
+        if (!line.startsWith('data:')) continue;
+        let data; try { data = JSON.parse(line.slice(5).trim()); } catch { continue; }
+        if (data.type === 'meta') { sourceByMarker = {}; (data.sources || []).forEach(s => { sourceByMarker[s.marker] = s; }); renderSources(data.sources || []); }
+        else if (data.type === 'delta') { raw += data.content; answer.innerHTML = renderAnswer(raw) + '<span class="cursor">▍</span>'; }
+        else if (data.type === 'error') { $('status').textContent = data.message; }
+        else if (data.type === 'done') { $('status').textContent = '完成'; answer.innerHTML = renderAnswer(raw); }
+      }
+    }
+  } catch (e) { $('status').textContent = '请求失败：' + e; }
+  finally { btn.disabled = false; }
+}
+
+function renderSources(list) { if (!list || !list.length) { sources.style.display = 'none'; return; } sources.style.display = 'block'; srcList.innerHTML = list.map(s => `<span class="src" data-marker="${s.marker}"><b>${s.marker}</b> ${escapeHtml(s.label)}</span>`).join(''); }
+
+function send() { return $('mode').value === 'quiz' ? startStudy() : chat(); }
+
+$('send').onclick = send;
+$('query').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) send(); });
+$('scopeToggle').onclick = () => { const b = $('scopeBody'); const s = b.style.display === 'none'; b.style.display = s ? 'block' : 'none'; $('scopeToggle').classList.toggle('open', s); };
+$('scopeSearch').addEventListener('input', e => { filter = e.target.value; renderScope(); });
+$('clearScope').onclick = () => { checked.clear(); renderScope(); };
+$('scopeList').addEventListener('click', e => {
+  const sec = e.target.closest('.grp-fold'); if (sec) { if (sec.dataset.sec === 'tags') tagsOpen = !tagsOpen; else booksOpen = !booksOpen; renderScope(); return; }
+  const fold = e.target.closest('[data-fold]'); if (fold) { const slug = fold.dataset.fold; expanded.has(slug) ? expanded.delete(slug) : expanded.add(slug); renderScope(); }
+});
+$('scopeList').addEventListener('change', e => { if (e.target.classList.contains('scope-cb')) { e.target.checked ? checked.add(e.target.value) : checked.delete(e.target.value); updateScopeCount(); } });
+
+$('answer').addEventListener('click', e => {
+  const cite = e.target.closest('.cite'); if (cite) { showSegment(cite.dataset.marker); return; }
+});
+$('quizCards').addEventListener('click', e => {
+  const cite = e.target.closest('.cite'); if (cite) { showSegment(cite.dataset.marker); return; }
+  const reveal = e.target.closest('.reveal');
+  if (reveal) { const i = reveal.dataset.qid; const ans = $('quizCards').querySelector(`.qcard[data-qid="${i}"] .qans`); if (ans) { const s = ans.style.display === 'none'; ans.style.display = s ? 'block' : 'none'; reveal.textContent = s ? '收起' : '查看答案及解析'; } return; }
+  const srclink = e.target.closest('.srclink'); if (srclink) { showSegment(srclink.dataset.marker); return; }
+  const yes = e.target.closest('.act-yes'); if (yes) { markQuestion(yes.dataset.qid, true); return; }
+  const no = e.target.closest('.act-no'); if (no) { markQuestion(no.dataset.qid, false); return; }
+  const fav = e.target.closest('.act-fav'); if (fav) { favQuestion(fav.dataset.qid); return; }
+});
+$('srcList').addEventListener('click', e => { const el = e.target.closest('.src'); if (el) showSegment(el.dataset.marker); });
+$('moreBtn').onclick = moreQuestions;
+$('pointsToggle').onclick = () => { const l = $('pointsList'); const s = l.style.display === 'none' || !l.style.display; l.style.display = s ? 'flex' : 'none'; $('pointsToggle').querySelector('.fold').textContent = s ? '▾' : '▸'; };
+$('favToggle').onclick = () => { const l = $('favList'); const s = l.style.display === 'none'; l.style.display = s ? 'flex' : 'none'; $('favToggle').querySelector('.fold').textContent = s ? '▾' : '▸'; };
+$('modalClose').onclick = () => $('modal').style.display = 'none';
+$('modal').addEventListener('click', e => { if (e.target === $('modal')) $('modal').style.display = 'none'; });
+
+function onModeChange() {
+  const mode = $('mode').value;
+  const label = { qa: '发送', inspire: '发送', quiz: '开始学习', verbatim: '开始精读' }[mode] || '发送';
+  $('send').textContent = label;
+  $('query').style.display = (mode === 'quiz') ? 'none' : '';
+  $('studyArea').style.display = (mode === 'quiz') ? 'block' : 'none';
+  $('answer').style.display = (mode === 'quiz') ? 'none' : '';
+  $('query').placeholder = (mode === 'quiz') ? '' : (mode === 'verbatim' ? '（可选）补充要求' : '输入问题，例如：泰利斯为什么提出水是万物的本原？');
+}
+$('mode').addEventListener('change', onModeChange);
+
+loadOverview();
+onModeChange();
+</script>
+</body>
+</html>

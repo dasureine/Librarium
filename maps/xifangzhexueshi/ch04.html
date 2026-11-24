@@ -1,0 +1,2732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>西方哲学史 · 第四章 — Librarium</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231c2422'/%3E%3Cg fill='none' stroke='%23ede9df' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 25 C16 21 16 18 16 15'/%3E%3Cpath d='M16 15 C12 15 9 12 8 8 C12 9.5 14.5 12 16 15'/%3E%3Cpath d='M16 15 C20 15 23 12 24 8 C20 9.5 17.5 12 16 15'/%3E%3Cpath d='M16 15 C16 12 16 10 16 8'/%3E%3C/g%3E%3C/svg%3E" />
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg" id="lr-favicon" />
+  <script>
+    (function () {
+      var el = document.getElementById('lr-favicon');
+      if (!el) return;
+      var seg = (location.pathname || '').split('/').filter(Boolean);
+      var idx = seg.indexOf('maps');
+      var depth = idx >= 0 ? Math.max(0, seg.length - idx - 1) : 0;
+      el.href = new Array(depth + 1).join('../') + 'assets/favicon.svg';
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pinyon+Script&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-page: #141c1a;
+      --bg-card: #18211f;
+      --bg-subtle: #202c28;
+      --bg-green-soft: rgba(133,168,151,0.12);
+      --text-main: #ede9df;
+      --text-secondary: #ced7d1;
+      --text-muted: #8aa097;
+      --border-light: rgba(176,196,186,0.16);
+      --border-strong: rgba(176,196,186,0.28);
+      --green-main: #85a897;
+      --green-dark: #1d2724;
+      --green-mid: #85a897;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+      --font-serif: "Source Han Serif SC", "Noto Serif SC", "Songti SC", "STSong", Georgia, serif;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      --font-display: "Pinyon Script", "Snell Roundhand", "Edwardian Script ITC", "Vivaldi", "French Script MT", "Gabriola", "Apple Chancery", cursive;
+      --font-aux: "Cormorant Garamond", "Gabriola", "Palatino Linotype", "Source Han Serif SC", "Noto Serif SC", "Songti SC", Georgia, serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.65;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 顶部栏 */
+    .topbar {
+      background-color: var(--bg-card);
+      border-bottom: 1px solid var(--border-light);
+      padding: 14px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      color: var(--green-main);
+      border: none;
+      padding: 0;
+      background: transparent;
+      cursor: pointer;
+      transition: color 0.3s var(--ease), transform 0.3s var(--ease), filter 0.3s var(--ease);
+    }
+
+    .back-btn svg { display: block; }
+
+    .back-btn:hover {
+      color: var(--text-main);
+      transform: translateX(-2px);
+      filter: drop-shadow(0 0 6px rgba(133,168,151,0.6));
+    }
+
+    .brand-link {
+      font-family: var(--font-display);
+      font-size: 26px;
+      color: var(--text-main);
+      text-decoration: none;
+      border: none;
+      padding: 4px 0;
+      background: transparent;
+      letter-spacing: 0.02em;
+      text-shadow: 0 0 18px rgba(237, 233, 223, 0.22);
+      transition: color 0.3s var(--ease), text-shadow 0.3s var(--ease);
+    }
+
+    .brand-link:hover {
+      color: #f4f1ea;
+      text-shadow: 0 0 22px rgba(133, 168, 151, 0.5);
+    }
+
+    .title-block h1 {
+      font-family: var(--font-serif);
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-main);
+      line-height: 1.3;
+    }
+
+    .title-block p {
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    .perspective-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .ctrl-btn {
+      appearance: none;
+      background-color: var(--bg-card);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-light);
+      padding: 6px 13px;
+      font-size: 12.5px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .ctrl-btn:hover:not(:disabled) {
+      border-color: var(--green-main);
+      color: var(--green-main);
+    }
+
+    .ctrl-btn.active {
+      background-color: var(--green-main);
+      border-color: var(--green-main);
+      color: #FFFFFF;
+    }
+
+    .ctrl-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    /* 主体可拖动双栏 */
+    .workspace {
+      flex: 1;
+      display: flex;
+      min-height: calc(100vh - 68px);
+      overflow: hidden;
+    }
+
+    .workspace.resizing {
+      cursor: col-resize;
+      user-select: none;
+    }
+
+    /* 左侧图谱区 */
+    .canvas-pane {
+      position: relative;
+      flex: 1;
+      min-width: 340px;
+      display: flex;
+      flex-direction: column;
+      background:
+        radial-gradient(900px 600px at 30% 18%, rgba(28,39,36,0.9) 0%, transparent 60%),
+        linear-gradient(160deg, #141c1a 0%, #1c2724 100%);
+    }
+
+    /* 中间可拖动分隔条 */
+    .resizer {
+      width: 6px;
+      flex-shrink: 0;
+      background-color: var(--border-light);
+      cursor: col-resize;
+      position: relative;
+      transition: background-color 0.6s var(--ease), box-shadow 0.6s var(--ease);
+    }
+
+    .resizer::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 2px;
+      height: 28px;
+      border-radius: 2px;
+      background-color: var(--green-main);
+      opacity: 0.4;
+      transition: opacity 0.6s var(--ease), height 0.6s var(--ease), box-shadow 0.6s var(--ease);
+    }
+
+    .resizer:hover,
+    .resizer.dragging {
+      background-color: var(--green-main);
+      box-shadow: 0 0 14px rgba(132,166,150,0.4);
+    }
+
+    .resizer:hover::after,
+    .resizer.dragging::after {
+      opacity: 1;
+      height: 40px;
+      box-shadow: 0 0 10px rgba(132,166,150,0.55);
+    }
+
+    .legend-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 20px;
+      background-color: var(--bg-card);
+      border-bottom: 1px solid var(--border-light);
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .legend-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .legend-line {
+      display: inline-block;
+      width: 24px;
+      height: 0;
+      border-top-width: 2px;
+      border-top-style: solid;
+    }
+
+    .legend-line.both {
+      border-top-color: #8aa097;
+    }
+
+    .legend-line.primary {
+      border-top-color: #85a897;
+    }
+
+    .legend-line.secondary {
+      border-top-color: #85a897;
+      border-top-style: dashed;
+    }
+
+    .svg-wrapper {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    svg#mapSvg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      user-select: none;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    svg#mapSvg.panning {
+      cursor: grabbing;
+    }
+
+    /* SVG 内部样式：连线层永远位于节点层下方，标签按需浮现在最上层 */
+    .edge {
+      opacity: 0.26;
+      transition: opacity 0.45s var(--ease);
+    }
+    .edge.edge-strong {
+      opacity: 0.95;
+    }
+    .edge.edge-dim {
+      opacity: 0.10;
+    }
+
+    .edge-path {
+      fill: none;
+      stroke-width: 1.5;
+      transition: stroke 0.45s var(--ease), stroke-width 0.45s var(--ease);
+      cursor: pointer;
+    }
+    .edge.edge-strong .edge-path {
+      stroke-width: 2.2;
+      stroke-dasharray: 6 10;
+      animation: dashFlow 1.8s linear infinite;
+    }
+    .edge-arrow {
+      transition: fill 0.45s var(--ease);
+    }
+
+    .edge-hit {
+      fill: none;
+      stroke: transparent;
+      stroke-width: 18;
+      pointer-events: stroke;
+      cursor: pointer;
+    }
+
+    .edge-label-group {
+      cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.45s var(--ease);
+    }
+    .edge-label-group.visible {
+      opacity: 1;
+    }
+
+    .edge-label-bg {
+      fill: rgba(15, 22, 19, 0.90);
+      stroke: rgba(210, 224, 217, 0.22);
+      stroke-width: 0.75;
+    }
+
+    .edge-label-text {
+      font-size: 11.5px;
+      fill: #d8dfda;
+      text-anchor: middle;
+      dominant-baseline: central;
+      letter-spacing: 0.02em;
+    }
+
+    .node-group {
+      cursor: pointer;
+      transform-box: fill-box;
+      transform-origin: center;
+      transition: opacity 0.45s ease, transform 0.38s var(--ease);
+    }
+
+    .node-rect {
+      fill: rgba(32, 44, 40, 0.80);
+      stroke: rgba(182, 206, 196, 0.28);
+      stroke-width: 1;
+      transition: fill 0.38s ease, stroke 0.38s ease, stroke-width 0.38s ease, filter 0.38s ease;
+    }
+
+    .node-group:hover {
+      transform: scale(1.045);
+    }
+    .node-group:hover .node-rect {
+      fill: rgba(44, 58, 52, 0.9);
+      stroke: rgba(133, 168, 151, 0.72);
+      filter: drop-shadow(0 6px 16px rgba(132,166,150,0.35));
+    }
+
+    .node-group.highlighted .node-rect {
+      stroke: #85a897;
+      stroke-width: 1.6;
+    }
+
+    .node-group.selected {
+      transform: scale(1.045);
+    }
+    .node-group.selected .node-rect {
+      fill: rgba(44, 58, 52, 0.9);
+      stroke: rgba(236, 232, 224, 0.85);
+      stroke-width: 1.6;
+      filter: drop-shadow(0 0 18px rgba(236,232,224,0.28));
+    }
+
+    /* 节点卡片（foreignObject 内嵌 HTML，自动折行，严格限制在卡片内边距内） */
+    .node-card {
+      width: 100%;
+      height: 100%;
+      padding: 12px 16px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      pointer-events: none;
+      font-family: var(--font-sans);
+    }
+
+    .node-card-top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .node-card-cat {
+      font-size: 12px;
+      line-height: 1.2;
+      color: #85a897;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+
+    .node-card-badge {
+      flex-shrink: 0;
+      font-size: 10.5px;
+      line-height: 1.25;
+      color: #b7cdc0;
+      background: rgba(133, 168, 151, 0.10);
+      border: 1px solid rgba(133, 168, 151, 0.28);
+      border-radius: 999px;
+      padding: 2px 9px;
+      white-space: nowrap;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      box-shadow: 0 0 10px rgba(132, 166, 150, 0.18);
+    }
+
+    .node-card-title {
+      font-family: var(--font-serif);
+      font-size: 16px;
+      font-weight: 600;
+      color: #ece8de;
+      line-height: 1.32;
+      margin-top: 6px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      max-height: 2.7em;
+    }
+
+    .node-card-brief {
+      font-size: 13px;
+      color: #cdd6d0;
+      line-height: 1.45;
+      margin-top: 5px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      max-height: 3em;
+    }
+
+    /* 起点节点微光描边 */
+    .node-group.start-node .node-rect {
+      stroke: #85a897;
+      stroke-width: 1.4;
+      filter: drop-shadow(0 0 10px rgba(132, 166, 150, 0.5));
+    }
+
+    .dimmed {
+      opacity: 0.22;
+    }
+
+    /* 底部步进条 */
+    .stepper-bar {
+      background-color: var(--bg-card);
+      border-top: 1px solid var(--border-light);
+      padding: 14px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .step-info {
+      flex: 1;
+      min-width: 240px;
+    }
+
+    .step-tag {
+      font-size: 11.5px;
+      color: var(--green-main);
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .step-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .step-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* 右侧详情面板 */
+    .detail-pane {
+      width: 420px;
+      min-width: 280px;
+      max-width: 72vw;
+      flex-shrink: 0;
+      background-color: rgba(24, 33, 31, 0.6);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-left: 1px solid rgba(235, 232, 224, 0.10);
+      padding: 28px 26px;
+      overflow-y: auto;
+      max-height: calc(100vh - 68px);
+      font-size: 16.5px;
+      line-height: 1.9;
+      color: rgba(238, 235, 226, 0.92);
+    }
+
+    .detail-kicker {
+      font-size: 12px;
+      color: var(--green-main);
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .detail-badges {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .detail-badge {
+      font-size: 11.5px;
+      color: var(--green-main);
+      background-color: var(--bg-green-soft);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: 2px 10px;
+      letter-spacing: 0.04em;
+    }
+
+    .detail-badge-num {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .detail-title {
+      font-family: var(--font-serif);
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .detail-core {
+      font-size: 15.5px;
+      line-height: 1.8;
+      color: rgba(238, 235, 226, 0.95);
+      background-color: var(--bg-green-soft);
+      border-left: 3px solid var(--green-main);
+      padding: 12px 16px;
+      margin: 0 0 22px;
+    }
+
+    .detail-summary {
+      font-size: 15px;
+      color: rgba(238, 235, 226, 0.82);
+      margin-bottom: 20px;
+    }
+
+    .detail-section {
+      margin-bottom: 22px;
+    }
+
+    .detail-section h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 12px;
+      padding-left: 8px;
+      border-left: 2px solid var(--green-main);
+    }
+
+    .point-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .point-list li {
+      font-size: 14.5px;
+      color: var(--text-secondary);
+      padding: 10px 12px;
+      background-color: var(--bg-page);
+      border: 1px solid var(--bg-subtle);
+      line-height: 1.85;
+    }
+
+    .point-list li strong {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    .perspective-note {
+      font-size: 14px;
+      color: var(--text-secondary);
+      padding: 12px 14px;
+      background-color: var(--bg-green-soft);
+      border: 1px solid var(--border-light);
+      margin-bottom: 10px;
+      line-height: 1.8;
+    }
+
+    .perspective-note strong {
+      display: block;
+      font-size: 12px;
+      color: var(--green-main);
+      margin-bottom: 3px;
+    }
+
+    .rel-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .rel-item {
+      text-align: left;
+      width: 100%;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-light);
+      padding: 9px 11px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .rel-item:hover {
+      border-color: var(--green-main);
+      background-color: var(--bg-green-soft);
+    }
+
+    .rel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--green-main);
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .rel-body {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.75;
+    }
+
+    .node-index-btn {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      text-align: left;
+      padding: 10px 12px;
+      background-color: var(--bg-page);
+      border: 1px solid var(--border-light);
+      margin-bottom: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .node-index-btn:hover {
+      border-color: var(--green-main);
+      background-color: var(--bg-green-soft);
+    }
+
+    .node-index-btn span:first-child {
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .node-index-btn span:last-child {
+      font-size: 12px;
+      color: var(--green-mid);
+    }
+
+    /* 新手导览：推荐阅读路线 */
+    .guide-path {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+    }
+
+    .guide-step-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      text-align: left;
+      padding: 12px 14px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-light);
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color 0.2s var(--ease), background-color 0.2s var(--ease), transform 0.2s var(--ease);
+    }
+
+    .guide-step-btn:hover {
+      border-color: var(--green-main);
+      background-color: var(--bg-green-soft);
+      transform: translateX(3px);
+    }
+
+    .guide-num {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--green-main);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.04em;
+    }
+
+    .guide-label {
+      flex: 1;
+      font-size: 14.5px;
+      color: var(--text-main);
+    }
+
+    .guide-arrow {
+      font-size: 16px;
+      color: var(--green-mid);
+    }
+
+    .guide-hint {
+      margin-top: 18px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+      text-align: center;
+    }
+
+    .submap-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .submap-btn {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      text-align: left;
+      padding: 11px 12px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-light);
+      cursor: pointer;
+      font-family: inherit;
+      text-decoration: none;
+      transition: border-color 0.2s var(--ease), background-color 0.2s var(--ease), transform 0.2s var(--ease);
+    }
+
+    .submap-btn:hover {
+      border-color: var(--green-main);
+      background-color: var(--bg-green-soft);
+      transform: translateX(3px);
+    }
+
+    .submap-btn .submap-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .submap-btn .submap-arrow {
+      font-size: 15px;
+      color: var(--green-mid);
+    }
+
+    .node-submap-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+      padding: 10px 14px;
+      background-color: var(--bg-green-soft);
+      border: 1px solid var(--green-main);
+      color: var(--green-main);
+      cursor: pointer;
+      font-family: inherit;
+      text-decoration: none;
+      font-size: 14px;
+      transition: background-color 0.2s var(--ease), color 0.2s var(--ease);
+    }
+
+    .node-submap-btn:hover {
+      background-color: var(--green-main);
+      color: #141c1a;
+    }
+
+    .legend-hint {
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+
+    /* 右上角：适应全屏 / 重置视野 */
+    .fit-btn {
+      position: absolute;
+      top: 52px;
+      right: 16px;
+      z-index: 2;
+      appearance: none;
+      background-color: rgba(24, 33, 31, 0.85);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-light);
+      border-radius: 16px;
+      padding: 5px 14px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s var(--ease);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .fit-btn:hover {
+      border-color: var(--green-main);
+      color: var(--green-main);
+      box-shadow: 0 0 12px rgba(132, 166, 150, 0.35);
+    }
+
+    @media (max-width: 900px) {
+      .workspace {
+        flex-direction: column;
+        min-height: auto;
+        overflow: visible;
+      }
+      .canvas-pane {
+        min-width: 0;
+        border-bottom: 1px solid var(--border-light);
+      }
+      .resizer {
+        display: none;
+      }
+      .detail-pane {
+        width: 100% !important;
+        max-width: 100%;
+        max-height: none;
+        font-size: 15.5px;
+      }
+    }
+    /* —— 纸纹噪点 —— */
+    .noise {
+      position: fixed;
+      inset: 0;
+      z-index: 9997;
+      pointer-events: none;
+      opacity: 0.06;
+      mix-blend-mode: soft-light;
+    }
+
+    /* —— 雾幕转场（纯 GPU 合成层：动画期间仅过渡 opacity 与 transform） —— */
+    .curtain {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 45%, #1d2925 0%, #141c1a 78%);
+      opacity: 1;
+      visibility: visible;
+      will-change: opacity, transform;
+      transform: translateZ(0);
+    }
+
+    /* 竖线：静态宽柔光层（水平 + 垂直渐变模拟中心明亮、边缘羽化，不依赖 filter） */
+    .curtain::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 16px;
+      transform: translateX(-50%) translateZ(0) scaleY(1) scaleX(1);
+      background:
+        linear-gradient(to bottom, transparent 0%, rgba(235, 232, 224, 0.10) 20%, rgba(240, 237, 228, 0.55) 50%, rgba(235, 232, 224, 0.10) 80%, transparent 100%),
+        linear-gradient(90deg, transparent 0%, rgba(235, 232, 224, 0.10) 30%, rgba(240, 237, 228, 0.28) 50%, rgba(235, 232, 224, 0.10) 70%, transparent 100%);
+      opacity: 0.72;
+      will-change: opacity, transform;
+      pointer-events: none;
+    }
+
+    /* 外页 → 竖线：离开当前页（650ms 后跳转） */
+    .curtain.covering {
+      animation: curtainCover 580ms cubic-bezier(0.25, 0.1, 0.25, 1) 0ms both;
+    }
+    .curtain.covering::after {
+      animation: lineCover 400ms cubic-bezier(0.22, 1, 0.36, 1) 180ms both;
+    }
+
+    /* 竖线 → 内页：进入目标页揭幕（pointer-events 放行，避免遮挡阅读交互） */
+    .curtain.revealing {
+      pointer-events: none;
+      animation: curtainReveal 850ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
+    }
+    .curtain.revealing::after {
+      animation: lineReveal 340ms cubic-bezier(0.22, 1, 0.36, 1) 0ms both;
+    }
+
+    /* 揭幕完成后的静默隐藏态 */
+    .curtain.settled {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .curtain.settled::after {
+      opacity: 0;
+    }
+
+    @keyframes curtainCover {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes lineCover {
+      from { opacity: 0; transform: translateX(-50%) translateZ(0) scaleY(0.45) scaleX(1); }
+      to { opacity: 0.72; transform: translateX(-50%) translateZ(0) scaleY(1) scaleX(1); }
+    }
+    @keyframes curtainReveal {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+    @keyframes lineReveal {
+      from { opacity: 0.72; transform: translateX(-50%) translateZ(0) scaleY(1) scaleX(1); }
+      to { opacity: 0; transform: translateX(-50%) translateZ(0) scaleY(1.06) scaleX(2.4); }
+    }
+
+    /* —— 右侧详情切换动效 —— */
+    .detail-pane.pane-refresh {
+      animation: detailIn 0.42s var(--ease);
+    }
+
+    @keyframes dashFlow {
+      to { stroke-dashoffset: -32; }
+    }
+    @keyframes detailIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* 内页克制版微光浮尘与鼠标追光 */
+    .map-dust {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .map-glow {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      mix-blend-mode: soft-light;
+      background: radial-gradient(420px circle at var(--mx, 40%) var(--my, 40%), rgba(132,166,150,0.12), transparent 65%);
+    }
+    .legend-bar,
+    .svg-wrapper,
+    .stepper-bar {
+      position: relative;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+  <svg class="noise" aria-hidden="true">
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch" />
+      <feColorMatrix type="saturate" values="0" />
+    </filter>
+    <rect width="100%" height="100%" filter="url(#grain)" />
+  </svg>
+  <div class="curtain" id="curtain"></div>
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="back-btn" id="backBtn" type="button" aria-label="返回上一级">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"></path><path d="M10 7L5 12l5 5"></path></svg>
+      </button>
+      <a class="brand-link" id="brandLink" href="../index.html?settled=1" aria-label="返回首页">Librarium</a>
+      <div class="title-block">
+        <h1 id="pageTitle"></h1>
+        <p id="pageSubtitle"></p>
+      </div>
+    </div>
+    <div id="perspectiveGroup" class="perspective-group"></div>
+  </header>
+
+  <div id="workspace" class="workspace">
+    <section class="canvas-pane">
+      <canvas class="map-dust" id="mapDust"></canvas>
+      <div class="map-glow" id="mapGlow"></div>
+      <div class="legend-bar">
+        <div id="legendItems" class="legend-items"></div>
+        <span class="legend-hint">点击节点阅读精解 · 滚轮缩放 · 拖拽移动画布</span>
+      </div>
+      <div class="svg-wrapper">
+        <svg id="mapSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <button id="fitBtn" class="fit-btn" type="button" title="适应全屏 / 重置视野">适应全屏</button>
+      <div class="stepper-bar">
+        <div class="step-info">
+          <div id="stepTag" class="step-tag"></div>
+          <div id="stepDesc" class="step-desc"></div>
+        </div>
+        <div class="step-actions">
+          <button id="prevStepBtn" class="ctrl-btn" type="button">上一步</button>
+          <button id="nextStepBtn" class="ctrl-btn" type="button">下一步</button>
+          <button id="resetBtn" class="ctrl-btn" type="button">重置全景</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="resizer" class="resizer" title="左右拖动调节分屏比例"></div>
+
+    <aside id="detailPane" class="detail-pane"></aside>
+  </div>
+
+  <script>
+    /* ============================================================
+     * MAP_DATA：本书专属数据区（新增书籍时仅需替换本对象内容）
+     * ============================================================ */
+    const MAP_DATA = {
+  "meta": {
+    "title": "西方哲学史 · 第四章",
+    "subtitle": "理念论与理想国",
+    "overview": "本章从苏格拉底的心灵原则出发，确立可知理念领域，并落实为灵魂与城邦学说。"
+  },
+  "perspectives": [
+    {
+      "id": "all",
+      "label": "全景互锁",
+      "legendLabel": "本章结构",
+      "lineClass": "both"
+    },
+    {
+      "id": "primary",
+      "label": "继承与综合",
+      "legendLabel": "思想渊源",
+      "lineClass": "primary"
+    },
+    {
+      "id": "secondary",
+      "label": "批评与修正",
+      "legendLabel": "内部困难",
+      "lineClass": "secondary"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "x": 0,
+      "y": 0,
+      "category": "生平背景",
+      "title": "柏拉图生平与著作",
+      "brief": "政治失败→哲学教育,四分期",
+      "coreIdea": "政治失败转向哲学教育，综合前苏哲学形成完整体系。",
+      "summary": "柏拉图三下西西里教育统治者失败，创立学园把政治改造转为哲学教育。对话分苏格拉底、过渡、成熟、晚期四阶段，综合早期自然哲学、智者与苏格拉底资源，形成希腊哲学首个完整理论体系。",
+      "subPoints": [
+        {
+          "label": "核心论证",
+          "text": "政治失败促使柏拉图创立学园，把政治改造转化为哲学教育。"
+        },
+        {
+          "label": "关键区分",
+          "text": "对话分期：苏格拉底时期、过渡时期、成熟期、晚期，对应思想从伦理问题到理念论的发展。"
+        },
+        {
+          "label": "内在两难",
+          "text": "政治计划彻底破灭，哲学事业却获得成功。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "柏拉图《第二封信》314c。"
+        }
+      ],
+      "perspectivesNote": [
+        {
+          "label": "【原书评述】",
+          "text": "作者指出柏拉图的思想是对以前希腊哲学的创造性综合，是希腊哲学第一个完整的、成熟的理论体系。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "G. R. Morrow 等学者依据《第七封信》辨析柏拉图政治活动与学园教育的关联，强调书信对理解其生平的价值。"
+        }
+      ]
+    },
+    {
+      "id": "n2",
+      "x": 440,
+      "y": 0,
+      "category": "分离论证",
+      "title": "分离学说的论证",
+      "brief": "意见/知识→对象分离",
+      "coreIdea": "从认识能力差异推出意见与知识对象分离，确立可知领域。",
+      "summary": "从不同认识能力对应不同对象，推出意见与知识对象不等。柏拉图综合巴门尼德的是者标准与赫拉克利特的流变判断，把可感事物归为意见对象，确立可感领域与可知领域分离，为确定知识提供对象基础。",
+      "subPoints": [
+        {
+          "label": "核心论证",
+          "text": "从“不同认识能力与不同对象相对应”和“意见与知识是不同能力”推出意见对象与知识对象分离。"
+        },
+        {
+          "label": "关键区分",
+          "text": "意见/知识；可感事物/是者；既是又不是者/是者/非是者。"
+        },
+        {
+          "label": "内在两难",
+          "text": "分离学说有悖日常经验和常识，柏拉图用思辨论证强行确立。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "柏拉图《理想国》477a-479e、478b。"
+        }
+      ],
+      "perspectivesNote": [
+        {
+          "label": "【原书评述】",
+          "text": "作者指出理解柏拉图区分两个领域的论证是理解分离学说的关键，论证过程往往比结论更重要。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "亚里士多德在《形而上学》中批评理念与可感物分离导致知识无法触及个体，开启后世实在论与唯名论之争。"
+        }
+      ]
+    },
+    {
+      "id": "n3",
+      "x": 880,
+      "y": 0,
+      "category": "认识比喻",
+      "title": "四线段与洞穴比喻",
+      "brief": "四线段/太阳/洞穴→善统摄",
+      "coreIdea": "以四线段、太阳、洞穴比喻说明认识等级与善的统摄地位。",
+      "summary": "四线段把认识分为幻想、信念、数学、理性四级，太阳比喻说明善提供真理与认知能力，洞穴比喻展示哲学家从意见上升到知识并返回启蒙的历程，引出哲学家王的公共利益论证。",
+      "subPoints": [
+        {
+          "label": "核心论证",
+          "text": "四线段、太阳、洞穴比喻形象说明两个领域、认识等级和善的统摄地位，以及哲学家返回城邦的使命。"
+        },
+        {
+          "label": "关键区分",
+          "text": "幻想/信念/数学/理性知识；洞内影像/洞外理念；太阳/善。"
+        },
+        {
+          "label": "内在两难",
+          "text": "哲学家个人思辨的幸福与返回洞穴的政治义务相冲突，解放者因不适应黑暗而失败。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "《理想国》509e、508e、509b、514a-517a、517d、473d-e。"
+        }
+      ],
+      "perspectivesNote": [
+        {
+          "label": "【原书评述】",
+          "text": "作者指出柏拉图借解放囚徒失败的故事比喻苏格拉底的悲剧，并从中总结哲学家使命是启蒙教育。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "列奥·施特劳斯将洞穴比喻视为哲学与政治永恒张力的原型，主张哲学需以隐微写作应对政治迫害。"
+        }
+      ]
+    },
+    {
+      "id": "n4",
+      "x": 880,
+      "y": 260,
+      "category": "分有关系",
+      "title": "分有与摹仿",
+      "brief": "分有/摹仿→存在原因",
+      "coreIdea": "用分有说明隶属关系，摹仿说明相似关系，解释个体存在。",
+      "summary": "分有从语言分析入手解释个别事物与型相的隶属，摹仿说明可感世界与原型相似。柏拉图构造神圣原型、神圣摹仿物、人工原型、人工摹仿物的四重区分，为宇宙生成论和艺术观奠基。",
+      "subPoints": [
+        {
+          "label": "核心论证",
+          "text": "用“分有”说明个别事物与型相的隶属关系，用“摹仿”说明相似关系，解释事物存在原因。"
+        },
+        {
+          "label": "关键区分",
+          "text": "分有/摹仿；神圣原型/人工原型；神圣摹仿物/人工摹仿物。"
+        },
+        {
+          "label": "内在两难",
+          "text": "分有物只能在一定程度上与理念型相相似，不能等同；分有和摹仿各自解释不同关系，缺乏统一。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "《菲多篇》101c、《会饮篇》210a-212a、《理想国》596b、《智者篇》265c-d、《蒂迈欧篇》30c-31b。"
+        }
+      ],
+      "perspectivesNote": [
+        {
+          "label": "【原书评述】",
+          "text": "作者指出柏拉图的“分有”解释方法实际上是一种语言分析。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "大卫·阿姆斯特朗的共相理论用“部分同一”解释殊相与共相，可视为对柏拉图分有说的现代重建。"
+        }
+      ]
+    },
+    {
+      "id": "n5",
+      "x": 440,
+      "y": 260,
+      "category": "诘难回应",
+      "title": "分有说的困难",
+      "brief": "五诘难→无穷倒退",
+      "coreIdea": "《巴门尼德篇》五诘难否定分有诸意义，暴露无穷倒退。",
+      "summary": "《巴门尼德篇》借老巴门尼德提出五个论辩，逐条否定分有的严格对应、部分整体、思想概念、个体相似、主奴摹仿意义，暴露无穷倒退和神知识无所知的悖谬，揭示理念论内在困难。",
+      "subPoints": [
+        {
+          "label": "核心论证",
+          "text": "五个诘难逐条否定“分有”的可能意义，暴露无穷倒退和神的知识无所知的悖谬。"
+        },
+        {
+          "label": "关键区分",
+          "text": "整体与部分/个别与普遍；理念世界主奴关系/可感世界主奴关系；爱利亚派否认可分/柏拉图承认分有。"
+        },
+        {
+          "label": "内在两难",
+          "text": "相似性解释陷入无穷倒退；摹仿说反而导致神的知识对可感世界无所知。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "《巴门尼德篇》130b、132b、134c-e。"
+        }
+      ],
+      "perspectivesNote": [
+        {
+          "label": "【原书评述】",
+          "text": "作者指出亚里士多德把这一无穷倒退称作“第三者”问题，现代哲学家称之为“外在关系说”。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "维特根斯坦在《哲学研究》中提出“家族相似”概念，可视为对柏拉图分有说普遍性要求的一种替代方案。"
+        }
+      ]
+    },
+    {
+      "id": "n6",
+      "x": 0,
+      "y": 260,
+      "category": "通种逻辑",
+      "title": "通种论",
+      "brief": "是者/非是者/动/静/同/异",
+      "coreIdea": "以最普遍型相的逻辑相容性打破爱利亚派悖论。",
+      "summary": "通种论分析是者/非是者、运动/静止、相同/相异三对最普遍型相的逻辑关系，说明非是者指相异而非矛盾，通种之间相容，打破爱利亚派在存在、动静、一多之间的对立，回应分有诘难。",
+      "subPoints": [
+        {
+          "label": "核心论证",
+          "text": "通过分析通种间的逻辑关系，说明是者不等于存在，非是者不等于非存在，非是者指相异而非矛盾。"
+        },
+        {
+          "label": "关键区分",
+          "text": "是者/存在；非是者/非存在；相异/矛盾；相同/相异。"
+        },
+        {
+          "label": "内在两难",
+          "text": "运动与静止不相容，但都与是者相通；每个通种同时分有相同和相异。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "《智者篇》237、257b、258d。"
+        }
+      ],
+      "perspectivesNote": [
+        {
+          "label": "【原书评述】",
+          "text": "作者认为通种论对形而上学的诞生和发展具有长远的理论意义，是柏拉图理念论的重要发展。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "黑格尔在《逻辑学》中将通种论视为辩证法的先驱，其“具体共相”概念与柏拉图通种相容性呼应。"
+        }
+      ]
+    },
+    {
+      "id": "n7",
+      "x": 0,
+      "y": 520,
+      "category": "下降方法",
+      "title": "两分法",
+      "brief": "最高概念→不可分割型相",
+      "coreIdea": "从普遍型相向下二分，为可感个体提供下降联结。",
+      "summary": "两分法从包含定义的最高概念开始逐步二分，直至不可分割的型相，最特殊型相与可感事物差距最小，成为可感事物的直接原因。亚里士多德批评其偷用结论，但柏拉图目的在维护分有说而非发现本质。",
+      "subPoints": [
+        {
+          "label": "核心论证",
+          "text": "从最高概念二分下降，逼近不可分割型相，为普遍型相与可感个体提供联结。"
+        },
+        {
+          "label": "关键区分",
+          "text": "集合/区分；上升/下降；普遍型相/不可分割型相。"
+        },
+        {
+          "label": "内在两难",
+          "text": "亚里士多德批评两分法是选言推理，犯偷用结论错误，不能发现本质特征。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "《政治家篇》261e-268a；亚里士多德《前分析篇》46a31-35、《形而上学》1037b28-1038a35。"
+        }
+      ],
+      "perspectivesNote": [
+        {
+          "label": "【原书评述】",
+          "text": "作者强调柏拉图使用两分法的目的是维护分有说，而非找出事物本质。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "亨尼希提出的支序分类学沿用二分逻辑，但其目标已从形而上学转向经验科学，体现方法论转型。"
+        }
+      ]
+    },
+    {
+      "id": "n8",
+      "x": 440,
+      "y": 520,
+      "category": "灵魂结构",
+      "title": "灵魂三分与回忆说",
+      "brief": "理性/激情/欲望→回忆",
+      "coreIdea": "灵魂三分对应德性，回忆说为知识来源提供理念论基础。",
+      "summary": "灵魂区分理性、激情、欲望三重原则，分别对应智慧、勇敢、节制，并统摄身体。回忆说用神话说明灵魂先行观照理念、因堕落遗忘、经训练唤醒，回应智者求知悖论，为苏格拉底方法提供理念论根据，论证灵魂不朽。",
+      "subPoints": [
+        {
+          "label": "核心论证",
+          "text": "灵魂三重区分设定理性、激情、欲望，对应智慧、勇敢、节制；回忆说论证学习是灵魂对先天知识的回忆，回应求知悖论。"
+        },
+        {
+          "label": "关键区分",
+          "text": "理性/激情/欲望；灵魂/身体；知识/意见；无意识/意识。"
+        },
+        {
+          "label": "内在两难",
+          "text": "灵魂与身体结合是堕落，但符合灵魂中包含向往身体因素的必然性；最高智慧只有在死亡后才能达到。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "《理想国》444b、《菲德罗篇》246a-248b、《菲多篇》81e-86c、80e、68d。"
+        }
+      ],
+      "perspectivesNote": [
+        {
+          "label": "【原书评述】",
+          "text": "作者指出回忆说为苏格拉底方法提供了理念论的论证，回答了《巴门尼德篇》中最大的困难，并开西方伦理学以灵魂不朽作为道德生活前提的传统。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "奥古斯丁将柏拉图的回忆说改造为“光照说”，以神圣光照替代灵魂前世记忆，成为基督教知识论范式。"
+        }
+      ]
+    },
+    {
+      "id": "n9",
+      "x": 880,
+      "y": 520,
+      "category": "城邦正义",
+      "title": "国家是大写的人",
+      "brief": "三分阶层→各尽其职",
+      "coreIdea": "城邦三分对应灵魂三分，正义即各等级各司其职。",
+      "summary": "社会起源于经济需要，分工产生生产者、武士、统治者三阶层。正义是各等级依照自然禀赋各尽其职，哲学家统治城邦为公众利益，反对强权即公正。这种自然说带保守主义，违背社会发展趋势。",
+      "subPoints": [
+        {
+          "label": "核心论证",
+          "text": "将灵魂三分与城邦三分对应，从经济需要推导三阶层，正义就是各等级各司其职，哲学家王为公共利益。"
+        },
+        {
+          "label": "关键区分",
+          "text": "统治者/武士/生产者；智慧/勇敢/节制；个人利益/城邦公共利益。"
+        },
+        {
+          "label": "内在两难",
+          "text": "柏拉图反对以某一等级利益为基础的阶级社会，但自然说和固定等级又与变化的城邦社会现实相冲突。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "《理想国》369c、433a-434c、473d-e；《高尔吉亚篇》488b-490b；《法律篇》705a、737e。"
+        }
+      ],
+      "perspectivesNote": [
+        {
+          "label": "【原书评述】",
+          "text": "作者指出柏拉图社会观的基础是自然说，基调是保守主义，具体立法违反氏族农业社会向城邦商业社会发展的历史潮流。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "卡尔·波普尔在《开放社会及其敌人》中将柏拉图政治哲学视为极权主义思想源头，引发长期争论。"
+        },
+        {
+          "label": "【跨书锚点】",
+          "text": "韦伯在《儒教与道教》分析传统中国士阶层与伦理，可对比柏拉图哲学家王统治理想与儒家精英政治的异同。"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "n1",
+      "target": "n2",
+      "perspective": "primary",
+      "label": "综合巴门尼德与赫拉克利特",
+      "curve": 0,
+      "labelT": 0.5,
+      "detail": "柏拉图综合巴门尼德的是者标准与赫拉克利特的流变判断，推出可感领域与可知领域分离。"
+    },
+    {
+      "id": "e2",
+      "source": "n5",
+      "target": "n4",
+      "perspective": "secondary",
+      "label": "批评分有说",
+      "curve": 0,
+      "labelT": 0.5,
+      "detail": "《巴门尼德篇》借老巴门尼德提出五个诘难，逐条否定分有说的可能意义。"
+    },
+    {
+      "id": "e3",
+      "source": "n6",
+      "target": "n2",
+      "perspective": "secondary",
+      "label": "批评爱利亚派",
+      "curve": 0,
+      "labelT": 0.5,
+      "detail": "通种论用逻辑分析打破爱利亚派在是者/非是者、动/静、一/多之间设置的悖论。"
+    }
+  ],
+  "steps": [
+    {
+      "title": "步骤 1 / 5：生平转向与思想综合",
+      "description": "柏拉图政治失败后转向哲学教育，综合前苏哲学资源，为理念论奠基。",
+      "activeNodes": [
+        "n1",
+        "n2"
+      ],
+      "activeEdges": [
+        "e1"
+      ]
+    },
+    {
+      "title": "步骤 2 / 5：认识等级与善的统摄",
+      "description": "通过四线段、太阳、洞穴比喻形象说明认识等级与善的统摄地位。",
+      "activeNodes": [
+        "n2",
+        "n3"
+      ],
+      "activeEdges": []
+    },
+    {
+      "title": "步骤 3 / 5：分有说及其困难",
+      "description": "分有与摹仿解释个体存在，但《巴门尼德篇》诘难暴露其内在困难。",
+      "activeNodes": [
+        "n4",
+        "n5"
+      ],
+      "activeEdges": [
+        "e2"
+      ]
+    },
+    {
+      "title": "步骤 4 / 5：通种论与两分法",
+      "description": "通种论打破爱利亚派悖论，两分法为可感个体提供下降联结。",
+      "activeNodes": [
+        "n2",
+        "n6",
+        "n7"
+      ],
+      "activeEdges": [
+        "e3"
+      ]
+    },
+    {
+      "title": "步骤 5 / 5：灵魂与城邦同构",
+      "description": "灵魂三分与回忆说确立知识来源与不朽，城邦三分落实正义与哲学家王。",
+      "activeNodes": [
+        "n8",
+        "n9"
+      ],
+      "activeEdges": []
+    }
+  ],
+  "readingGuide": {
+    "coreQuestion": "柏拉图如何从苏格拉底的心灵内在原则出发，通过确立可感事物之外的可知理念领域，为确定知识、灵魂不朽和理想城邦提供统一基础？",
+    "startNodeId": "n1",
+    "recommendedPath": [
+      {
+        "id": "n1",
+        "label": "柏拉图生平与著作"
+      },
+      {
+        "id": "n2",
+        "label": "分离学说的论证"
+      },
+      {
+        "id": "n3",
+        "label": "四线段与洞穴比喻"
+      },
+      {
+        "id": "n8",
+        "label": "灵魂三分与回忆说"
+      },
+      {
+        "id": "n9",
+        "label": "国家是大写的人"
+      }
+    ]
+  },
+  "parentMap": {
+    "title": "西方哲学史",
+    "path": ""
+  },
+  "subMaps": []
+};
+
+    /* ============================================================
+     * 渲染与交互引擎（母版通用逻辑，无需针对具体书籍修改）
+     * ============================================================ */
+    const NODE_W = 272;
+    const NODE_H = 120;
+    const SAFE_MARGIN = 140;
+    const BIDIR_OFFSET = 30;
+
+    const state = {
+      perspective: "all",
+      stepIndex: -1,
+      selectedNodeId: null,
+      selectedEdgeId: null,
+      hoveredNodeId: null,
+      hoveredEdgeId: null,
+      view: null
+    };
+
+    const nodeMap = new Map(MAP_DATA.nodes.map(n => [n.id, n]));
+    const edgeMap = new Map(MAP_DATA.edges.map(e => [e.id, e]));
+
+    /* 双向连线对：同一组无序节点间存在两条方向相反的边 */
+    const bidirMap = new Map();
+    MAP_DATA.edges.forEach(e => {
+      const key = [e.source, e.target].sort().join("|");
+      if (!bidirMap.has(key)) bidirMap.set(key, []);
+      bidirMap.get(key).push(e);
+    });
+
+    /* 渲染后的连线 / 节点元素引用，供悬停高亮无重建地更新 */
+    let edgeElements = [];
+    let nodeElements = [];
+
+    const workspaceEl = document.getElementById("workspace");
+    const resizerEl = document.getElementById("resizer");
+    const svgEl = document.getElementById("mapSvg");
+    const perspectiveGroupEl = document.getElementById("perspectiveGroup");
+    const legendItemsEl = document.getElementById("legendItems");
+    const detailPaneEl = document.getElementById("detailPane");
+    const stepTagEl = document.getElementById("stepTag");
+    const stepDescEl = document.getElementById("stepDesc");
+    const prevStepBtn = document.getElementById("prevStepBtn");
+    const nextStepBtn = document.getElementById("nextStepBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const fitBtnEl = document.getElementById("fitBtn");
+    const backBtnEl = document.getElementById("backBtn");
+    const brandLinkEl = document.getElementById("brandLink");
+
+    function computeIndexBase() {
+      return MAP_DATA.parentMap ? "../../index.html" : "../index.html";
+    }
+
+    function computeHomeHref() {
+      return computeIndexBase() + "?settled=1";
+    }
+
+    function stepBack() {
+      const curtain = document.getElementById("curtain");
+      const finish = () => {
+        let sameOrigin = false;
+        try {
+          const ref = document.referrer || "";
+          if (ref) sameOrigin = new URL(ref).origin === window.location.origin;
+        } catch (e) { sameOrigin = false; }
+        if (sameOrigin && window.history.length > 1) {
+          window.history.back();
+        } else if (MAP_DATA.parentMap && MAP_DATA.parentMap.path) {
+          window.location.href = MAP_DATA.parentMap.path;
+        } else {
+          window.location.href = computeIndexBase() + "?settled=1&view=atlases";
+        }
+      };
+      if (curtain) {
+        curtain.classList.remove("settled", "revealing");
+        curtain.classList.add("covering");
+        setTimeout(finish, 650);
+      } else {
+        finish();
+      }
+    }
+
+    function renderTopbarLinks() {
+      if (brandLinkEl) brandLinkEl.setAttribute("href", computeHomeHref());
+    }
+
+    if (backBtnEl) backBtnEl.addEventListener("click", stepBack);
+
+    /* 左右分屏拖动逻辑 */
+    let isDraggingSplit = false;
+
+    resizerEl.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      isDraggingSplit = true;
+      resizerEl.classList.add("dragging");
+      workspaceEl.classList.add("resizing");
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!isDraggingSplit) return;
+      const rect = workspaceEl.getBoundingClientRect();
+      const newDetailWidth = rect.right - e.clientX;
+      const minDetail = 260;
+      const maxDetail = rect.width - 340;
+      const clamped = Math.max(minDetail, Math.min(maxDetail, newDetailWidth));
+      detailPaneEl.style.width = `${clamped}px`;
+    });
+
+    window.addEventListener("mouseup", () => {
+      if (!isDraggingSplit) return;
+      isDraggingSplit = false;
+      resizerEl.classList.remove("dragging");
+      workspaceEl.classList.remove("resizing");
+    });
+
+    /* —— 滚轮缩放与拖拽平移 —— */
+    svgEl.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const rect = svgEl.getBoundingClientRect();
+      const fx = rect.width ? (e.clientX - rect.left) / rect.width : 0.5;
+      const fy = rect.height ? (e.clientY - rect.top) / rect.height : 0.5;
+      const factor = e.deltaY < 0 ? 0.9 : 1.1;
+      zoomAt(factor, fx, fy);
+    }, { passive: false });
+
+    let panning = false;
+    let panStart = null;
+    svgEl.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return;
+      if (e.target !== svgEl) return;
+      panning = true;
+      panStart = { cx: e.clientX, cy: e.clientY, vx: state.view ? state.view.x : 0, vy: state.view ? state.view.y : 0 };
+      svgEl.classList.add("panning");
+      e.preventDefault();
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!panning || !panStart) return;
+      fitIfNeeded();
+      const rect = svgEl.getBoundingClientRect();
+      const dx = (e.clientX - panStart.cx) * (state.view.w / (rect.width || 1));
+      const dy = (e.clientY - panStart.cy) * (state.view.h / (rect.height || 1));
+      state.view.x = panStart.vx - dx;
+      state.view.y = panStart.vy - dy;
+      applyView();
+    });
+    window.addEventListener("mouseup", () => {
+      panning = false;
+      panStart = null;
+      svgEl.classList.remove("panning");
+    });
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function createSvgEl(tag, attrs = {}) {
+      const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+      Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+      return el;
+    }
+
+    function clipToNodeBox(cx, cy, tx, ty, pad) {
+      const dx = tx - cx;
+      const dy = ty - cy;
+      if (dx === 0 && dy === 0) return { x: cx, y: cy };
+      const hw = NODE_W / 2 + pad;
+      const hh = NODE_H / 2 + pad;
+      const scaleX = dx !== 0 ? hw / Math.abs(dx) : Infinity;
+      const scaleY = dy !== 0 ? hh / Math.abs(dy) : Infinity;
+      const t = Math.min(scaleX, scaleY);
+      return { x: cx + dx * t, y: cy + dy * t };
+    }
+
+    /* —— 视野计算 / 缩放 / 平移 —— */
+    function computeBounds() {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      const expand = (x, y) => {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      };
+      MAP_DATA.nodes.forEach(n => {
+        expand(n.x - NODE_W / 2, n.y - NODE_H / 2);
+        expand(n.x + NODE_W / 2, n.y + NODE_H / 2);
+      });
+      /* 把外拱弧线的控制点纳入边界，防止顶部 / 底部绕行弧线被 viewBox 裁切 */
+      MAP_DATA.edges.forEach(e => {
+        const g = computeEdgeGeometry(e);
+        if (g.cx != null) expand(g.cx, g.cy);
+      });
+      if (!isFinite(minX)) { minX = 0; minY = 0; maxX = 1000; maxY = 700; }
+      return { minX, minY, maxX, maxY };
+    }
+
+    function fitView() {
+      const b = computeBounds();
+      state.view = {
+        x: b.minX - SAFE_MARGIN,
+        y: b.minY - SAFE_MARGIN,
+        w: (b.maxX - b.minX) + SAFE_MARGIN * 2,
+        h: (b.maxY - b.minY) + SAFE_MARGIN * 2
+      };
+    }
+
+    function fitIfNeeded() {
+      if (!state.view) fitView();
+    }
+
+    function applyView() {
+      fitIfNeeded();
+      svgEl.setAttribute("viewBox", `${state.view.x} ${state.view.y} ${state.view.w} ${state.view.h}`);
+    }
+
+    function zoomAt(factor, cxFrac, cyFrac) {
+      fitIfNeeded();
+      const v = state.view;
+      const sx = v.x + cxFrac * v.w;
+      const sy = v.y + cyFrac * v.h;
+      const newW = Math.max(220, Math.min(4200, v.w * factor));
+      const newH = Math.max(160, Math.min(3200, v.h * factor));
+      v.x = sx - cxFrac * newW;
+      v.y = sy - cyFrac * newH;
+      v.w = newW;
+      v.h = newH;
+      applyView();
+    }
+
+    function animateView(toX, toY, toW, toH, dur = 520) {
+      fitIfNeeded();
+      const from = { x: state.view.x, y: state.view.y, w: state.view.w, h: state.view.h };
+      const t0 = performance.now();
+      function step(now) {
+        const t = Math.min(1, (now - t0) / dur);
+        const e = 1 - Math.pow(1 - t, 3);
+        state.view = {
+          x: from.x + (toX - from.x) * e,
+          y: from.y + (toY - from.y) * e,
+          w: from.w + (toW - from.w) * e,
+          h: from.h + (toH - from.h) * e
+        };
+        applyView();
+        if (t < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    function centerOnNode(id) {
+      const node = nodeMap.get(id);
+      if (!node) return;
+      const w = 760, h = 480;
+      animateView(node.x - w / 2, node.y - h / 2, w, h);
+    }
+
+    function focusNode(id) {
+      state.selectedNodeId = id;
+      state.selectedEdgeId = null;
+      state.stepIndex = -1;
+      renderAll();
+      centerOnNode(id);
+    }
+
+    function nodeBox(id) {
+      const n = nodeMap.get(id);
+      return { x: n.x - NODE_W / 2, y: n.y - NODE_H / 2, w: NODE_W, h: NODE_H };
+    }
+
+    function segmentIntersectsRect(x1, y1, x2, y2, rx, ry, rw, rh) {
+      /* Liang-Barsky：线段是否与矩形（含边界）相交 */
+      let t0 = 0, t1 = 1;
+      const dx = x2 - x1, dy = y2 - y1;
+      const p = [-dx, dx, -dy, dy];
+      const q = [x1 - rx, rx + rw - x1, y1 - ry, ry + rh - y1];
+      for (let i = 0; i < 4; i++) {
+        if (p[i] === 0) {
+          if (q[i] < 0) return false;
+        } else {
+          const r = q[i] / p[i];
+          if (p[i] < 0) {
+            if (r > t1) return false;
+            else if (r > t0) t0 = r;
+          } else {
+            if (r < t0) return false;
+            else if (r < t1) t1 = r;
+          }
+        }
+      }
+      return true;
+    }
+
+    function straightCrossesThirdCard(s, t) {
+      for (const n of MAP_DATA.nodes) {
+        if (n.id === s.id || n.id === t.id) continue;
+        const b = nodeBox(n.id);
+        if (segmentIntersectsRect(s.x, s.y, t.x, t.y, b.x, b.y, b.w, b.h)) return true;
+      }
+      return false;
+    }
+
+    function bezierCrossesAnyCard(s, t, nx, ny, curve) {
+      const mx = (s.x + t.x) / 2, my = (s.y + t.y) / 2;
+      const cx = mx + nx * curve, cy = my + ny * curve;
+      const STEPS = 26;
+      let px = s.x, py = s.y;
+      for (let i = 1; i <= STEPS; i++) {
+        const u = i / STEPS;
+        const inv = 1 - u;
+        const x = inv * inv * s.x + 2 * inv * u * cx + u * u * t.x;
+        const y = inv * inv * s.y + 2 * inv * u * cy + u * u * t.y;
+        for (const n of MAP_DATA.nodes) {
+          if (n.id === s.id || n.id === t.id) continue;
+          const b = nodeBox(n.id);
+          if (segmentIntersectsRect(px, py, x, y, b.x, b.y, b.w, b.h)) return true;
+        }
+        px = x; py = y;
+      }
+      return false;
+    }
+
+    function chooseArcCurve(s, t, nx, ny) {
+      /* 大弧度绕行：优先向上外拱（首行）、向下外拱（末行），中间行绕空隙 */
+      const rows = [...new Set(MAP_DATA.nodes.map(n => n.y))].sort((a, b) => a - b);
+      const topRow = rows[0], bottomRow = rows[rows.length - 1];
+      const bothTop = s.y === topRow && t.y === topRow;
+      const bothBottom = s.y === bottomRow && t.y === bottomRow;
+
+      const up = { x: 0, y: -1 };
+      const down = { x: 0, y: 1 };
+      const left = { x: -1, y: 0 };
+      const right = { x: 1, y: 0 };
+
+      let sideOrder;
+      if (bothTop) sideOrder = [up, left, right, down];
+      else if (bothBottom) sideOrder = [down, left, right, up];
+      else if (s.y === topRow || t.y === topRow) sideOrder = [up, down, left, right];
+      else sideOrder = [down, up, left, right];
+
+      const mags = [180, 260, 360, 460, 580];
+      for (const mag of mags) {
+        for (const dir of sideOrder) {
+          const dot = nx * dir.x + ny * dir.y;
+          const sign = dot >= 0 ? 1 : -1;
+          const curve = sign * mag;
+          if (!bezierCrossesAnyCard(s, t, nx, ny, curve)) return curve;
+        }
+      }
+      const dir = sideOrder[0];
+      const dot = nx * dir.x + ny * dir.y;
+      return (dot >= 0 ? 1 : -1) * mags[mags.length - 1];
+    }
+
+    function arrowPathAt(x, y, dirX, dirY, size) {
+      const len = Math.hypot(dirX, dirY) || 1;
+      const ux = dirX / len, uy = dirY / len;
+      const px = -uy, py = ux;
+      const baseX = x - ux * size, baseY = y - uy * size;
+      const w = size * 0.5;
+      return `M ${x.toFixed(1)} ${y.toFixed(1)} L ${(baseX + px * w).toFixed(1)} ${(baseY + py * w).toFixed(1)} L ${(baseX - px * w).toFixed(1)} ${(baseY - py * w).toFixed(1)} Z`;
+    }
+
+    function computeEdgeGeometry(edge) {
+      const s = nodeMap.get(edge.source);
+      const t = nodeMap.get(edge.target);
+      const dx = t.x - s.x;
+      const dy = t.y - s.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len;
+      const ny = dx / len;
+
+      let curve = 0;
+      const key = [edge.source, edge.target].sort().join("|");
+      const pair = bidirMap.get(key) || [];
+      const isBidir = pair.length > 1;
+
+      if (isBidir) {
+        /* 双向连线：同一符号沿各自法线弯曲，自然形成对称双弧 */
+        curve = BIDIR_OFFSET;
+      } else if (straightCrossesThirdCard(s, t)) {
+        curve = chooseArcCurve(s, t, nx, ny);
+      }
+
+      let cx = null, cy = null;
+      let start, end;
+      if (curve === 0) {
+        start = clipToNodeBox(s.x, s.y, t.x, t.y, 2);
+        end = clipToNodeBox(t.x, t.y, s.x, s.y, 7);
+      } else {
+        cx = (s.x + t.x) / 2 + nx * curve;
+        cy = (s.y + t.y) / 2 + ny * curve;
+        start = clipToNodeBox(s.x, s.y, cx, cy, 2);
+        end = clipToNodeBox(t.x, t.y, cx, cy, 7);
+      }
+
+      const d = curve === 0
+        ? `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} L ${end.x.toFixed(1)} ${end.y.toFixed(1)}`
+        : `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${end.x.toFixed(1)} ${end.y.toFixed(1)}`;
+
+      const u = curve === 0 ? (typeof edge.labelT === "number" ? edge.labelT : 0.5) : 0.5;
+      let lx, ly;
+      if (curve === 0) {
+        lx = start.x + (end.x - start.x) * u;
+        ly = start.y + (end.y - start.y) * u;
+      } else {
+        const inv = 1 - u;
+        lx = inv * inv * start.x + 2 * inv * u * cx + u * u * end.x;
+        ly = inv * inv * start.y + 2 * inv * u * cy + u * u * end.y;
+      }
+
+      const dirX = curve === 0 ? end.x - start.x : end.x - cx;
+      const dirY = curve === 0 ? end.y - start.y : end.y - cy;
+      const arrowD = arrowPathAt(end.x, end.y, dirX, dirY, 7);
+
+      return { d, lx, ly, cx, cy, arrowD };
+    }
+
+    function getActiveSets() {
+      const activeNodes = new Set();
+      const activeEdges = new Set();
+
+      if (state.stepIndex >= 0) {
+        const step = MAP_DATA.steps[state.stepIndex];
+        step.activeNodes.forEach(id => activeNodes.add(id));
+        step.activeEdges.forEach(id => activeEdges.add(id));
+        return { activeNodes, activeEdges, filtering: true };
+      }
+
+      if (state.selectedNodeId) {
+        activeNodes.add(state.selectedNodeId);
+        MAP_DATA.edges.forEach(e => {
+          if (e.source === state.selectedNodeId || e.target === state.selectedNodeId) {
+            if (isEdgeInPerspective(e)) {
+              activeEdges.add(e.id);
+              activeNodes.add(e.source);
+              activeNodes.add(e.target);
+            }
+          }
+        });
+        return { activeNodes, activeEdges, filtering: true };
+      }
+
+      if (state.selectedEdgeId) {
+        const edge = edgeMap.get(state.selectedEdgeId);
+        if (edge) {
+          activeEdges.add(edge.id);
+          activeNodes.add(edge.source);
+          activeNodes.add(edge.target);
+        }
+        return { activeNodes, activeEdges, filtering: true };
+      }
+
+      if (state.perspective !== "all") {
+        getPerspectiveFocusedEdges(state.perspective).forEach(e => {
+          activeEdges.add(e.id);
+          activeNodes.add(e.source);
+          activeNodes.add(e.target);
+        });
+        return { activeNodes, activeEdges, filtering: true };
+      }
+
+      MAP_DATA.nodes.forEach(n => activeNodes.add(n.id));
+      MAP_DATA.edges.forEach(e => activeEdges.add(e.id));
+      return { activeNodes, activeEdges, filtering: false };
+    }
+
+    function isEdgeInPerspective(edge) {
+      if (state.perspective === "all") return true;
+      return edge.perspective === "both" || edge.perspective === state.perspective;
+    }
+
+    function getPerspectiveFocusedEdges(perspId) {
+      if (perspId === "all") return MAP_DATA.edges;
+      const exclusive = MAP_DATA.edges.filter(e => e.perspective === perspId);
+      if (exclusive.length > 0) return exclusive;
+      return MAP_DATA.edges.filter(e => isEdgeInPerspective(e));
+    }
+
+    function getEdgeStyle(edge) {
+      // 按 MAP_DATA.perspectives 的 lineClass 动态映射：primary 实线苔绿，
+      // secondary 虚线深苔，其余（含 both 与未匹配视角）统一雾灰绿实线。
+      const perspective = (MAP_DATA.perspectives || []).find(p => p.id === edge.perspective);
+      if (perspective && perspective.lineClass === "primary") {
+        return { stroke: "#85a897", dash: "" };
+      }
+      if (perspective && perspective.lineClass === "secondary") {
+        return { stroke: "#6d8679", dash: "6 4" };
+      }
+      return { stroke: "#8aa097", dash: "" };
+    }
+
+    function renderHeaderAndLegend() {
+      document.title = MAP_DATA.meta.title.split("：")[0] + " — Librarium";
+      document.getElementById("pageTitle").textContent = MAP_DATA.meta.title;
+      document.getElementById("pageSubtitle").textContent = MAP_DATA.meta.subtitle;
+
+      perspectiveGroupEl.innerHTML = "";
+      MAP_DATA.perspectives.forEach(p => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "ctrl-btn" + (state.perspective === p.id && state.stepIndex === -1 ? " active" : "");
+        btn.textContent = p.label;
+        btn.addEventListener("click", () => {
+          state.perspective = p.id;
+          state.stepIndex = -1;
+          state.selectedNodeId = null;
+          state.selectedEdgeId = null;
+          renderAll();
+        });
+        perspectiveGroupEl.appendChild(btn);
+      });
+
+      legendItemsEl.innerHTML = MAP_DATA.perspectives
+        .map(p => `
+          <span class="legend-item">
+            <span class="legend-line ${p.lineClass}"></span>
+            <span>${escapeHtml(p.legendLabel)}</span>
+          </span>
+        `)
+        .join("");
+    }
+
+    function findReverseEdge(edge) {
+      const key = [edge.source, edge.target].sort().join("|");
+      const pair = bidirMap.get(key) || [];
+      return pair.find(e => e.id !== edge.id) || null;
+    }
+
+    function computeEdgeStates() {
+      const result = new Map();
+      const hasStep = state.stepIndex >= 0;
+
+      let focusEdgeIds = new Set();
+      let strongEdgeIds = new Set();
+      let hasFocus = false;
+
+      if (hasStep) {
+        MAP_DATA.steps[state.stepIndex].activeEdges.forEach(id => {
+          focusEdgeIds.add(id);
+          strongEdgeIds.add(id);
+        });
+        hasFocus = true;
+      } else if (state.selectedNodeId || state.hoveredNodeId) {
+        const nid = state.selectedNodeId || state.hoveredNodeId;
+        MAP_DATA.edges.forEach(e => {
+          if ((e.source === nid || e.target === nid) &&
+              (state.perspective === "all" || isEdgeInPerspective(e))) {
+            focusEdgeIds.add(e.id);
+            strongEdgeIds.add(e.id);
+          }
+        });
+        hasFocus = true;
+      } else if (state.selectedEdgeId || state.hoveredEdgeId) {
+        const eid = state.selectedEdgeId || state.hoveredEdgeId;
+        const e = edgeMap.get(eid);
+        if (e) {
+          focusEdgeIds.add(e.id);
+          strongEdgeIds.add(e.id);
+          const rev = findReverseEdge(e);
+          if (rev) {
+            focusEdgeIds.add(rev.id);
+            strongEdgeIds.add(rev.id);
+          }
+        }
+        hasFocus = true;
+      }
+
+      const perspectiveFiltered = !hasFocus && state.perspective !== "all";
+      let perspectiveFocusedEdgeIds = new Set();
+      let hasExclusiveEdges = false;
+      if (perspectiveFiltered) {
+        const exclusive = MAP_DATA.edges.filter(e => e.perspective === state.perspective);
+        hasExclusiveEdges = exclusive.length > 0;
+        (hasExclusiveEdges ? exclusive : MAP_DATA.edges.filter(e => isEdgeInPerspective(e)))
+          .forEach(e => perspectiveFocusedEdgeIds.add(e.id));
+      }
+
+      MAP_DATA.edges.forEach(e => {
+        let cls = "";
+        let showLabel = false;
+        if (hasFocus) {
+          if (strongEdgeIds.has(e.id)) {
+            cls = "edge-strong";
+            showLabel = focusEdgeIds.has(e.id);
+          } else {
+            cls = "edge-dim";
+          }
+        } else if (perspectiveFiltered) {
+          if (perspectiveFocusedEdgeIds.has(e.id)) {
+            cls = "edge-strong";
+            showLabel = false;
+          } else if (hasExclusiveEdges && e.perspective === "both") {
+            cls = "";
+          } else {
+            cls = "edge-dim";
+          }
+        }
+        result.set(e.id, { cls, showLabel });
+      });
+      return result;
+    }
+
+    function applyInteraction() {
+      const states = computeEdgeStates();
+      edgeElements.forEach(rec => {
+        const st = states.get(rec.id) || { cls: "", showLabel: false };
+        rec.g.classList.remove("edge-strong", "edge-dim");
+        if (st.cls) rec.g.classList.add(st.cls);
+        rec.gLabel.classList.toggle("visible", st.showLabel);
+      });
+    }
+
+    function renderSvg() {
+      svgEl.innerHTML = "";
+      edgeElements = [];
+      nodeElements = [];
+
+      const { activeNodes, filtering } = getActiveSets();
+
+      const edgeLayer = createSvgEl("g", { class: "layer-edges" });
+      const nodeLayer = createSvgEl("g", { class: "layer-nodes" });
+      const labelLayer = createSvgEl("g", { class: "layer-labels" });
+
+      MAP_DATA.edges.forEach(edge => {
+        const geom = computeEdgeGeometry(edge);
+        const style = getEdgeStyle(edge);
+
+        const gEdge = createSvgEl("g", { class: "edge" });
+
+        const path = createSvgEl("path", {
+          d: geom.d,
+          class: "edge-path",
+          stroke: style.stroke
+        });
+        if (style.dash) path.setAttribute("stroke-dasharray", style.dash);
+
+        const arrow = createSvgEl("path", {
+          d: geom.arrowD,
+          class: "edge-arrow",
+          fill: style.stroke
+        });
+
+        const hit = createSvgEl("path", { d: geom.d, class: "edge-hit" });
+
+        /* 点击连线高亮，再次点击同一条连线取消选中恢复原状 */
+        const onToggleEdge = () => {
+          if (state.selectedEdgeId === edge.id) {
+            state.selectedEdgeId = null;
+          } else {
+            state.selectedEdgeId = edge.id;
+            state.selectedNodeId = null;
+            state.stepIndex = -1;
+          }
+          renderAll();
+        };
+
+        hit.addEventListener("click", onToggleEdge);
+        path.addEventListener("click", onToggleEdge);
+        gEdge.addEventListener("mouseenter", () => { state.hoveredEdgeId = edge.id; applyInteraction(); });
+        gEdge.addEventListener("mouseleave", () => { state.hoveredEdgeId = null; applyInteraction(); });
+
+        gEdge.appendChild(path);
+        gEdge.appendChild(arrow);
+        gEdge.appendChild(hit);
+        edgeLayer.appendChild(gEdge);
+
+        const labelText = edge.label;
+        const boxW = Math.max(88, labelText.length * 11.5 + 28);
+        const boxH = 24;
+
+        const gLabel = createSvgEl("g", { class: "edge-label-group" });
+        gLabel.addEventListener("click", onToggleEdge);
+
+        gLabel.appendChild(createSvgEl("rect", {
+          x: (geom.lx - boxW / 2).toFixed(1),
+          y: (geom.ly - boxH / 2).toFixed(1),
+          width: boxW,
+          height: boxH,
+          rx: 999,
+          class: "edge-label-bg"
+        }));
+
+        const txt = createSvgEl("text", {
+          x: geom.lx.toFixed(1),
+          y: geom.ly.toFixed(1),
+          class: "edge-label-text"
+        });
+        txt.textContent = labelText;
+        gLabel.appendChild(txt);
+        labelLayer.appendChild(gLabel);
+
+        edgeElements.push({ id: edge.id, g: gEdge, gLabel });
+      });
+
+      const startNodeId = (MAP_DATA.readingGuide && MAP_DATA.readingGuide.startNodeId) || null;
+
+      MAP_DATA.nodes.forEach(node => {
+        const isActive = activeNodes.has(node.id);
+        const isDimmed = filtering && !isActive;
+        const isSelected = state.selectedNodeId === node.id;
+        const isStart = node.id === startNodeId;
+
+        const gNode = createSvgEl("g", {
+          class: "node-group"
+            + (isDimmed ? " dimmed" : "")
+            + (filtering && isActive ? " highlighted" : "")
+            + (isSelected ? " selected" : "")
+            + (isStart ? " start-node" : "")
+        });
+
+        gNode.addEventListener("click", () => {
+          if (state.selectedNodeId === node.id) {
+            state.selectedNodeId = null;
+          } else {
+            state.selectedNodeId = node.id;
+            state.selectedEdgeId = null;
+            state.stepIndex = -1;
+          }
+          renderAll();
+        });
+        gNode.addEventListener("mouseenter", () => { state.hoveredNodeId = node.id; applyInteraction(); });
+        gNode.addEventListener("mouseleave", () => { state.hoveredNodeId = null; applyInteraction(); });
+
+        const x0 = node.x - NODE_W / 2;
+        const y0 = node.y - NODE_H / 2;
+
+        gNode.appendChild(createSvgEl("rect", {
+          x: x0,
+          y: y0,
+          width: NODE_W,
+          height: NODE_H,
+          rx: 2,
+          class: "node-rect"
+        }));
+
+        /* 卡片内文字：foreignObject 内嵌 HTML，自动折行，绝不溢出卡片 */
+        const fo = createSvgEl("foreignObject", {
+          x: x0,
+          y: y0,
+          width: NODE_W,
+          height: NODE_H
+        });
+        const card = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
+        card.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+        card.className = "node-card";
+        card.innerHTML =
+          `<div class="node-card-top">` +
+            `<div class="node-card-cat">${escapeHtml(node.category)}</div>` +
+            (isStart ? `<div class="node-card-badge">01 · 起点</div>` : "") +
+          `</div>` +
+          `<div class="node-card-title">${escapeHtml(node.title)}</div>` +
+          `<div class="node-card-brief">${escapeHtml(node.brief)}</div>`;
+        fo.appendChild(card);
+        gNode.appendChild(fo);
+
+        nodeLayer.appendChild(gNode);
+      });
+
+      svgEl.appendChild(edgeLayer);
+      svgEl.appendChild(nodeLayer);
+      svgEl.appendChild(labelLayer);
+      applyInteraction();
+      fitIfNeeded();
+      applyView();
+    }
+
+    function renderStepper() {
+      if (state.stepIndex >= 0) {
+        const step = MAP_DATA.steps[state.stepIndex];
+        stepTagEl.textContent = step.title;
+        stepDescEl.textContent = step.description;
+      } else {
+        const pObj = MAP_DATA.perspectives.find(p => p.id === state.perspective);
+        stepTagEl.textContent = `当前模式：${pObj ? pObj.label : "全景"}`;
+        stepDescEl.textContent = "点击“下一步”可按因果顺序分步浏览整本书的核心逻辑链条。";
+      }
+
+      prevStepBtn.disabled = state.stepIndex <= 0;
+      nextStepBtn.disabled = state.stepIndex >= MAP_DATA.steps.length - 1;
+    }
+
+    function renderDetailPane() {
+      if (state.selectedNodeId) {
+        const node = nodeMap.get(state.selectedNodeId);
+        const incoming = MAP_DATA.edges.filter(e => e.target === node.id && isEdgeInPerspective(e));
+        const outgoing = MAP_DATA.edges.filter(e => e.source === node.id && isEdgeInPerspective(e));
+
+        const subPointsHtml = node.subPoints
+          .map(sp => `<li><strong>${escapeHtml(sp.label)}：</strong>${escapeHtml(sp.text)}</li>`)
+          .join("");
+
+        const pNotesHtml = (node.perspectivesNote || [])
+          .map(pn => `<div class="perspective-note"><strong>${escapeHtml(pn.label)}</strong>${escapeHtml(pn.text)}</div>`)
+          .join("");
+
+        const renderRelButtons = (edges, dir) => {
+          if (edges.length === 0) return `<p style="font-size:12.5px;color:#7A7F7A;">无直接连线</p>`;
+          return edges.map(e => {
+            const peer = nodeMap.get(dir === "in" ? e.source : e.target);
+            const arrowText = dir === "in"
+              ? `${escapeHtml(peer.title)} → 本模块`
+              : `本模块 → ${escapeHtml(peer.title)}`;
+            return `
+              <button class="rel-item" type="button" data-jump-node="${peer.id}">
+                <div class="rel-head">
+                  <span>${arrowText}</span>
+                  <span>${escapeHtml(e.label)}</span>
+                </div>
+                <div class="rel-body">${escapeHtml(e.detail)}</div>
+              </button>
+            `;
+          }).join("");
+        };
+
+        const nodeIndex = MAP_DATA.nodes.findIndex(n => n.id === node.id) + 1;
+        const coreIdea = node.coreIdea || node.summary || "";
+
+        detailPaneEl.innerHTML = `
+          <div class="detail-badges">
+            <span class="detail-badge">${escapeHtml(node.category)}</span>
+            <span class="detail-badge-num">节点 ${String(nodeIndex).padStart(2, "0")}</span>
+          </div>
+          <h2 class="detail-title">${escapeHtml(node.title)}</h2>
+          <blockquote class="detail-core">${escapeHtml(coreIdea)}</blockquote>
+          ${node.summary && node.summary !== coreIdea ? `<p class="detail-summary">${escapeHtml(node.summary)}</p>` : ""}
+
+          <div class="detail-section">
+            <h3>详细展开</h3>
+            <ul class="point-list">${subPointsHtml}</ul>
+          </div>
+
+          ${pNotesHtml ? `<div class="detail-section"><h3>理论定位</h3>${pNotesHtml}</div>` : ""}
+
+          <div class="detail-section">
+            <h3>上游来源</h3>
+            <div class="rel-list">${renderRelButtons(incoming, "in")}</div>
+          </div>
+
+          <div class="detail-section">
+            <h3>下游去向</h3>
+            <div class="rel-list">${renderRelButtons(outgoing, "out")}</div>
+          </div>
+
+          ${node.subMapPath ? `
+            <a class="node-submap-btn" href="${escapeHtml(node.subMapPath)}">深入本章图谱 →</a>
+          ` : ""}
+        `;
+
+        detailPaneEl.querySelectorAll("[data-jump-node]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            focusNode(btn.getAttribute("data-jump-node"));
+            detailPaneEl.scrollTop = 0;
+          });
+        });
+        return;
+      }
+
+      if (state.selectedEdgeId) {
+        const edge = edgeMap.get(state.selectedEdgeId);
+        const s = nodeMap.get(edge.source);
+        const t = nodeMap.get(edge.target);
+        const pObj = MAP_DATA.perspectives.find(p => p.id === edge.perspective) || MAP_DATA.perspectives[0];
+
+        detailPaneEl.innerHTML = `
+          <div class="detail-kicker">因果与作用机制 · ${escapeHtml(pObj.legendLabel)}</div>
+          <h2 class="detail-title">${escapeHtml(edge.label)}</h2>
+          <p class="detail-summary">${escapeHtml(edge.detail)}</p>
+
+          <div class="detail-section">
+            <h3>关联模块</h3>
+            <button class="node-index-btn" type="button" data-jump-node="${s.id}">
+              <span>起点：${escapeHtml(s.title)}</span>
+              <span>查看详情 →</span>
+            </button>
+            <button class="node-index-btn" type="button" data-jump-node="${t.id}">
+              <span>终点：${escapeHtml(t.title)}</span>
+              <span>查看详情 →</span>
+            </button>
+          </div>
+        `;
+
+        detailPaneEl.querySelectorAll("[data-jump-node]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            state.selectedNodeId = btn.getAttribute("data-jump-node");
+            state.selectedEdgeId = null;
+            renderAll();
+          });
+        });
+        return;
+      }
+
+      const pObj = MAP_DATA.perspectives.find(p => p.id === state.perspective);
+      if (state.perspective !== "all" && pObj) {
+        const focusedEdges = getPerspectiveFocusedEdges(state.perspective);
+        const focusedNodeIds = new Set();
+        focusedEdges.forEach(e => { focusedNodeIds.add(e.source); focusedNodeIds.add(e.target); });
+        const focusedNodes = MAP_DATA.nodes.filter(n => focusedNodeIds.has(n.id));
+
+        const edgeItemsHtml = focusedEdges.map(e => {
+          const s = nodeMap.get(e.source);
+          const t = nodeMap.get(e.target);
+          return `
+            <button class="rel-item" type="button" data-jump-edge="${e.id}">
+              <div class="rel-head">
+                <span>${escapeHtml(s.title)} → ${escapeHtml(t.title)}</span>
+                <span>${escapeHtml(e.label)}</span>
+              </div>
+              <div class="rel-body">${escapeHtml(e.detail)}</div>
+            </button>
+          `;
+        }).join("");
+
+        const nodeItemsHtml = focusedNodes.map(n => `
+          <button class="node-index-btn" type="button" data-jump-node="${n.id}">
+            <span>${escapeHtml(n.title)}</span>
+            <span>${escapeHtml(n.category)}</span>
+          </button>
+        `).join("");
+
+        detailPaneEl.innerHTML = `
+          <div class="detail-kicker">分析视角 · ${escapeHtml(pObj.legendLabel || pObj.label)}</div>
+          <h2 class="detail-title">${escapeHtml(pObj.label)}</h2>
+          <blockquote class="detail-core">本视角聚焦「${escapeHtml(pObj.legendLabel || pObj.label)}」这一核心线索，共 ${focusedEdges.length} 条连线、${focusedNodes.length} 个节点。</blockquote>
+
+          <div class="detail-section">
+            <h3>本视角核心脉络</h3>
+            <div class="rel-list">${edgeItemsHtml || `<p style="font-size:12.5px;color:#7A7F7A;">本视角暂无专属连线</p>`}</div>
+          </div>
+
+          <div class="detail-section">
+            <h3>本视角涉及节点</h3>
+            ${nodeItemsHtml}
+          </div>
+
+          <p class="guide-hint">点击连线或节点查看精解 · 点击顶部「全景互锁」返回完整导览</p>
+        `;
+
+        detailPaneEl.querySelectorAll("[data-jump-edge]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            state.selectedEdgeId = btn.getAttribute("data-jump-edge");
+            state.selectedNodeId = null;
+            state.stepIndex = -1;
+            renderAll();
+          });
+        });
+        detailPaneEl.querySelectorAll("[data-jump-node]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            focusNode(btn.getAttribute("data-jump-node"));
+          });
+        });
+        return;
+      }
+
+      const indexButtonsHtml = MAP_DATA.nodes
+        .map(n => `
+          <button class="node-index-btn" type="button" data-jump-node="${n.id}">
+            <span>${escapeHtml(n.title)}</span>
+            <span>${escapeHtml(n.category)}</span>
+          </button>
+        `)
+        .join("");
+
+      const guide = MAP_DATA.readingGuide || null;
+      let guideHtml = "";
+      if (guide && guide.recommendedPath && guide.recommendedPath.length) {
+        const stepsHtml = guide.recommendedPath.map((rp, i) => {
+          const node = nodeMap.get(rp.id);
+          const label = rp.label || (node ? node.title : rp.id);
+          const num = String(i + 1).padStart(2, "0");
+          return `
+            <li>
+              <button class="guide-step-btn" type="button" data-jump-node="${escapeHtml(rp.id)}">
+                <span class="guide-num">${num}</span>
+                <span class="guide-label">${escapeHtml(label)}</span>
+                <span class="guide-arrow">→</span>
+              </button>
+            </li>
+          `;
+        }).join("");
+        guideHtml = `
+          <div class="detail-section">
+            <h3>推荐阅读路线</h3>
+            <ol class="guide-path">${stepsHtml}</ol>
+          </div>
+        `;
+      }
+
+      const guideTitle = (guide && guide.startNodeId) ? "从这里开始阅读" : "知识地图导览";
+      const guideQuestion = (guide && guide.coreQuestion) ? guide.coreQuestion : MAP_DATA.meta.overview;
+
+      detailPaneEl.innerHTML = `
+        <div class="detail-kicker">新手导览</div>
+        <h2 class="detail-title">${escapeHtml(guideTitle)}</h2>
+        <blockquote class="detail-core">${escapeHtml(guideQuestion)}</blockquote>
+        ${guideHtml}
+        <div class="detail-section">
+          <h3>全部节点索引</h3>
+          ${indexButtonsHtml}
+        </div>
+        ${(MAP_DATA.subMaps && MAP_DATA.subMaps.length) ? `
+          <div class="detail-section">
+            <h3>分章节图谱入口</h3>
+            <div class="submap-list">${MAP_DATA.subMaps.map(sm => `
+              <a class="submap-btn" href="${escapeHtml(sm.path)}">
+                <span class="submap-title">${escapeHtml(sm.title)}</span>
+                <span class="submap-arrow">深入 →</span>
+              </a>
+            `).join("")}</div>
+          </div>
+        ` : ""}
+        <p class="guide-hint">点击节点阅读精解 · 滚轮缩放 · 拖拽移动画布</p>
+      `;
+
+      detailPaneEl.querySelectorAll("[data-jump-node]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          focusNode(btn.getAttribute("data-jump-node"));
+        });
+      });
+    }
+
+    function renderAll() {
+      renderHeaderAndLegend();
+      renderSvg();
+      renderStepper();
+      renderDetailPane();
+      detailPaneEl.classList.remove("pane-refresh");
+      void detailPaneEl.offsetWidth;
+      detailPaneEl.classList.add("pane-refresh");
+    }
+
+    prevStepBtn.addEventListener("click", () => {
+      if (state.stepIndex > 0) {
+        state.stepIndex -= 1;
+        state.selectedNodeId = null;
+        state.selectedEdgeId = null;
+        renderAll();
+      }
+    });
+
+    nextStepBtn.addEventListener("click", () => {
+      if (state.stepIndex < MAP_DATA.steps.length - 1) {
+        state.stepIndex += 1;
+        state.selectedNodeId = null;
+        state.selectedEdgeId = null;
+        renderAll();
+      }
+    });
+
+    resetBtn.addEventListener("click", () => {
+      state.perspective = "all";
+      state.stepIndex = -1;
+      state.selectedNodeId = null;
+      state.selectedEdgeId = null;
+      fitView();
+      applyView();
+      renderAll();
+    });
+
+    fitBtnEl.addEventListener("click", () => {
+      fitView();
+      applyView();
+    });
+
+    renderTopbarLinks();
+    renderAll();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialNodeId = urlParams.get("node");
+    if (initialNodeId && nodeMap.has(initialNodeId)) {
+      const settleOnce = () => {
+        window.removeEventListener("librarium:settled", settleOnce);
+        focusNode(initialNodeId);
+      };
+      window.addEventListener("librarium:settled", settleOnce);
+      setTimeout(() => {
+        if (state.selectedNodeId !== initialNodeId) focusNode(initialNodeId);
+      }, 1400);
+    }
+  </script>
+
+  <script>
+    (function () {
+      var curtain = document.getElementById("curtain");
+
+      function settleCurtain() {
+        curtain.classList.remove("revealing", "covering");
+        curtain.classList.add("settled");
+        window.dispatchEvent(new CustomEvent("librarium:settled"));
+      }
+
+      /* 进入页：首帧静态绘制完成后，双层 rAF 平滑启动揭幕 */
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          curtain.classList.add("revealing");
+          curtain.addEventListener("animationend", function onRevealEnd(e) {
+            if (e.target === curtain && e.animationName === "curtainReveal") {
+              curtain.removeEventListener("animationend", onRevealEnd);
+              settleCurtain();
+            }
+          });
+        });
+      });
+
+      document.addEventListener("click", function (e) {
+        var a = e.target && e.target.closest ? e.target.closest("a") : null;
+        if (!a) return;
+        var href = a.getAttribute("href");
+        if (!href || href.charAt(0) === "#" || /^[a-z][a-z0-9+.-]*:/i.test(href) || a.target === "_blank") return;
+        if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        e.preventDefault();
+        curtain.classList.remove("settled", "revealing");
+        curtain.classList.add("covering");
+        setTimeout(function () { window.location.href = href; }, 650);
+      });
+
+      window.addEventListener("pageshow", function (e) {
+        /* 后退 / 前进恢复时，若仍停留在雾幕，则直接落定 */
+        if (e.persisted) {
+          settleCurtain();
+        }
+      });
+    })();
+  </script>
+
+  <script>
+    (function () {
+      /* 内页克制版微光浮尘 + 鼠标追光（严格位于节点与正文之下，不干扰阅读点击） */
+      var canvas = document.getElementById("mapDust");
+      var glow = document.getElementById("mapGlow");
+      if (!canvas) return;
+      var ctx = canvas.getContext("2d");
+      var W = 0, H = 0, dpr = 1;
+      function resize() {
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        W = canvas.clientWidth || canvas.parentElement.clientWidth;
+        H = canvas.clientHeight || canvas.parentElement.clientHeight;
+        canvas.width = W * dpr; canvas.height = H * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      resize();
+      window.addEventListener("resize", resize);
+
+      var N = 16;
+      var parts = [];
+      for (var i = 0; i < N; i++) {
+        parts.push({
+          x: Math.random(), y: Math.random(),
+          r: 0.5 + Math.random() * 1.1,
+          vx: (Math.random() - 0.5) * 0.08,
+          vy: (Math.random() - 0.5) * 0.08,
+          base: 0.10 + Math.random() * 0.10,
+          phase: Math.random() * Math.PI * 2
+        });
+      }
+      var mx = -9999, my = -9999;
+      window.addEventListener("mousemove", function (e) {
+        var rect = canvas.getBoundingClientRect();
+        mx = e.clientX - rect.left; my = e.clientY - rect.top;
+        if (glow && W > 0 && H > 0) {
+          glow.style.setProperty("--mx", (mx / W * 100) + "%");
+          glow.style.setProperty("--my", (my / H * 100) + "%");
+        }
+      });
+
+      function tick() {
+        ctx.clearRect(0, 0, W, H);
+        var t = Date.now() * 0.0008;
+        for (var i = 0; i < parts.length; i++) {
+          var p = parts[i];
+          p.x += p.vx / Math.max(W, 1); p.y += p.vy / Math.max(H, 1);
+          if (p.x < 0) p.x = 1; else if (p.x > 1) p.x = 0;
+          if (p.y < 0) p.y = 1; else if (p.y > 1) p.y = 0;
+          var px = p.x * W, py = p.y * H;
+          var breathe = 0.5 + 0.5 * Math.sin(t * 3 + p.phase);
+          var alpha = p.base * (0.4 + 0.6 * breathe);
+          var dx = px - mx, dy = py - my;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 140 && dist > 0.5) { var b = 1 - dist / 140; alpha += b * 0.12; }
+          if (alpha > 0.30) alpha = 0.30;
+          var g = ctx.createRadialGradient(px, py, 0, px, py, p.r * 3.5);
+          g.addColorStop(0, "rgba(200,222,212," + alpha.toFixed(3) + ")");
+          g.addColorStop(1, "rgba(200,222,212,0)");
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(px, py, p.r * 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        requestAnimationFrame(tick);
+      }
+      tick();
+    })();
+  </script>
+</body>
+</html>

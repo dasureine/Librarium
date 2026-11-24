@@ -1,0 +1,155 @@
+/* Librarium 内置 AI 工作台（阶段 2）：全屏 overlay，样式全部作用域隔离在 #aiWorkbench 下。 */
+
+#aiWorkbench {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: none;
+  overflow-y: auto;
+  font-family: "Source Han Serif SC", "Noto Serif SC", "Songti SC", "STSong", Georgia, serif;
+  color: #ede9df;
+  /* 半透明：让身后那朵大花在「思考」时旋转可透出看到，同时内容卡片保持可读。 */
+  background:
+    radial-gradient(1000px 700px at 78% 12%, rgba(44,59,54,0.5) 0%, transparent 56%),
+    rgba(16, 23, 20, 0.84);
+  padding: 44px 20px 64px;
+}
+#aiWorkbench.open { display: block; }
+#aiWorkbench * { box-sizing: border-box; margin: 0; padding: 0; }
+
+#aiWorkbench .wrap { max-width: 880px; margin: 0 auto; }
+#aiWorkbench .wb-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+#aiWorkbench h1 { font-size: 28px; font-weight: 500; letter-spacing: 1px; color: #ede9df; }
+#aiWorkbench .wb-close {
+  background: transparent; border: 1px solid rgba(178,198,188,0.22); color: #9bb0a5;
+  border-radius: 8px; padding: 6px 14px; cursor: pointer; font-family: inherit; font-size: 14px;
+}
+#aiWorkbench .wb-close:hover { color: #ede9df; }
+#aiWorkbench .sub { color: #9bb0a5; font-size: 14px; margin: 8px 0 24px; }
+
+#aiWorkbench .card {
+  background: rgba(34,46,42,0.82); border: 1px solid rgba(178,198,188,0.22); border-radius: 12px;
+  padding: 22px 24px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); margin-bottom: 16px;
+}
+#aiWorkbench .row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; align-items: flex-end; }
+#aiWorkbench .row label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #9bb0a5; }
+#aiWorkbench select, #aiWorkbench textarea, #aiWorkbench input[type=text] {
+  background: #1a2422; color: #ede9df; border: 1px solid rgba(178,198,188,0.22);
+  border-radius: 8px; padding: 8px 10px; font-family: inherit; font-size: 14px;
+}
+#aiWorkbench select { min-width: 150px; }
+#aiWorkbench textarea { width: 100%; min-height: 64px; line-height: 1.7; font-size: 15px; resize: vertical; }
+#aiWorkbench .chk { flex-direction: row !important; align-items: center; gap: 8px !important; }
+#aiWorkbench button {
+  background: #85a897; color: #0f1614; border: none; border-radius: 10px;
+  padding: 10px 22px; font-family: inherit; font-size: 15px; cursor: pointer; font-weight: 600;
+}
+#aiWorkbench button:disabled { opacity: .5; cursor: not-allowed; }
+#aiWorkbench button.ghost {
+  background: transparent; border: 1px solid rgba(178,198,188,0.22); color: #9bb0a5;
+  font-weight: 400; font-size: 13px; padding: 5px 14px;
+}
+#aiWorkbench button.on { background: #85a897; color: #0f1614; border-color: #85a897; font-weight: 600; }
+
+/* 范围折叠面板 */
+#aiWorkbench .scope-panel { border: 1px solid rgba(178,198,188,0.22); border-radius: 10px; overflow: hidden; margin-bottom: 14px; }
+#aiWorkbench .scope-toggle {
+  width: 100%; display: flex; align-items: center; gap: 10px; justify-content: flex-start;
+  background: rgba(20,28,26,0.4); color: #ede9df; border: none; padding: 11px 14px;
+  font-size: 14px; font-weight: 500; border-radius: 0; cursor: pointer;
+}
+#aiWorkbench .scope-toggle .arrow { margin-left: auto; color: #85a897; transition: transform .2s; }
+#aiWorkbench .scope-toggle.open .arrow { transform: rotate(180deg); }
+#aiWorkbench .scope-count { color: #9bb0a5; font-size: 12px; font-weight: 400; }
+#aiWorkbench .scope-body { display: none; border-top: 1px solid rgba(178,198,188,0.22); padding: 12px 14px; background: rgba(20,28,26,0.28); }
+#aiWorkbench .scope-search { width: 100%; margin-bottom: 8px; }
+#aiWorkbench .scope-list { max-height: 280px; overflow: auto; }
+#aiWorkbench .grp { font-size: 12px; color: #9bb0a5; margin: 10px 0 4px; letter-spacing: 1px; }
+#aiWorkbench .grp:first-child { margin-top: 0; }
+#aiWorkbench .grp-fold { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 6px; }
+#aiWorkbench .grp-fold:hover { color: #a7c8b8; }
+#aiWorkbench .scope-item { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-size: 14px; color: #ede9df; cursor: pointer; }
+#aiWorkbench .scope-item.sub { margin-left: 24px; color: #9bb0a5; }
+#aiWorkbench .scope-item input { accent-color: #85a897; }
+#aiWorkbench .book-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+#aiWorkbench .book-title { cursor: pointer; font-size: 14px; color: #ede9df; }
+#aiWorkbench .fold { cursor: pointer; color: #85a897; width: 14px; text-align: center; user-select: none; }
+#aiWorkbench .chapter-list { margin-left: 12px; }
+#aiWorkbench .empty { color: #9bb0a5; font-size: 13px; padding: 6px 0; }
+
+#aiWorkbench #status { color: #9bb0a5; font-size: 13px; margin-top: 10px; min-height: 18px; }
+#aiWorkbench #answer {
+  margin-top: 16px; line-height: 1.9; font-size: 16px;
+  background: rgba(20,28,26,0.5); border: 1px solid rgba(178,198,188,0.22); border-radius: 10px;
+  padding: 16px 18px; min-height: 90px;
+}
+#aiWorkbench .cite {
+  display: inline-block; color: #0f1614; background: #85a897; border-radius: 4px;
+  padding: 0 5px; font-weight: 700; cursor: pointer; font-size: 0.92em;
+}
+#aiWorkbench .cite:hover { background: #a7c8b8; }
+#aiWorkbench .loc { color: #a7c8b8; font-weight: 600; }
+#aiWorkbench .cursor { color: #85a897; animation: aiBlink 1s steps(1) infinite; }
+@keyframes aiBlink { 50% { opacity: 0; } }
+
+/* 学习进度 */
+#aiWorkbench #studyArea { display: none; }
+#aiWorkbench .progress-wrap { margin: 6px 0; }
+#aiWorkbench .progress-label { display: flex; justify-content: space-between; font-size: 13px; color: #9bb0a5; margin-bottom: 6px; }
+#aiWorkbench .progress-track { height: 10px; background: rgba(20,28,26,0.6); border: 1px solid rgba(178,198,188,0.22); border-radius: 6px; overflow: hidden; }
+#aiWorkbench .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, #85a897, #a7c8b8); transition: width .5s cubic-bezier(0.22,1,0.36,1); }
+#aiWorkbench .section-head { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; color: #9bb0a5; font-size: 13px; margin: 14px 0 6px; }
+#aiWorkbench .section-head:hover { color: #a7c8b8; }
+#aiWorkbench .points-list { display: none; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+#aiWorkbench .point-item { display: inline-flex; align-items: center; gap: 6px; background: rgba(133,168,151,0.08); border: 1px solid rgba(178,198,188,0.22); border-radius: 8px; padding: 3px 10px; font-size: 13px; color: #9bb0a5; }
+#aiWorkbench .point-item .dot { color: #9bb0a5; }
+#aiWorkbench .point-item.done { background: rgba(133,168,151,0.2); color: #ede9df; }
+#aiWorkbench .point-item.done .dot { color: #a7c8b8; }
+
+#aiWorkbench .qcard { border: 1px solid rgba(178,198,188,0.22); border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; background: rgba(20,28,26,0.4); }
+#aiWorkbench .q { font-size: 16px; margin-bottom: 10px; }
+#aiWorkbench .qbtns { display: flex; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+#aiWorkbench .qans { margin-top: 10px; border-top: 1px dashed rgba(178,198,188,0.22); padding-top: 10px; }
+#aiWorkbench .qa, #aiWorkbench .qx { font-size: 15px; margin-bottom: 8px; }
+#aiWorkbench .qa b, #aiWorkbench .qx b { color: #a7c8b8; }
+#aiWorkbench .qacts { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+#aiWorkbench .qbadge { display: inline-block; font-size: 12px; color: #a7c8b8; margin-left: 8px; }
+
+#aiWorkbench #sources { margin-top: 14px; display: none; }
+#aiWorkbench #sources h3 { font-size: 14px; color: #9bb0a5; font-weight: 500; margin-bottom: 8px; }
+#aiWorkbench .src { display: inline-block; background: rgba(133,168,151,0.12); border: 1px solid rgba(178,198,188,0.22); border-radius: 8px; padding: 4px 10px; margin: 0 8px 8px 0; font-size: 13px; color: #ede9df; cursor: pointer; }
+#aiWorkbench .src:hover { background: rgba(133,168,151,0.22); }
+#aiWorkbench .src b { color: #85a897; font-weight: 600; }
+
+/* 原文弹窗 */
+#aiWorkbench .modal {
+  display: none; position: fixed; inset: 0; z-index: 70; background: rgba(10,14,13,0.6);
+  align-items: center; justify-content: center; padding: 24px;
+}
+#aiWorkbench .modal.open { display: flex; }
+#aiWorkbench .modal .panel {
+  background: #1c2623; border: 1px solid rgba(178,198,188,0.22); border-radius: 14px;
+  max-width: 680px; width: 100%; max-height: 80vh; overflow: auto; padding: 22px 24px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+}
+#aiWorkbench .modal .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+#aiWorkbench .modal .head h3 { font-size: 15px; color: #9bb0a5; font-weight: 500; }
+#aiWorkbench .modal pre { white-space: pre-wrap; line-height: 1.9; font-size: 15px; font-family: inherit; color: #ede9df; }
+
+/* 主页：整朵大花即入口，点击区域覆盖整朵花（含花瓣内部空白） */
+.art-lily {
+  pointer-events: auto;
+  cursor: pointer;
+}
+.art-lily svg { pointer-events: all; }
+
+/* 主页：思考时大花缩放旋转 */
+#artLily.ai-thinking svg {
+  animation: aiThinkSpin 1.4s linear infinite;
+  transform-origin: 50% 50%;
+}
+@keyframes aiThinkSpin {
+  0% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(0.62) rotate(180deg); }
+  100% { transform: scale(1) rotate(360deg); }
+}
