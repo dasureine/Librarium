@@ -400,7 +400,9 @@
     }
 
     var status = isPartial
-      ? '整书总图待上传完整后生成 · 已完成 ' + chapters.length + ' 章'
+      ? (chapters.length
+          ? '全书 ' + chapters.length + ' 章已上传完整 · 待生成总图'
+          : '整书总图待上传完整后生成')
       : (book.overallStatus === 'complete' ? '整书总图' : '已完成 ' + chapters.length + ' 章');
     var tagsText = (book.tags || []).map(escapeHtml).join(' · ');
     card.innerHTML =
@@ -413,6 +415,34 @@
       '<p class="atlas-summary">' + escapeHtml(book.summary) + '</p>' +
       (isPartial ? '' : '<span class="atlas-arrow">→</span>');
     sec.appendChild(card);
+
+    if (isPartial && chapters.length) {
+      var action = document.createElement('div');
+      action.className = 'atlas-finalize';
+      var finalizeBtn = document.createElement('button');
+      finalizeBtn.type = 'button';
+      finalizeBtn.className = 'atlas-finalize-btn';
+      finalizeBtn.textContent = '已完整上传 · 生成整书总图';
+      finalizeBtn.title = '分章图谱已齐备，点击生成全书总览与整书知识图谱';
+      finalizeBtn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        if (finalizeBtn.disabled) return;
+        finalizeBtn.disabled = true;
+        finalizeBtn.textContent = '正在启动…';
+        var starter = (typeof window.startLibrariumFinalize === 'function')
+          ? window.startLibrariumFinalize(book.id, book.title, book.author)
+          : Promise.resolve(false);
+        Promise.resolve(starter).then(function (ok) {
+          if (!ok) {
+            finalizeBtn.disabled = false;
+            finalizeBtn.textContent = '已完整上传 · 生成整书总图';
+            showOfflineToast();
+          }
+        });
+      });
+      action.appendChild(finalizeBtn);
+      sec.appendChild(action);
+    }
 
     var toggleEl = null;
     if (chapters.length) {

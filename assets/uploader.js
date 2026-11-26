@@ -15,7 +15,8 @@
     gitSync: '/api/git/sync',
     shutdown: '/api/shutdown',
     library: '/api/library/overview',
-    openFolder: '/api/library/open'
+    openFolder: '/api/library/open',
+    finalize: '/api/books/finalize'
   };
 
   var ACCEPT_EXT = '.pdf,.epub,.txt,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff';
@@ -74,8 +75,6 @@
   var books = []; // books.json 缓存
   var resumeBook = null; // 续传选中的书目
   var existing = { chapters: [], max_order: 0, map_files: [] }; // 已入藏信息
-  var offsetMode = 'none'; // 'none' | 'auto' | 'custom'
-  var offsetStart = 1; // 自定义起始章号（1-based）
 
   var btn = null;
   var backdrop = null;
@@ -213,23 +212,6 @@
       });
   }
 
-  function isChapterExisting(index) {
-    var seen = {};
-    (existing.chapters || []).forEach(function (c) {
-      if (c && typeof c.order === 'number') seen[c.order] = true;
-    });
-    if (seen[index]) return true;
-    var fname = 'ch' + String(index).padStart(2, '0') + '.html';
-    return (existing.map_files || []).indexOf(fname) !== -1;
-  }
-
-  function currentOffset() {
-    if (mode !== 'resume') return 0;
-    if (offsetMode === 'none') return 0;
-    if (offsetMode === 'custom') return Math.max(0, (parseInt(offsetStart, 10) || 1) - 1);
-    return (existing.max_order || 0);
-  }
-
   function refreshSlugHint() {
     var hint = bodyEl && bodyEl.querySelector('#lrSlugHint');
     if (!hint) return;
@@ -315,7 +297,6 @@
     fd.append('slug', slug);
     var mapEl = bodyEl && bodyEl.querySelector('#lrPageMap');
     fd.append('page_map', mapEl ? mapEl.value : '');
-    fd.append('offset', String(currentOffset()));
     fd.append('skip_noncontent', skipNonContent ? 'true' : 'false');
     return apiFetch(API.resplit, { method: 'POST', body: fd, cache: 'no-store' })
       .then(function (data) {
@@ -456,6 +437,55 @@
       .catch(function () { return false; });
   };
 
+  /* 从书架卡片调用：分章全部完成后生成总览与整书总图，复用入藏弹窗的进度界面 */
+  window.startLibrariumFinalize = function (slug, title, author) {
+    slug = slugify(slug);
+    if (!slug) return Promise.resolve(false);
+    if (jobId && (jobStatus === 'queued' || jobStatus === 'running')) {
+      return Promise.resolve(false);
+    }
+
+    function begin() {
+      buildModal();
+      var fd = new FormData();
+      fd.append('slug', slug);
+      fd.append('title', title || '未命名书');
+      fd.append('author', author || '佚名');
+      return apiFetch(API.finalize, { method: 'POST', body: fd, cache: 'no-store' })
+        .then(function (data) {
+          draft = { slug: slug, title: title || '未命名书', author: author || '佚名' };
+          jobId = data.job_id;
+          jobStatus = data.status || 'queued';
+          paused = false;
+          renderedLogs = 0;
+          elapsedStartedAt = Date.now();
+          elapsedSeconds = 0;
+          setModalHeading('生成整书总图', '全书分章已完成 · 生成总览与整书知识图谱');
+          goStep(3);
+          startPolling();
+          startElapsedTimer();
+          if (backdrop) backdrop.classList.add('is-open');
+          return true;
+        })
+        .catch(function () { return false; });
+    }
+
+    if (health && health.online === true) return begin();
+    return fetch(API.health, { method: 'GET', cache: 'no-store' })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        if (data && data.online === true) {
+          health = data;
+          return begin();
+        }
+        return false;
+      })
+      .catch(function () { return false; });
+  };
+
   /* ---------- 弹窗骨架 ---------- */
 
   function buildModal() {
@@ -493,9 +523,18 @@
     });
   }
 
+  function setModalHeading(title, subtitle) {
+    if (!modal) return;
+    var titleEl = modal.querySelector('.lr-modal-title');
+    var subEl = modal.querySelector('.lr-modal-sub');
+    if (titleEl) titleEl.textContent = title;
+    if (subEl) subEl.textContent = subtitle;
+  }
+
   function openModal() {
     console.log('[Librarium] open uploader');
     buildModal();
+    setModalHeading('入藏新书', '上传本地电子书 · 自动生成笔记与知识图谱');
     refreshLibraryCount();
     if (jobId && jobStatus && (jobStatus === 'queued' || jobStatus === 'running')) {
       renderedLogs = 0;
@@ -528,8 +567,6 @@
     elapsedSeconds = 0;
     mode = 'new';
     resumeBook = null;
-    offsetMode = 'none';
-    offsetStart = 1;
     existing = { chapters: [], max_order: 0, map_files: [] };
     inspection = null;
     skippedTitles = [];
@@ -777,8 +814,7 @@
       selectedFiles.forEach(function (file) { fd.append('files', file, file.name); });
       fd.append('slug', slug);
       fd.append('skip_noncontent', skipNonContent ? 'true' : 'false');
-      if (mode === 'resume') fd.append('offset', String(currentOffset()));
-      console.log(
+        console.log(
         '[Librarium] handleUpload: POST ' + API.upload +
         ' slug=' + slug +
         ' files=' + selectedFiles.map(function (f) { return f.name; }).join(', ') +
@@ -883,13 +919,15 @@
         '<div class="lr-empty">提交后将重新切分，并在上方展示章节与字数。</div>';
     } else if (chapters.length) {
       var rows = chapters.map(function (c) {
-        var existed = isResume && isChapterExisting(c.index);
-        var checked = isResume ? !existed : true;
-        var tag = existed ? '<span class="lr-tag">已入藏</span>' : '';
+        var replaces = isResume ? (parseInt(c.replaces, 10) || 0) : 0;
+        var isNewChapter = isResume && !replaces;
+        var tag = replaces
+          ? '<span class="lr-tag lr-tag-replace">替换旧章</span>'
+          : (isNewChapter ? '<span class="lr-tag lr-tag-new">新增</span>' : '');
         var box = isResume
-          ? '<span class="c-check"><input type="checkbox" data-chapter="' + c.index + '"' + (checked ? ' checked' : '') + '></span>'
+          ? '<span class="c-check"><input type="checkbox" data-chapter="' + c.index + '" checked' + (replaces ? ' disabled' : '') + '></span>'
           : '';
-        return '<div class="lr-chapter' + (existed ? ' is-existing' : '') + '">' +
+        return '<div class="lr-chapter' + (replaces ? ' is-replace' : (isNewChapter ? ' is-new-chapter' : '')) + '">' +
           box +
           '<span class="c-idx">' + String(c.index).padStart(2, '0') + '</span>' +
           '<span class="c-title">' + escapeHtml(c.title) + tag + '</span>' +
@@ -911,18 +949,8 @@
 
     var rangeHtml = '';
     if (isResume) {
-      var numVal = (offsetMode === 'custom')
-        ? (parseInt(offsetStart, 10) || 1)
-        : (offsetMode === 'auto' ? ((existing.max_order || 0) + 1) : 1);
       rangeHtml =
-        '<div class="lr-offset">' +
-          '<span>章号偏移</span>' +
-          '<label><input type="radio" name="lrOffset" value="none"' + (offsetMode === 'none' ? ' checked' : '') + '> 按原目录编号</label>' +
-          '<label><input type="radio" name="lrOffset" value="auto"' + (offsetMode === 'auto' ? ' checked' : '') + '> 接续当前最大章号自动顺延</label>' +
-          '<label><input type="radio" name="lrOffset" value="custom"' + (offsetMode === 'custom' ? ' checked' : '') + '> 自定义起始章号</label>' +
-          '<span class="lr-offset-num">第 <input type="number" id="lrOffsetN" min="1" value="' + numVal + '"' + (offsetMode === 'custom' ? '' : ' disabled') + '> 章</span>' +
-        '</div>' +
-        '<div class="lr-hint lr-resume-count">将生成勾选的新章节，已入藏章节默认跳过（可手动勾选覆盖）。「按原目录编号」保留目录中的章号；「接续顺延」从已入藏最大章号 +1 开始，会重新命名分章文件。</div>';
+        '<div class="lr-hint lr-resume-count">已按章节标题自动匹配：标「替换旧章」的章节会原位覆盖旧章并重新生成笔记/图谱（默认必选）；标「新增」的章节从现有序号后顺延。原文指纹未变的章节在生成时会自动跳过。</div>';
     } else if (!needsPageMap) {
       rangeHtml =
         '<div class="lr-range">' +
@@ -974,32 +1002,6 @@
       });
     }
 
-    if (mode === 'resume') {
-      bodyEl.querySelectorAll('input[name="lrOffset"]').forEach(function (r) {
-        r.addEventListener('change', function () {
-          offsetMode = bodyEl.querySelector('input[name="lrOffset"]:checked').value;
-          var numInput = bodyEl.querySelector('#lrOffsetN');
-          if (numInput) {
-            numInput.disabled = (offsetMode !== 'custom');
-            if (offsetMode !== 'custom') {
-              numInput.value = String(offsetMode === 'auto' ? ((existing.max_order || 0) + 1) : 1);
-            }
-          }
-          applyOffset();
-        });
-      });
-      var numInput = bodyEl.querySelector('#lrOffsetN');
-      if (numInput) {
-        numInput.addEventListener('change', function () {
-          offsetStart = parseInt(numInput.value, 10) || 1;
-          applyOffset();
-        });
-      }
-      bodyEl.querySelectorAll('input[data-chapter]').forEach(function (cb) {
-        cb.addEventListener('change', function () { /* 勾选状态由 startJob 即时读取 */ });
-      });
-    }
-
     if (needsPageMap) {
       footEl.querySelector('#lrResplitBtn').addEventListener('click', resplit);
     } else {
@@ -1019,7 +1021,6 @@
     fd.append('slug', slugify(draft.slug) || 'book');
     fd.append('page_map', mapText);
     fd.append('skip_noncontent', skipNonContent ? 'true' : 'false');
-    if (mode === 'resume') fd.append('offset', String(currentOffset()));
 
     apiFetch(API.resplit, { method: 'POST', body: fd, cache: 'no-store' })
       .then(function (data) {
@@ -1479,6 +1480,8 @@
 
   function mountSideTools(foot) {
     if (!foot) return;
+    // 生成中隐藏左侧工具，给「暂停刷新 / 中止生成」留出完整一行。
+    if (jobId && (jobStatus === 'queued' || jobStatus === 'running')) return;
     var host = foot.querySelector('.lr-foot-note');
     if (!host) return; // 完成 / 取消等界面自带按钮区，不注入左侧工具
     if (host.querySelector('.lr-side-tools')) return;

@@ -7,6 +7,8 @@
 """
 
 import argparse
+import hashlib
+import json
 import re
 import shutil
 import sys
@@ -329,15 +331,108 @@ def archive_chapters(chapters_dir, keep=3):
     return target
 
 
+def chapter_filename(order):
+    """统一分章文件名：只按章号命名，标题不再进入文件名。"""
+    return f"ch{int(order):02d}.txt"
+
+
+def chapter_hash(title, text):
+    """章节身份指纹：标题 + 正文，用于换源后判断笔记与图谱是否过期。"""
+    payload = f"{str(title or '').strip()}\n{text or ''}".encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+CHAPTER_MANIFEST = "manifest.json"
+
+
+def load_chapter_manifest(chapters_dir):
+    """读取 chapters/manifest.json，返回 {order: entry}。"""
+    path = Path(chapters_dir) / CHAPTER_MANIFEST
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    entries = data.get("chapters") if isinstance(data, dict) else data
+    result = {}
+    for entry in entries or []:
+        if not isinstance(entry, dict):
+            continue
+        try:
+            order = int(entry.get("order"))
+        except (TypeError, ValueError):
+            continue
+        result[order] = entry
+    return result
+
+
+def save_chapter_manifest(chapters_dir, entries, source=""):
+    """写回 chapters/manifest.json（按章号排序，标题与指纹都在这里）。"""
+    chapters_dir = Path(chapters_dir)
+    chapters_dir.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "version": 1,
+        "updated_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        "source": source or "",
+        "chapters": [entries[order] for order in sorted(entries)],
+    }
+    path = chapters_dir / CHAPTER_MANIFEST
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return path
+
+
+def _resolve_orders(spans, order_resolver, offset):
+    """确定每章最终章号：优先用调用方的重复章节匹配结果，否则按目录顺序编号。"""
+    titles = [str(title).strip() or "未命名章节" for title, _s, _e in spans]
+    if order_resolver is not None:
+        orders = [max(1, int(order)) for order in order_resolver(titles)]
+        if len(orders) != len(titles):
+            raise ValueError("order_resolver 返回的章号数量与目录条目不一致")
+    else:
+        orders = [index + offset for index in range(1, len(titles) + 1)]
+    if len(set(orders)) != len(orders):
+        raise ValueError("order_resolver 返回了重复章号")
+    return titles, orders
+
+
+def _write_chapter(out_dir, order, title, text, chars, pages, manifest):
+    """按章号写入分章文件并更新 manifest 条目。"""
+    filename = chapter_filename(order)
+    (out_dir / filename).write_text(text, encoding="utf-8")
+    manifest[int(order)] = {
+        "order": int(order),
+        "title": title,
+        "filename": filename,
+        "chars": int(chars),
+        "pages": int(pages),
+        "hash": chapter_hash(title, text),
+        "updated_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+    }
+    return {
+        "index": int(order),
+        "filename": filename,
+        "title": title,
+        "chars": int(chars),
+        "pages": int(pages),
+    }
+
+
 def split_into_chapters(book_path, out_dir, level=1, offset=0,
-                        skip_noncontent=True, map_path=None):
+                        skip_noncontent=True, map_path=None, order_resolver=None):
     """通用拆章入口：把 PDF / EPUB / TXT 按目录拆成逐章 txt。
+
+    分章文件统一按章号命名：chapters/ch01.txt、ch02.txt……章节标题与内容指纹
+    写入 chapters/manifest.json。换源重传时同名文件原位覆盖，标题变化也不会
+    产生重复章节文件。
+
+    order_resolver(titles) -> [order, ...]：由调用方按已入藏章节计算最终章号，
+    实现「重复章节原位替换、新章节顺延追加」；不传时按目录顺序 + offset 编号。
 
     返回 dict：
         status     ready / needs_manual_map / scanned / empty
         chapters   [{index, filename, title, chars, pages}]
         unit / total_units / skipped / inspection / avg_chars
-    map_path 为手动目录映射文件（无内嵌目录时使用）。
     """
     path = Path(book_path)
     out_dir = Path(out_dir)
@@ -375,26 +470,22 @@ def split_into_chapters(book_path, out_dir, level=1, offset=0,
                 "inspection": info,
                 "message": "该 TXT 内容为空，无法拆章。",
             }
-        archive_chapters(out_dir)
+        titles, orders = _resolve_orders(spans, order_resolver, offset)
+        manifest = load_chapter_manifest(out_dir)
         chapters = []
         total_chars = 0
-        for idx, (title, start, end) in enumerate(spans, start=1):
+        for (_raw_title, start, end), title, order in zip(spans, titles, orders):
             start = max(0, start)
             end = min(total_units, max(end, start + 1))
             if start >= total_units:
                 continue
             part = "\n".join(lines[start:end]).strip()
             total_chars += len(part)
-            global_idx = idx + offset
-            filename = f"{global_idx:02d}_{to_filename(title) or '未命名章节'}.txt"
-            (out_dir / filename).write_text(part, encoding="utf-8")
-            chapters.append({
-                "index": global_idx,
-                "filename": filename,
-                "title": title or "未命名章节",
-                "chars": len(part),
-                "pages": end - start,
-            })
+            chapters.append(
+                _write_chapter(out_dir, order, title, part, len(part), end - start, manifest)
+            )
+        save_chapter_manifest(out_dir, manifest, source=str(path))
+        chapters.sort(key=lambda item: item["index"])
         if not chapters:
             return {"status": "empty", "chapters": [], "inspection": info,
                     "message": "未能拆分出任何章节，请检查目录映射。"}
@@ -444,11 +535,12 @@ def split_into_chapters(book_path, out_dir, level=1, offset=0,
                 ),
             }
 
-        archive_chapters(out_dir)
+        titles, orders = _resolve_orders(spans, order_resolver, offset)
+        manifest = load_chapter_manifest(out_dir)
         chapters = []
         total_chars = 0
         total_pages = 0
-        for idx, (title, start, end) in enumerate(spans, start=1):
+        for (_raw_title, start, end), title, order in zip(spans, titles, orders):
             start = max(0, start)
             end = min(total_units, max(end, start + 1))
             if start >= total_units:
@@ -463,16 +555,11 @@ def split_into_chapters(book_path, out_dir, level=1, offset=0,
             text = "\n".join(parts).strip()
             total_pages += end - start
             total_chars += raw_chars
-            global_idx = idx + offset
-            filename = f"{global_idx:02d}_{to_filename(title) or '未命名章节'}.txt"
-            (out_dir / filename).write_text(text, encoding="utf-8")
-            chapters.append({
-                "index": global_idx,
-                "filename": filename,
-                "title": title or "未命名章节",
-                "chars": raw_chars,
-                "pages": end - start,
-            })
+            chapters.append(
+                _write_chapter(out_dir, order, title, text, raw_chars, end - start, manifest)
+            )
+        save_chapter_manifest(out_dir, manifest, source=str(path))
+        chapters.sort(key=lambda item: item["index"])
 
         if not chapters:
             return {"status": "empty", "chapters": [], "inspection": info,

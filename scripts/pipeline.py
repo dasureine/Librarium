@@ -457,6 +457,87 @@ def list_jobs() -> list:
         return [job.snapshot() for job in _JOBS.values()]
 
 
+def _title_key(title) -> str:
+    return split_book.normalize_title(title)
+
+
+def _chapter_number_key(title) -> str:
+    """提取「第X章 / Chapter N」编号，用于同一章换标题后的匹配。"""
+    normalized = split_book.normalize_title(title)
+    match = re.match(
+        r"^第\s*([0-9一二三四五六七八九十百千零〇两]+)\s*[章节回卷篇部]", normalized
+    )
+    if match:
+        return "zh:" + str(_cn_int(match.group(1)))
+    match = re.match(r"^chapter\s*([0-9]+)", normalized, re.IGNORECASE)
+    if match:
+        return "en:" + str(int(match.group(1)))
+    return ""
+
+
+def _existing_chapter_index(slug: str) -> dict:
+    """合并 books.json 与 workspace 清单中的已入藏章节，返回 {order: {order,title}}。"""
+    by_order = {}
+    for chapter in list_existing_chapters(slug):
+        try:
+            order = int(chapter.get("index"))
+        except (TypeError, ValueError):
+            continue
+        by_order[order] = {"order": order, "title": str(chapter.get("title") or "")}
+    for chapter in existing_chapters_for_slug(slug).get("chapters") or []:
+        if not isinstance(chapter, dict) or not isinstance(chapter.get("order"), int):
+            continue
+        by_order.setdefault(
+            int(chapter["order"]),
+            {"order": int(chapter["order"]), "title": str(chapter.get("title") or "")},
+        )
+    return by_order
+
+
+def plan_chapter_orders(existing: dict, titles: list) -> list:
+    """按已入藏章节标题匹配新目录：重复章节原位替换，新章节顺延追加。
+
+    匹配优先级：标题完全一致 -> 章号一致（仅当旧章号唯一）。返回与 titles
+    等长的最终章号列表。这样无论上传多少次，同一章只会占用一个章号。
+    """
+    if not existing:
+        return list(range(1, len(titles) + 1))
+
+    by_title = {}
+    by_number = {}
+    for order, chapter in existing.items():
+        title_key = _title_key(chapter.get("title"))
+        if title_key:
+            by_title.setdefault(title_key, []).append(order)
+        number_key = _chapter_number_key(chapter.get("title"))
+        if number_key:
+            by_number.setdefault(number_key, []).append(order)
+
+    used = set()
+    next_new = max(existing) + 1
+    orders = []
+    for title in titles:
+        candidates = [o for o in by_title.get(_title_key(title), []) if o not in used]
+        if not candidates:
+            number_key = _chapter_number_key(title)
+            number_candidates = (
+                [o for o in by_number.get(number_key, []) if o not in used]
+                if number_key else []
+            )
+            if len(number_candidates) == 1:
+                candidates = number_candidates
+        if candidates:
+            order = candidates[0]
+        else:
+            while next_new in used:
+                next_new += 1
+            order = next_new
+            next_new += 1
+        used.add(order)
+        orders.append(order)
+    return orders
+
+
 def split_precheck(slug: str, book_path: Path, page_map: Optional[str] = None,
                    level: int = 1, offset: int = 0, skip_noncontent: bool = True) -> dict:
     """阶段1：切分电子书为逐章纯文本，并返回格式 / 目录体检结果。
@@ -466,6 +547,9 @@ def split_precheck(slug: str, book_path: Path, page_map: Optional[str] = None,
       · 有文字层但无目录 -> 返回 needs_page_map，等待手动目录映射
       · 无文字层（扫描版）-> 抛 ScannedBookError，提示先 OCR
     返回 dict：status / chapters / inspection / skipped / unit / page_count / offset。
+
+    重传同一本书时，按章节标题/章号匹配已入藏章节：重复章节使用原章号原位替换，
+    新章节从最大章号之后顺延，避免出现「第一章 + 第五章 第一章」这类重复。
     """
     workspace = WORKSPACE / slug
     chapters_dir = workspace / "chapters"
@@ -478,6 +562,12 @@ def split_precheck(slug: str, book_path: Path, page_map: Optional[str] = None,
     if not glossary.exists():
         glossary.write_text(split_book.GLOSSARY_HEADER, encoding="utf-8")
 
+    existing_before = _existing_chapter_index(slug)
+    existing_orders_before = set(existing_before)
+
+    def _resolver(titles):
+        return plan_chapter_orders(existing_before, titles)
+
     result = split_book.split_into_chapters(
         book_path,
         chapters_dir,
@@ -485,6 +575,7 @@ def split_precheck(slug: str, book_path: Path, page_map: Optional[str] = None,
         offset=offset,
         skip_noncontent=skip_noncontent,
         map_path=page_map,
+        order_resolver=_resolver,
     )
     status = result.get("status")
     unit = result.get("unit") or "页"
@@ -493,9 +584,14 @@ def split_precheck(slug: str, book_path: Path, page_map: Optional[str] = None,
     skipped = result.get("skipped") or []
 
     if status == "ready":
+        chapters = result.get("chapters") or []
+        for chapter in chapters:
+            order = int(chapter.get("index") or 0)
+            chapter["replaces"] = order if order in existing_orders_before else 0
+            chapter["is_new"] = order not in existing_orders_before
         return {
             "status": "ready",
-            "chapters": result.get("chapters") or [],
+            "chapters": chapters,
             "avg_chars_per_page": result.get("avg_chars"),
             "inspection": inspection,
             "skipped": skipped,
@@ -530,16 +626,47 @@ def split_precheck(slug: str, book_path: Path, page_map: Optional[str] = None,
 
 
 def list_existing_chapters(slug: str) -> list:
-    """读取 workspace/<slug>/chapters/ 已切分章节，供断点复用（避免重复切分）。"""
+    """读取已切分章节，优先 chapters/manifest.json。
+
+    新规范下分章文件只按章号命名（ch01.txt…），标题存放在 manifest.json；
+    旧数据（NN_标题.txt）保留兼容读取。
+    """
     chapters_dir = WORKSPACE / slug / "chapters"
     if not chapters_dir.is_dir():
         return []
+    manifest = split_book.load_chapter_manifest(chapters_dir)
+    if manifest:
+        chapters = []
+        for order in sorted(manifest):
+            entry = manifest[order]
+            filename = str(entry.get("filename") or split_book.chapter_filename(order))
+            text_path = chapters_dir / filename
+            if not text_path.exists():
+                continue
+            text = text_path.read_text(encoding="utf-8")
+            chapters.append({
+                "index": int(order),
+                "filename": filename,
+                "title": str(entry.get("title") or f"第{order}章"),
+                "chars": len(text),
+                "pages": int(entry.get("pages") or 0),
+            })
+        if chapters:
+            return chapters
+
     chapters = []
     for f in sorted(chapters_dir.glob("*.txt"), key=natural_key):
         stem = f.stem
-        m = re.match(r"^(\d+)_(.*)$", stem)
-        index = int(m.group(1)) if m else 0
-        title = (m.group(2) if m else stem).replace("_", " ").strip()
+        canonical = re.match(r"^ch(\d+)$", stem, re.IGNORECASE)
+        legacy = re.match(r"^(\d+)_(.*)$", stem)
+        if canonical:
+            index = int(canonical.group(1))
+            title = f"第{index}章"
+        elif legacy:
+            index = int(legacy.group(1))
+            title = legacy.group(2).replace("_", " ").strip()
+        else:
+            continue
         text = f.read_text(encoding="utf-8")
         chapters.append({
             "index": index or (len(chapters) + 1),
@@ -548,6 +675,7 @@ def list_existing_chapters(slug: str) -> list:
             "chars": len(text),
             "pages": 0,
         })
+    chapters.sort(key=lambda chapter: chapter["index"])
     return chapters
 
 
@@ -1226,6 +1354,16 @@ def _pass2_ready(map_path: Path) -> bool:
     return False
 
 
+def _ir_usable(ir) -> bool:
+    """chapter_ir 是否包含可用的原著解剖内容（防止空壳 IR 让 Pass 2 空转）。"""
+    if not isinstance(ir, dict):
+        return False
+    if str(ir.get("note") or "").strip():
+        return True
+    units = ir.get("units")
+    return isinstance(units, list) and bool(units)
+
+
 def _read_note_as_ir(note_path: Path, ch: dict) -> dict:
     body = note_path.read_text(encoding="utf-8-sig").strip() if note_path.exists() else ""
     return {
@@ -1370,25 +1508,39 @@ def stage2_chapters(job: JobState, llm: LLM, chapters: list) -> None:
             raise JobCancelled()
         job.set(done_chapters=done)
         job.log(f"处理第 {ch['index']}/{total} 章：{ch['title']}")
-        base = ch["filename"][: -len(".txt")]
+        base = f"ch{int(ch['index']):02d}"
         ir_path = ir_dir / f"{base}.json"
         note_path = notes_dir / f"{base}.md"
         map_path = maps_dir / f"{base}.json"
 
-        text_path = chapters_dir / ch["filename"]
+        text_path = chapters_dir / str(ch.get("filename") or f"{base}.txt")
+        if not text_path.exists():
+            text_path = chapters_dir / f"{base}.txt"
         text = text_path.read_text(encoding="utf-8") if text_path.exists() else ""
+        text_hash = split_book.chapter_hash(ch.get("title"), text)
         ctx = _chapter_context(ch, job)
 
-        # ---- Pass 1：原著解剖（ir_path 与 note_path 同时存在则跳过）----
+        # ---- Pass 1：原著解剖（原文指纹一致且 ir/note 都存在才跳过）----
+        pass1_reused = False
+        ir = {}
         if ir_path.exists() and note_path.exists():
-            job.log("  Pass 1 已存在，读取 chapter_ir（断点续跑）")
             try:
-                ir = json.loads(ir_path.read_text(encoding="utf-8"))
+                loaded = json.loads(ir_path.read_text(encoding="utf-8"))
             except Exception:
-                ir = {}
-            if not isinstance(ir, dict) or not ir:
-                ir = _read_note_as_ir(note_path, ch)
-        elif not text.strip():
+                loaded = {}
+            if not isinstance(loaded, dict):
+                loaded = {}
+            stored_hash = str(loaded.get("source_hash") or "")
+            if not _ir_usable(loaded):
+                job.log("  chapter_ir 为空或残缺：Pass 1 重新生成")
+            elif stored_hash and stored_hash != text_hash:
+                job.log("  检测到本章原文已更新：Pass 1 重新生成")
+            else:
+                ir = loaded
+                pass1_reused = True
+                job.log("  Pass 1 已存在，读取 chapter_ir（断点续跑）")
+
+        if not pass1_reused and not text.strip():
             job.log("  警告：本章切分文本为空，写入残缺占位（不调用模型）")
             ir = {
                 "chapter_core_question": "",
@@ -1398,17 +1550,18 @@ def stage2_chapters(job: JobState, llm: LLM, chapters: list) -> None:
                 "verified_relations": [],
                 "chapter_framework": "",
             }
-            ir_path.write_text(json.dumps(ir, ensure_ascii=False, indent=2), encoding="utf-8")
             note_path.write_text(f"## {chapter_heading(ch)}\n\n{ir['note']}\n", encoding="utf-8")
-        else:
+        elif not pass1_reused:
             ir = run_pass1(job, llm, ctx, text,
                            [e.get("term", "") for e in glossary_entries if e.get("term")])
             if not isinstance(ir, dict):
                 ir = {}
-            ir_path.write_text(json.dumps(ir, ensure_ascii=False, indent=2), encoding="utf-8")
             note_body = normalize_note_markdown(ir.get("note", ""))
             note_path.write_text(f"## {chapter_heading(ch)}\n\n{note_body}\n", encoding="utf-8")
             job.log("  Pass 1 完成：chapter_ir + chapter_notes 已写入")
+
+        ir["source_hash"] = text_hash
+        ir_path.write_text(json.dumps(ir, ensure_ascii=False, indent=2), encoding="utf-8")
 
         # 术语表去重合并（幂等：同章重跑只覆盖，不重复追加）
         glossary_entries = merge_glossary_entries(glossary_entries, ir.get("glossary") or [], ch)
@@ -1418,14 +1571,16 @@ def stage2_chapters(job: JobState, llm: LLM, chapters: list) -> None:
         # ---- Pass 2：图谱建构与学术延伸 ----
         pass2_skipped = False
         cmap = None
-        if _pass2_ready(map_path):
+        if pass1_reused and _pass2_ready(map_path):
             try:
                 loaded = json.loads(map_path.read_text(encoding="utf-8"))
             except Exception:
                 loaded = None
             if isinstance(loaded, dict):
-                cmap = loaded
-                pass2_skipped = True
+                stored_hash = str(loaded.get("source_hash") or "")
+                if not stored_hash or stored_hash == text_hash:
+                    cmap = loaded
+                    pass2_skipped = True
         if cmap is None:
             cmap = run_pass2(job, llm, ctx, ir, book_anchors, glossary_entries)
         else:
@@ -1433,8 +1588,9 @@ def stage2_chapters(job: JobState, llm: LLM, chapters: list) -> None:
 
         cmap.setdefault("chapter_id", f"{ch['index']:02d}")
         cmap.setdefault("chapter_title", ch["title"])
+        cmap["source_hash"] = text_hash
+        map_path.write_text(json.dumps(cmap, ensure_ascii=False, indent=2), encoding="utf-8")
         if not pass2_skipped:
-            map_path.write_text(json.dumps(cmap, ensure_ascii=False, indent=2), encoding="utf-8")
             job.log(f"  Pass 2 完成：chapter_maps 已写入（{len(cmap.get('nodes') or [])} 节点）")
 
         # 轻量只读告警：属种层级在图谱节点命名中是否越界（不篡改数据、不中断任务）。
@@ -1501,7 +1657,12 @@ def note_heading(path: Path) -> str:
             if content and content not in NOTE_SECTIONS:
                 return content
     m = re.match(r"^\d+_(.+)$", path.stem)
-    return m.group(1).replace("_", " ").strip() if m else path.stem
+    if m:
+        return m.group(1).replace("_", " ").strip()
+    m = re.match(r"^ch(\d+)$", path.stem, re.IGNORECASE)
+    if m:
+        return f"第{int(m.group(1))}章"
+    return path.stem
 
 
 def stage3_overview(job: JobState, llm: LLM) -> Path:
@@ -2164,10 +2325,32 @@ def list_chapter_maps(slug: str) -> list:
             data = json.loads(f.read_text(encoding="utf-8"))
         except Exception:
             continue
-        m = re.match(r"^(\d+)_", f.stem)
-        order = int(m.group(1)) if m else 0
+        canonical = re.match(r"^ch(\d+)$", f.stem, re.IGNORECASE)
+        legacy = re.match(r"^(\d+)_", f.stem)
+        match = canonical or legacy
+        order = int(match.group(1)) if match else 0
         result.append({"order": order or (len(result) + 1), "chapter_map": data})
     return result
+
+
+def chapter_map_ready(slug: str, order: int) -> bool:
+    """判断某一章的分章图谱是否已生成且结构完整。"""
+    return _pass2_ready(WORKSPACE / slug / "chapter_maps" / f"ch{int(order):02d}.json")
+
+
+def chapters_completion(slug: str) -> dict:
+    """统计全书章节完成度，供「生成整书总图」按钮前置校验。"""
+    chapters = list_existing_chapters(slug)
+    missing = [
+        int(chapter["index"]) for chapter in chapters
+        if not chapter_map_ready(slug, int(chapter["index"]))
+    ]
+    return {
+        "total": len(chapters),
+        "ready": len(chapters) - len(missing),
+        "missing": missing[:20],
+        "complete": bool(chapters) and not missing,
+    }
 
 
 def build_submaps_and_chapters(slug: str, book_title: str) -> tuple:

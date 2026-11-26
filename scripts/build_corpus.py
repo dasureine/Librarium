@@ -140,12 +140,31 @@ def split_by_pages(text: str) -> list:
 
 
 def parse_chapter_filename(name: str):
-    """从 '01_第一章.txt' 解析 (章号, 章名)。"""
+    """从 'ch01.txt' 或旧式 '01_第一章.txt' 解析 (章号, 章名)。"""
     stem = Path(name).stem
     m = re.match(r"^(\d+)_(.*)$", stem)
-    index = int(m.group(1)) if m else 0
-    title = (m.group(2) if m else stem).replace("_", " ").strip()
-    return index, title
+    if m:
+        return int(m.group(1)), m.group(2).replace("_", " ").strip()
+    m = re.match(r"^ch(\d+)$", stem, re.IGNORECASE)
+    if m:
+        return int(m.group(1)), ""
+    return 0, stem
+
+
+def chapter_titles(chapters_dir: Path) -> dict:
+    """读取 chapters/manifest.json，返回 {章号: 标题}。"""
+    try:
+        import split_book
+
+        manifest = split_book.load_chapter_manifest(chapters_dir)
+    except Exception:
+        return {}
+    titles = {}
+    for order, entry in manifest.items():
+        title = str((entry or {}).get("title") or "").strip()
+        if title:
+            titles[int(order)] = title
+    return titles
 
 
 def chapter_segments(slug: str, chapter_index: int, text: str, page_offset: int,
@@ -184,11 +203,13 @@ def load_notes(workspace: Path) -> list:
     notes_dir = workspace / "chapter_notes"
     notes = []
     if notes_dir.is_dir():
+        titles = chapter_titles(workspace / "chapters")
         for f in sorted(notes_dir.glob("*.md"), key=natural_key):
             index, title = parse_chapter_filename(f.name)
+            title = title or titles.get(index) or f"第{index}章"
             notes.append({
                 "chapter_index": index,
-                "title": title or f"第{index}章",
+                "title": title,
                 "text": f.read_text(encoding="utf-8-sig").strip(),
             })
     return notes
@@ -217,8 +238,10 @@ def build_corpus(only_slug: str = None, min_segment: int = MIN_SEGMENT) -> dict:
 
         chapters = []
         anchor_count = 0
+        titles = chapter_titles(chapters_dir)
         for f in sorted(chapters_dir.glob("*.txt"), key=natural_key):
             index, title = parse_chapter_filename(f.name)
+            title = title or titles.get(index) or f"第{index}章"
             text = f.read_text(encoding="utf-8")
             has_anchor = bool(PAGE_ANCHOR.search(text))
             if has_anchor:

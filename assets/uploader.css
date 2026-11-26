@@ -566,6 +566,23 @@ textarea.lr-input {
   border-radius: 999px;
   vertical-align: middle;
 }
+.lr-chapter .c-title .lr-tag-replace {
+  color: #d8c9b6;
+  border-color: rgba(196, 146, 124, 0.5);
+  background: rgba(124, 74, 58, 0.14);
+}
+.lr-chapter .c-title .lr-tag-new {
+  color: var(--moss, #85a897);
+  border-color: rgba(133, 168, 151, 0.45);
+  background: rgba(133, 168, 151, 0.08);
+}
+.lr-chapter.is-replace {
+  background: rgba(196, 146, 124, 0.045);
+}
+.lr-chapter .c-check input[type="checkbox"]:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
 .lr-chapter.is-existing {
   opacity: 0.46;
 }

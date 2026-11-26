@@ -3,8 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>西方哲学史 · 第一章 — Librarium</title>
+  <title>西方哲学史 · 第一章 希腊哲学的精神和问题 — Librarium</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231c2422'/%3E%3Cg fill='none' stroke='%23ede9df' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 25 C16 21 16 18 16 15'/%3E%3Cpath d='M16 15 C12 15 9 12 8 8 C12 9.5 14.5 12 16 15'/%3E%3Cpath d='M16 15 C20 15 23 12 24 8 C20 9.5 17.5 12 16 15'/%3E%3Cpath d='M16 15 C16 12 16 10 16 8'/%3E%3C/g%3E%3C/svg%3E" />
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg" id="lr-favicon" />
+  <script>
+    (function () {
+      var el = document.getElementById('lr-favicon');
+      if (!el) return;
+      var seg = (location.pathname || '').split('/').filter(Boolean);
+      var idx = seg.indexOf('maps');
+      var depth = idx >= 0 ? Math.max(0, seg.length - idx - 1) : 0;
+      el.href = new Array(depth + 1).join('../') + 'assets/favicon.svg';
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Pinyon+Script&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
@@ -1033,9 +1044,9 @@
      * ============================================================ */
     const MAP_DATA = {
   "meta": {
-    "title": "西方哲学史 · 第一章：希腊哲学的精神特质与范畴准备",
-    "subtitle": "从神话到理性：自然、本原与理智范畴",
-    "overview": "本章通过与中国、印度哲学的比较，说明希腊哲学具有非宗教精神与思辨精神两大特质，并界定自然、本原、宇宙、理智等范畴，为第二章本原学说提供概念工具与解释框架。"
+    "title": "西方哲学史 · 第一章 希腊哲学的精神和问题",
+    "subtitle": "第一章",
+    "overview": "以非宗教精神与思辨精神两条特质轴，说明希腊哲学与神话世界观的决裂及思辨方法论特征。"
   },
   "perspectives": [
     {
@@ -1043,313 +1054,435 @@
       "label": "全景互锁",
       "legendLabel": "本章结构",
       "lineClass": "both"
+    },
+    {
+      "id": "p1",
+      "label": "非宗教精神线索",
+      "legendLabel": "与神话决裂",
+      "lineClass": "primary"
+    },
+    {
+      "id": "p2",
+      "label": "思辨精神线索",
+      "legendLabel": "思辨方法论",
+      "lineClass": "secondary"
     }
   ],
   "nodes": [
     {
-      "id": "c01n1",
+      "id": "n1",
       "x": 0,
       "y": 0,
-      "category": "论点",
-      "title": "希腊哲学的非宗教精神与思",
-      "brief": "本章总纲，通过与中国、印度哲学比",
-      "coreIdea": "本章总纲，通过与中国、印度哲学比较得出希腊哲学两大特质。",
-      "summary": "本章总纲，通过与中国、印度哲学比较得出希腊哲学两大特质。。希腊哲学与宗教联系最不紧密，表达方式最为思辨，可归结为非宗教精神和思辨精神。这两条特质构成理解希腊哲学基本问题和概念的线索。",
+      "category": "神话世界观",
+      "title": "希腊神话世界图景",
+      "brief": "人格化神与生成图式",
+      "coreIdea": "希腊人以神人同形同性的神意主宰自然，缺乏内在秩序与原因。",
+      "summary": "早期希腊人用神话解释世界，将自然力与社会活动人格化，并把生成过程比拟为神的谱系。这一图式只安排时间次序，未说明自然的内在联系、活动秩序和变化原因。哲学思考由此以批判神话人格神与任意支配为起点，转向非人格的本原。",
       "subPoints": [
         {
-          "label": "比较维度",
-          "text": "从宗教联系程度和表达方式比较希腊、印度、中国哲学。"
+          "label": "核心论证",
+          "text": "神话世界观包含自然力和社会活动的人格化、神人同形同性、迷狂宗教精神与生成演化图式四特征。"
         },
         {
-          "label": "非宗教精神",
-          "text": "与神话世界观决裂，以非人格本原取代神。"
+          "label": "关键区分",
+          "text": "神话人格神与后世哲学非人格本原；神的任意意志与自然的内在必然原因。"
         },
         {
-          "label": "思辨精神",
-          "text": "以论辩、推理、证明为说理方式，追求纯粹知识。"
+          "label": "原典锚点",
+          "text": "赫西俄德《神谱》116—130；作者评述其用人类生殖力比拟自然的生成。"
         }
       ],
       "perspectivesNote": [
         {
-          "label": "本书立场",
-          "text": "作者据此为全书立论框架。"
+          "label": "【原书评述】",
+          "text": "这种图式以神人同形同性观念为基础，用人类的生殖力比拟自然的生成；它只是安排了自然物的时间次序，并没有表达自然界的内在联系、活动秩序和变化原因。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "维柯在《新科学》中提出“诗性智慧”，认为神话是人类原初的想象性共相，以“以己度物”方式把自然力量人格化，与本节点形成平行印证。"
+        },
+        {
+          "label": "【跨章锚点】",
+          "text": "后续章节对本原、无定等概念的讨论，正是以克服这种人格式生成图式为起点。"
         }
       ]
     },
     {
-      "id": "c01n2",
+      "id": "n2",
       "x": 440,
       "y": 0,
-      "category": "概念",
-      "title": "希腊神话的世界观",
-      "brief": "希腊哲学所脱离的原始世界观，具有",
-      "coreIdea": "希腊哲学所脱离的原始世界观，具有人格化、神人同形同性、迷狂宗教精神和生成演化图式四个特征。",
-      "summary": "希腊哲学所脱离的原始世界观，具有人格化、神人同形同性、迷狂宗教精神和生成演化图式四个特征。。希腊神话以多神崇拜解释自然与社会，神人同形同性，无自身秩序，神的意欲决定一切；奥尔弗斯教派体现迷狂精神；《神谱》展示生成演化图式。",
+      "category": "本原论",
+      "title": "自然哲学本原论",
+      "brief": "本原与宇宙秩序",
+      "coreIdea": "自然被界定为运动变化的本性，本原是非人格的自因并统摄宇宙秩序。",
+      "summary": "神话缺乏自然的内在秩序，早期哲学家转而追问万物运动变化的本性。通过界定自然（physis）、本原（arche）、宇宙（cosmos），自然哲学以本原为焦点，认为本原是唯一的、永恒不变的，又统摄万事万物，秩序和原因可经验观察与理性思辨发现，由此与神话世界观决裂。",
       "subPoints": [
         {
-          "label": "人格化",
-          "text": "自然力和社会活动被人格化为众神，如日、月、雷、战争等各有专司之神。"
+          "label": "核心论证",
+          "text": "自然哲学关注本原，将自然视为非人格的运动变化自因，秩序和原因可经验观察和理性思辨发现。"
         },
         {
-          "label": "神人同形同性",
-          "text": "神与凡人同形同性，具有人的恶行和强烈个性，世界由神的情欲和意志决定。"
+          "label": "关键区分",
+          "text": "自然（physis）指本性而非通常意义的自然界；本原（arche）兼有基质与原则；宇宙（cosmos）兼有总和与秩序。"
         },
         {
-          "label": "迷狂宗教精神",
-          "text": "奥尔弗斯教派追求脱离肉身的癫狂体验，体现神话非理性一面。"
+          "label": "内在两难",
+          "text": "本原被普遍相信是唯一的、永恒不变的，又统摄万事万物的存在和变化，引发一与多、静与动、变化与永恒的关系问题。"
         },
         {
-          "label": "生成演化图式",
-          "text": "赫西俄德《神谱》以谱系描述世界生成，但只排列时间次序，未解释内在联系和原因。"
-        }
-      ],
-      "perspectivesNote": []
-    },
-    {
-      "id": "c01n3",
-      "x": 880,
-      "y": 0,
-      "category": "概念",
-      "title": "自然哲学的核心概念",
-      "brief": "希腊哲学家以自然、本原、宇宙为核",
-      "coreIdea": "希腊哲学家以自然、本原、宇宙为核心概念探讨世界。",
-      "summary": "希腊哲学家以自然、本原、宇宙为核心概念探讨世界。。自然指事物运动变化的本性；本原是运动和变化的本原，兼具基质与原则；宇宙是天地万物的总和及其秩序。希腊哲学家认为自然是非人格本原，运动变化自因有序，可经验观察与理性思辨。",
-      "subPoints": [
-        {
-          "label": "自然（physis）",
-          "text": "指事物运动变化的本性，接近“本性”含义，而非自然事物总和。"
-        },
-        {
-          "label": "本原（arche）",
-          "text": "最初存在的东西，既是基质又是原则，赋予宇宙万物秩序。"
-        },
-        {
-          "label": "宇宙（cosmos）",
-          "text": "天地间一切事物的总和及其秩序，是本原分化演变的产物。"
-        }
-      ],
-      "perspectivesNote": []
-    },
-    {
-      "id": "c01n4",
-      "x": 880,
-      "y": 260,
-      "category": "论点",
-      "title": "希腊哲学思辨的特点",
-      "brief": "静观、辩证、演绎、理智、实践构成",
-      "coreIdea": "静观、辩证、演绎、理智、实践构成希腊哲学思辨精神的完整特征。",
-      "summary": "静观、辩证、演绎、理智、实践构成希腊哲学思辨精神的完整特征。。静观指向不变本原；辩证以对立统一和逻各斯中心主义为特征；演绎以几何学为样板，三段论为形式；理智（奴斯）是纯粹实体；实践以理性伦理学和公共政治为方向，但处于思辨之后。",
-      "subPoints": [
-        {
-          "label": "静观",
-          "text": "哲学家静观不变本原，追求超越现实的宁静，与日神精神相关。"
-        },
-        {
-          "label": "辩证",
-          "text": "通过对相反意见的分析综合达到统一，形成逻各斯中心主义。"
-        },
-        {
-          "label": "演绎",
-          "text": "以欧几里德几何学为样板，三段论是论辩普遍形式。"
-        },
-        {
-          "label": "理智",
-          "text": "奴斯为纯粹实体，推动万物而不被推动，统摄灵魂活动。"
-        },
-        {
-          "label": "实践",
-          "text": "理性伦理学和政治实践，但实践层级低于思辨。"
-        }
-      ],
-      "perspectivesNote": []
-    },
-    {
-      "id": "c01n5",
-      "x": 440,
-      "y": 260,
-      "category": "概念",
-      "title": "哲学思辨的起点与条件",
-      "brief": "哲学源于诧异，闲暇是哲学思辨的必",
-      "coreIdea": "哲学源于诧异，闲暇是哲学思辨的必要条件。",
-      "summary": "哲学源于诧异，闲暇是哲学思辨的必要条件。。亚里士多德认为求知是人的本性，哲学思辨最初表现为诧异。希腊贵族享有闲暇，发展出职业哲学家；哲学独立于宗教和官宦阶层，促进思辨精神。",
-      "subPoints": [
-        {
-          "label": "诧异",
-          "text": "哲学家对习以为常之事感到诧异，追根问底，产生哲学问题。"
-        },
-        {
-          "label": "闲暇",
-          "text": "希腊贵族无需为生计操劳，可从事纯思辨；希腊文“闲暇”派生出“学校”。"
-        },
-        {
-          "label": "职业哲学家",
-          "text": "哲学在希腊是独立崇高的职业，与宗教和官宦分离。"
-        }
-      ],
-      "perspectivesNote": []
-    },
-    {
-      "id": "c01n6",
-      "x": 0,
-      "y": 260,
-      "category": "概念",
-      "title": "理智主义及其问题",
-      "brief": "理智（奴斯）作为纯粹实体，引出身",
-      "coreIdea": "理智（奴斯）作为纯粹实体，引出身心二元和一系列认识论问题。",
-      "summary": "理智（奴斯）作为纯粹实体，引出身心二元和一系列认识论问题。。阿那克萨戈拉提出心灵为万物运动本原，苏格拉底等发展理智主义。理智无形、纯粹、推动万物而不被推动，构成灵魂纯粹部分，统摄一切活动。由此产生身体与灵魂、感觉与理性的二元对立问题。",
-      "subPoints": [
-        {
-          "label": "理智概念的起源",
-          "text": "阿那克萨戈拉首次提出心灵是万物运动本原，苏格拉底赞赏。"
-        },
-        {
-          "label": "理智的特性",
-          "text": "无形、纯粹、推动万物而不被推动，弥漫世界而保持自身统一。"
-        },
-        {
-          "label": "身心二元问题",
-          "text": "理智主义使身体与灵魂、感觉与理性成为二元对立，引发作用与认识难题。"
-        }
-      ],
-      "perspectivesNote": []
-    },
-    {
-      "id": "c01n7",
-      "x": 0,
-      "y": 520,
-      "category": "论点",
-      "title": "哲学实践精神及其限度",
-      "brief": "希腊哲学的实践精神表现在理性伦理",
-      "coreIdea": "希腊哲学的实践精神表现在理性伦理学和公共政治，但实践处于思辨之下。",
-      "summary": "希腊哲学的实践精神表现在理性伦理学和公共政治，但实践处于思辨之下。。希腊哲学家以善为价值取向，重视理性伦理，苏格拉底“德性就是知识”体现实践精神；哲学家关心城邦政治，提出“哲学家王”等理想。但希腊哲学思维秩序为个人思辨—个人实践—公众实践，政治功利性非第一位。",
-      "subPoints": [
-        {
-          "label": "理性伦理学",
-          "text": "人的自然本性是理性，意志和欲望应服从理智，美德来自理性。"
-        },
-        {
-          "label": "政治实践",
-          "text": "哲学家以改善公众事务为己任，提出“哲学家王”、“世界公民”等观念。"
-        },
-        {
-          "label": "实践层级",
-          "text": "希腊哲学以个人思辨为最高，实践是思辨的结果和效用。"
+          "label": "原典锚点",
+          "text": "亚里士多德《物理学》200b 12。"
         }
       ],
       "perspectivesNote": [
         {
-          "label": "对比中国哲学",
-          "text": "中国哲学将个人修养和政治实践放在首位，而希腊哲学更重思辨。"
+          "label": "【原书评述】",
+          "text": "他们不仅是最早的哲学家，也是第一批自然科学家；西方哲学绵延不断的理性主义传统在一定意义上也得益于这个充盈的源头。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "海德格尔在《形而上学导论》中重新解释 physis 为“涌现”，强调它不是后世“自然”义，而是自行展开的存在本身，可与本节点的本性界定形成对话。"
+        },
+        {
+          "label": "【跨章锚点】",
+          "text": "本原引发的一与多范畴对子，在下一节点“静观辩证演绎”中被辩证法处理。"
+        }
+      ]
+    },
+    {
+      "id": "n3",
+      "x": 880,
+      "y": 0,
+      "category": "方法论起点",
+      "title": "静观辩证演绎",
+      "brief": "静观辩证演绎三特点",
+      "coreIdea": "思辨以静观追求不变本原，以辩证法处理对立范畴并趋向一元中心。",
+      "summary": "思辨精神的前三个特点构成认识论维度：静观超出实用目的，追求静止永恒的本原；辩证法则以逻辑推理处理一与多、静与动等范畴对子，解决矛盾并趋向以一方为中心的一元论。这种二元对立与中心化倾向被德里达称为逻各斯中心主义。",
+      "subPoints": [
+        {
+          "label": "核心论证",
+          "text": "静观以“为知而知”的非实用性为旨趣，辩证通过范畴对子展开，演绎以逻辑推理为论辩形式。"
+        },
+        {
+          "label": "关键区分",
+          "text": "静观与实用活动；范畴对子之间的中心与边缘。"
+        },
+        {
+          "label": "内在两难",
+          "text": "静观追求静止永恒，但希腊现实充满变动苦难，尼采以酒神与日神精神的对立揭示这一矛盾。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "亚里士多德《形而上学》980a；柏拉图《尤苔谟斯篇》278a-b。"
+        }
+      ],
+      "perspectivesNote": [
+        {
+          "label": "【原书评述】",
+          "text": "尼采首先看出了希腊文化中现实和理想的矛盾，把它归结为追求变动和苦难的‘酒神’和追求静止和快乐的‘日神’这两种精神的对立。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "德里达在《论文字学》中把西方形而上学以言语、理性为中心的等级秩序命名为“逻各斯中心主义”，其解构策略正针对本节点辩证法的中心化倾向。"
+        },
+        {
+          "label": "【跨章锚点】",
+          "text": "爱利亚派对“是者”与“非是者”的严格区分，后续在柏拉图“通种”中得到部分缓解，可视为辩证法展开。"
+        }
+      ]
+    },
+    {
+      "id": "n4",
+      "x": 880,
+      "y": 260,
+      "category": "理智本原",
+      "title": "心灵本原",
+      "brief": "阿那克萨戈拉心灵本原",
+      "coreIdea": "阿那克萨戈拉首次提出心灵为万物运动本原，开启希腊理智主义传统。",
+      "summary": "阿那克萨戈拉把纯粹心灵引入本原论，使理智成为宇宙秩序的原因。这一转折受苏格拉底赞赏，并经柏拉图与亚里士多德提倡，成为希腊哲学中最突出体现理性精神的范畴。心灵被界定为无形的纯粹实体，推动万物而不被推动。",
+      "subPoints": [
+        {
+          "label": "核心论证",
+          "text": "心灵是万物运动的本原，是无形的纯粹实体，弥漫世界而保持自身统一。"
+        },
+        {
+          "label": "关键区分",
+          "text": "理智与灵魂、理智与身体、理性与感觉的区分。"
+        },
+        {
+          "label": "内在两难",
+          "text": "灵魂以外的理智如何作用于人的灵魂，如何支配异己的身体，无形式的理智如何认识有形的外物。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "见 Pass 1 引述亚里士多德对阿那克萨戈拉心灵本原的评述。"
+        }
+      ],
+      "perspectivesNote": [
+        {
+          "label": "【原书评述】",
+          "text": "理智主义最突出、最明显地体现了希腊哲学的理性精神。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "阿那克萨戈拉的“心灵”被黑格尔称为“Nous”，但黑格尔认为它仍是抽象普遍性；后来亚里士多德在《论灵魂》中将 nous 区分为主动理智与被动理智，引发中古阿拉伯哲学关于理智问题的争论。"
+        },
+        {
+          "label": "【跨章锚点】",
+          "text": "理智与灵魂、身体的二元对立成为后续身心关系问题的源头，柏拉图《斐多》中的灵魂净化与亚里士多德形式质料说可视为回应。"
+        }
+      ]
+    },
+    {
+      "id": "n5",
+      "x": 440,
+      "y": 260,
+      "category": "理性谱系",
+      "title": "理智主义传承",
+      "brief": "苏格拉底至亚里士多德",
+      "coreIdea": "苏格拉底赞赏心灵本原，柏拉图与亚里士多德继而提倡，使理智成为基本哲学范畴。",
+      "summary": "从苏格拉底对阿那克萨戈拉心灵本原的赞赏，到柏拉图、亚里士多德对理智的系统提倡，理智主义形成连续谱系。理智被进一步统摄灵魂活动，善与真、知识与德性的关联也在这一传统中展开，为希腊理性主义奠定方向。",
+      "subPoints": [
+        {
+          "label": "核心论证",
+          "text": "苏格拉底赞赏心灵本原，再经柏拉图和亚里士多德提倡，理智成为希腊哲学基本范畴。"
+        },
+        {
+          "label": "关键区分",
+          "text": "纯思辨的理智活动与感觉、意志、欲望等灵魂活动的区分。"
+        },
+        {
+          "label": "内在两难",
+          "text": "无形的理智如何认识有形的外物，纯思与欲望、意志在灵魂中的关系仍未解决。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "见 Pass 1 引述亚里士多德对苏格拉底赞赏阿那克萨戈拉的评述。"
+        }
+      ],
+      "perspectivesNote": [
+        {
+          "label": "【原书评述】",
+          "text": "理智主义最突出、最明显地体现了希腊哲学的理性精神。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "苏格拉底的“德性即知识”把理智与道德统一，休谟后来在《人性论》中区分“是”与“应当”，挑战了这种从理智推出实践规范的路径。"
+        },
+        {
+          "label": "【跨章锚点】",
+          "text": "后续章节“德性就是知识”将展开苏格拉底的理智主义道德观，并与智者相对主义形成对立。"
+        }
+      ]
+    },
+    {
+      "id": "n6",
+      "x": 0,
+      "y": 260,
+      "category": "实践条件",
+      "title": "实践与闲暇",
+      "brief": "思辨的条件与效用",
+      "coreIdea": "闲暇是哲学思辨的社会条件，实践作为思辨结果体现在个人与公众生活中。",
+      "summary": "思辨精神以闲暇为社会条件，希腊奴隶制与贵族风尚提供“学校”词源意义上的闲居。实践兼有实用义，指宗教、道德、政治活动，希腊哲学思维秩序为个人思辨→个人实践→公众实践，政治功利性并非第一位。",
+      "subPoints": [
+        {
+          "label": "核心论证",
+          "text": "闲暇是哲学思辨的必要条件，实践是思辨的结果和效用，涵盖宗教、道德、政治活动。"
+        },
+        {
+          "label": "关键区分",
+          "text": "个人精神生活的实用性与物质利益的实用性；希腊哲学实践秩序与中国哲学实践秩序的对比。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "亚里士多德《形而上学》980a；亚里士多德《政治学》1259a 15。"
+        }
+      ],
+      "perspectivesNote": [
+        {
+          "label": "【原书评述】",
+          "text": "希腊哲学的政治功利性并不是第一位的；中国哲学则不同，它把希腊哲学中第二位或第三位的东西放在首位。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "阿伦特在《人的境况》中区分劳动、工作和行动，并把亚里士多德意义上的实践（praxis）视为城邦公共领域中自由人之间以言行进行的活动，可与本章个人实践到公众实践的顺序相参照。"
+        },
+        {
+          "label": "【跨书锚点】",
+          "text": "与中国哲学的实践优先形成对比，后续与韦伯关于儒教伦理的讨论可对照。"
+        }
+      ]
+    },
+    {
+      "id": "n7",
+      "x": 0,
+      "y": 520,
+      "category": "框架收束",
+      "title": "双轴定位",
+      "brief": "非宗教与思辨双轴",
+      "coreIdea": "本章以非宗教精神与思辨精神两条特质轴定位希腊哲学的基本问题。",
+      "summary": "上述节点可收束为两条轴：非宗教精神以非人格本原替代神话人格神，确立自然的内在秩序；思辨精神以静观、辩证、演绎、理智、实践构成方法论。两轴共同说明希腊哲学何以成为与神话决裂且最具思辨性的传统。",
+      "subPoints": [
+        {
+          "label": "核心论证",
+          "text": "轴心时代三地哲学中希腊与宗教联系最不紧密，最思辨；两条特质分别对应与神话决裂和思辨方法论。"
+        },
+        {
+          "label": "关键区分",
+          "text": "非宗教精神与宗教精神；希腊思辨精神的五个特点与轴心时代其他文明的实践路径。"
+        },
+        {
+          "label": "原典锚点",
+          "text": "本章引论雅斯贝尔斯“轴心时代”框架；作者以非宗教精神与思辨精神两条线索为分类轴。"
+        }
+      ],
+      "perspectivesNote": [
+        {
+          "label": "【原书评述】",
+          "text": "作者以“非宗教精神”与“思辨精神”两条线索为分类轴，说明希腊哲学的精神和问题。"
+        },
+        {
+          "label": "【学术延伸】",
+          "text": "雅斯贝尔斯在《历史的起源与目标》中提出轴心时代，但质疑者如布罗代尔认为同时性只是偶然；韦伯的比较宗教社会学则从经济伦理角度说明不同文明的理性化路径差异。"
+        },
+        {
+          "label": "【跨书锚点】",
+          "text": "可与《儒教与道教》中韦伯对中国儒教实践理性优先的分析对照，说明希腊与中国的哲学实践秩序差异。"
         }
       ]
     }
   ],
   "edges": [
     {
-      "id": "c01e1",
-      "source": "c01n1",
-      "target": "c01n2",
-      "perspective": "both",
-      "label": "决裂",
+      "id": "e1",
+      "source": "n2",
+      "target": "n1",
+      "perspective": "p1",
+      "label": "立场对立",
       "curve": 0,
       "labelT": 0.5,
-      "detail": "希腊哲学的非宗教精神建立在对希腊神话世界观的批判与脱离之上。"
+      "detail": "希腊哲学与宗教的联系最不紧密，它可以说是与神话世界观相决裂的产物（[[p.18]]）。"
     },
     {
-      "id": "c01e2",
-      "source": "c01n2",
-      "target": "c01n3",
-      "perspective": "both",
-      "label": "取代",
+      "id": "e3",
+      "source": "n6",
+      "target": "n3",
+      "perspective": "p2",
+      "label": "方法支撑",
       "curve": 0,
       "labelT": 0.5,
-      "detail": "自然哲学家以非人格本原取代神话中神人同形同性的神，提出自然、本原、宇宙等概念。"
+      "detail": "亚里士多德正确地把‘闲暇’作为哲学思辨的必要条件（[[p.22]]）。"
     },
     {
-      "id": "c01e3",
-      "source": "c01n1",
-      "target": "c01n4",
+      "id": "e4",
+      "source": "n2",
+      "target": "n3",
       "perspective": "both",
-      "label": "包含",
+      "label": "范畴催生辩证法",
       "curve": 0,
       "labelT": 0.5,
-      "detail": "思辨精神的具体特点包括静观、辩证、演绎、理智、实践。"
+      "detail": "希腊哲学的基本范畴，如一和多、静和动、本质和现象都是对子；解决矛盾的途径是辩证法（[[p.23]]）。"
     },
     {
-      "id": "c01e4",
-      "source": "c01n5",
-      "target": "c01n4",
-      "perspective": "both",
-      "label": "条件",
+      "id": "e5",
+      "source": "n3",
+      "target": "n7",
+      "perspective": "p2",
+      "label": "归结收束",
       "curve": 0,
       "labelT": 0.5,
-      "detail": "诧异引发哲学思考，闲暇提供必要社会条件，共同支撑思辨精神的发展。"
+      "detail": "辩证法的思维不仅是二元对立的，而且是以对立的一方为中心、以另一方为边缘的一元中心论，德里达称为‘逻各斯中心主义’（[[p.23]]-[[p.24]]）。"
     },
     {
-      "id": "c01e5",
-      "source": "c01n3",
-      "target": "c01n4",
-      "perspective": "both",
-      "label": "对象",
+      "id": "e6",
+      "source": "n4",
+      "target": "n5",
+      "perspective": "p2",
+      "label": "继承谱系",
       "curve": 0,
       "labelT": 0.5,
-      "detail": "自然哲学家对本原和宇宙的思考成为希腊哲学思辨的主要对象。"
-    },
-    {
-      "id": "c01e6",
-      "source": "c01n4",
-      "target": "c01n6",
-      "perspective": "both",
-      "label": "体现",
-      "curve": 0,
-      "labelT": 0.5,
-      "detail": "理智（奴斯）是希腊哲学理性精神最突出的体现，引发身心二元问题。"
-    },
-    {
-      "id": "c01e7",
-      "source": "c01n4",
-      "target": "c01n7",
-      "perspective": "both",
-      "label": "延伸",
-      "curve": 0,
-      "labelT": 0.5,
-      "detail": "实践精神是思辨精神在伦理与政治领域的延伸，但实践层级低于思辨。"
-    },
-    {
-      "id": "c01e8",
-      "source": "c01n6",
-      "target": "c01n7",
-      "perspective": "both",
-      "label": "统摄",
-      "curve": 0,
-      "labelT": 0.5,
-      "detail": "理智主义要求意志和欲望服从理智，从而形成理性伦理学和实践理性。"
+      "detail": "阿那克萨戈拉首次提出心灵是万物运动的本原，苏格拉底对此大加赞赏，再经柏拉图和亚里士多德的提倡（[[p.24]]-[[p.25]]）。"
     }
   ],
-  "steps": [],
+  "steps": [
+    {
+      "title": "步骤 1 / 5：神话批判与本原论确立",
+      "description": "从希腊神话世界观的人格化神意出发，说明自然哲学如何以非人格本原取代神话，形成非宗教精神线索。",
+      "activeNodes": [
+        "n1",
+        "n2"
+      ],
+      "activeEdges": [
+        "e1"
+      ]
+    },
+    {
+      "title": "步骤 2 / 5：思辨认识维度展开",
+      "description": "在自然哲学基础上，静态关注范畴对子与辩证法，勾勒思辨精神中的静观、辩证、演绎三特点。",
+      "activeNodes": [
+        "n2",
+        "n3"
+      ],
+      "activeEdges": [
+        "e4"
+      ]
+    },
+    {
+      "title": "步骤 3 / 5：理智主义谱系推进",
+      "description": "由阿那克萨戈拉的心灵本原引出苏格拉底、柏拉图、亚里士多德的理智主义传承，强化理性精神。",
+      "activeNodes": [
+        "n4",
+        "n5"
+      ],
+      "activeEdges": [
+        "e6"
+      ]
+    },
+    {
+      "title": "步骤 4 / 5：实践与闲暇补充",
+      "description": "将闲暇作为思辨的社会条件，实践作为思辨的效用，完善思辨精神的后两个特点。",
+      "activeNodes": [
+        "n6",
+        "n3"
+      ],
+      "activeEdges": [
+        "e3"
+      ]
+    },
+    {
+      "title": "步骤 5 / 5：双轴定位收束",
+      "description": "用非宗教精神与思辨精神两条轴线总结本章，回答希腊哲学的精神和问题。",
+      "activeNodes": [
+        "n7"
+      ],
+      "activeEdges": [
+        "e5"
+      ]
+    }
+  ],
   "readingGuide": {
-    "coreQuestion": "本章通过与中国、印度哲学的比较，说明希腊哲学具有非宗教精神与思辨精神两大特质，并界定自然、本原、宇宙、理智等范畴，为第二章本原学说提供概念工具与解释框架。",
-    "startNodeId": "c01n1",
+    "coreQuestion": "希腊哲学何以从神话世界观中独立出来，并形成非宗教精神与思辨精神两条特质？",
+    "startNodeId": "n1",
     "recommendedPath": [
       {
-        "id": "c01n1",
-        "label": "希腊哲学的非宗教精神与思"
+        "id": "n1",
+        "label": "神话世界观"
       },
       {
-        "id": "c01n2",
-        "label": "希腊神话的世界观"
+        "id": "n2",
+        "label": "自然哲学本原论"
       },
       {
-        "id": "c01n3",
-        "label": "自然哲学的核心概念"
+        "id": "n3",
+        "label": "静观辩证演绎"
       },
       {
-        "id": "c01n4",
-        "label": "希腊哲学思辨的特点"
+        "id": "n5",
+        "label": "理智主义传承"
       },
       {
-        "id": "c01n5",
-        "label": "哲学思辨的起点与条件"
+        "id": "n7",
+        "label": "双轴定位"
       }
     ]
   },
@@ -1814,12 +1947,10 @@
       }
 
       if (state.perspective !== "all") {
-        MAP_DATA.edges.forEach(e => {
-          if (isEdgeInPerspective(e)) {
-            activeEdges.add(e.id);
-            activeNodes.add(e.source);
-            activeNodes.add(e.target);
-          }
+        getPerspectiveFocusedEdges(state.perspective).forEach(e => {
+          activeEdges.add(e.id);
+          activeNodes.add(e.source);
+          activeNodes.add(e.target);
         });
         return { activeNodes, activeEdges, filtering: true };
       }
@@ -1834,16 +1965,24 @@
       return edge.perspective === "both" || edge.perspective === state.perspective;
     }
 
+    function getPerspectiveFocusedEdges(perspId) {
+      if (perspId === "all") return MAP_DATA.edges;
+      const exclusive = MAP_DATA.edges.filter(e => e.perspective === perspId);
+      if (exclusive.length > 0) return exclusive;
+      return MAP_DATA.edges.filter(e => isEdgeInPerspective(e));
+    }
+
     function getEdgeStyle(edge) {
-      let stroke = "#8aa097";
-      let dash = "";
-      if (edge.perspective === "weber") {
-        stroke = "#85a897";
-      } else if (edge.perspective === "althusser") {
-        stroke = "#6d8679";
-        dash = "6 4";
+      // 按 MAP_DATA.perspectives 的 lineClass 动态映射：primary 实线苔绿，
+      // secondary 虚线深苔，其余（含 both 与未匹配视角）统一雾灰绿实线。
+      const perspective = (MAP_DATA.perspectives || []).find(p => p.id === edge.perspective);
+      if (perspective && perspective.lineClass === "primary") {
+        return { stroke: "#85a897", dash: "" };
       }
-      return { stroke, dash };
+      if (perspective && perspective.lineClass === "secondary") {
+        return { stroke: "#6d8679", dash: "6 4" };
+      }
+      return { stroke: "#8aa097", dash: "" };
     }
 
     function renderHeaderAndLegend() {
@@ -1900,7 +2039,8 @@
       } else if (state.selectedNodeId || state.hoveredNodeId) {
         const nid = state.selectedNodeId || state.hoveredNodeId;
         MAP_DATA.edges.forEach(e => {
-          if (e.source === nid || e.target === nid) {
+          if ((e.source === nid || e.target === nid) &&
+              (state.perspective === "all" || isEdgeInPerspective(e))) {
             focusEdgeIds.add(e.id);
             strongEdgeIds.add(e.id);
           }
@@ -1922,6 +2062,14 @@
       }
 
       const perspectiveFiltered = !hasFocus && state.perspective !== "all";
+      let perspectiveFocusedEdgeIds = new Set();
+      let hasExclusiveEdges = false;
+      if (perspectiveFiltered) {
+        const exclusive = MAP_DATA.edges.filter(e => e.perspective === state.perspective);
+        hasExclusiveEdges = exclusive.length > 0;
+        (hasExclusiveEdges ? exclusive : MAP_DATA.edges.filter(e => isEdgeInPerspective(e)))
+          .forEach(e => perspectiveFocusedEdgeIds.add(e.id));
+      }
 
       MAP_DATA.edges.forEach(e => {
         let cls = "";
@@ -1933,8 +2081,15 @@
           } else {
             cls = "edge-dim";
           }
-        } else if (perspectiveFiltered && !isEdgeInPerspective(e)) {
-          cls = "edge-dim";
+        } else if (perspectiveFiltered) {
+          if (perspectiveFocusedEdgeIds.has(e.id)) {
+            cls = "edge-strong";
+            showLabel = false;
+          } else if (hasExclusiveEdges && e.perspective === "both") {
+            cls = "";
+          } else {
+            cls = "edge-dim";
+          }
         }
         result.set(e.id, { cls, showLabel });
       });
@@ -2123,8 +2278,8 @@
     function renderDetailPane() {
       if (state.selectedNodeId) {
         const node = nodeMap.get(state.selectedNodeId);
-        const incoming = MAP_DATA.edges.filter(e => e.target === node.id);
-        const outgoing = MAP_DATA.edges.filter(e => e.source === node.id);
+        const incoming = MAP_DATA.edges.filter(e => e.target === node.id && isEdgeInPerspective(e));
+        const outgoing = MAP_DATA.edges.filter(e => e.source === node.id && isEdgeInPerspective(e));
 
         const subPointsHtml = node.subPoints
           .map(sp => `<li><strong>${escapeHtml(sp.label)}：</strong>${escapeHtml(sp.text)}</li>`)
@@ -2163,6 +2318,7 @@
           </div>
           <h2 class="detail-title">${escapeHtml(node.title)}</h2>
           <blockquote class="detail-core">${escapeHtml(coreIdea)}</blockquote>
+          ${node.summary && node.summary !== coreIdea ? `<p class="detail-summary">${escapeHtml(node.summary)}</p>` : ""}
 
           <div class="detail-section">
             <h3>详细展开</h3>
@@ -2224,6 +2380,68 @@
             state.selectedNodeId = btn.getAttribute("data-jump-node");
             state.selectedEdgeId = null;
             renderAll();
+          });
+        });
+        return;
+      }
+
+      const pObj = MAP_DATA.perspectives.find(p => p.id === state.perspective);
+      if (state.perspective !== "all" && pObj) {
+        const focusedEdges = getPerspectiveFocusedEdges(state.perspective);
+        const focusedNodeIds = new Set();
+        focusedEdges.forEach(e => { focusedNodeIds.add(e.source); focusedNodeIds.add(e.target); });
+        const focusedNodes = MAP_DATA.nodes.filter(n => focusedNodeIds.has(n.id));
+
+        const edgeItemsHtml = focusedEdges.map(e => {
+          const s = nodeMap.get(e.source);
+          const t = nodeMap.get(e.target);
+          return `
+            <button class="rel-item" type="button" data-jump-edge="${e.id}">
+              <div class="rel-head">
+                <span>${escapeHtml(s.title)} → ${escapeHtml(t.title)}</span>
+                <span>${escapeHtml(e.label)}</span>
+              </div>
+              <div class="rel-body">${escapeHtml(e.detail)}</div>
+            </button>
+          `;
+        }).join("");
+
+        const nodeItemsHtml = focusedNodes.map(n => `
+          <button class="node-index-btn" type="button" data-jump-node="${n.id}">
+            <span>${escapeHtml(n.title)}</span>
+            <span>${escapeHtml(n.category)}</span>
+          </button>
+        `).join("");
+
+        detailPaneEl.innerHTML = `
+          <div class="detail-kicker">分析视角 · ${escapeHtml(pObj.legendLabel || pObj.label)}</div>
+          <h2 class="detail-title">${escapeHtml(pObj.label)}</h2>
+          <blockquote class="detail-core">本视角聚焦「${escapeHtml(pObj.legendLabel || pObj.label)}」这一核心线索，共 ${focusedEdges.length} 条连线、${focusedNodes.length} 个节点。</blockquote>
+
+          <div class="detail-section">
+            <h3>本视角核心脉络</h3>
+            <div class="rel-list">${edgeItemsHtml || `<p style="font-size:12.5px;color:#7A7F7A;">本视角暂无专属连线</p>`}</div>
+          </div>
+
+          <div class="detail-section">
+            <h3>本视角涉及节点</h3>
+            ${nodeItemsHtml}
+          </div>
+
+          <p class="guide-hint">点击连线或节点查看精解 · 点击顶部「全景互锁」返回完整导览</p>
+        `;
+
+        detailPaneEl.querySelectorAll("[data-jump-edge]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            state.selectedEdgeId = btn.getAttribute("data-jump-edge");
+            state.selectedNodeId = null;
+            state.stepIndex = -1;
+            renderAll();
+          });
+        });
+        detailPaneEl.querySelectorAll("[data-jump-node]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            focusNode(btn.getAttribute("data-jump-node"));
           });
         });
         return;

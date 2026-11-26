@@ -181,6 +181,44 @@ def start(
     return {"job_id": job.id, "status": job.status, "slug": job.slug}
 
 
+@app.get("/api/books/completion/{slug}")
+def completion(slug: str):
+    """返回某本书的分章完成度（供「生成整书总图」按钮判断）。"""
+    slug = pipeline.sanitize_slug(slug)
+    return pipeline.chapters_completion(slug)
+
+
+@app.post("/api/books/finalize")
+def finalize(
+    title: str = Form(...),
+    author: str = Form(...),
+    slug: str = Form(...),
+):
+    """整书分章全部完成后，一键生成全书总览与整书总图。"""
+    slug = pipeline.sanitize_slug(slug)
+    progress = pipeline.chapters_completion(slug)
+    if progress["total"] <= 0:
+        raise HTTPException(status_code=400, detail="该书还没有切分章节，请先上传。")
+    # 同一本书已有任务在跑时直接复用，避免重复点击生成两份总图。
+    for running in pipeline.list_jobs():
+        if running.get("slug") == slug and running.get("status") in ("queued", "running"):
+            return {
+                "job_id": running["job_id"],
+                "status": running["status"],
+                "slug": slug,
+                "reused": True,
+            }
+    # 个别分章图谱缺失/残缺不阻止生成：整书任务会按原文指纹补齐后再出总图。
+    job = pipeline.start_job(title=title, author=author, slug=slug, chapter_range=None)
+    return {
+        "job_id": job.id,
+        "status": job.status,
+        "slug": job.slug,
+        "total_chapters": progress["total"],
+        "missing_chapters": progress["missing"],
+    }
+
+
 @app.get("/api/books/status/{job_id}")
 def status(job_id: str):
     job = pipeline.get_job(job_id)

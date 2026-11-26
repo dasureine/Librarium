@@ -386,6 +386,47 @@ button.atlas-card {
 }
 .atlas-card:hover .atlas-arrow { opacity: 1; transform: translateY(-50%) translateX(0); }
 
+/* 整书总图生成入口：分章已完整时的交互按钮 */
+.atlas-finalize {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+  padding-right: 4px;
+}
+.atlas-finalize-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  font-family: var(--font-serif);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--paper);
+  background: rgba(133, 168, 151, 0.14);
+  border: 1px solid rgba(133, 168, 151, 0.5);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.35s var(--ease), border-color 0.35s var(--ease),
+    transform 0.35s var(--ease), opacity 0.35s;
+}
+.atlas-finalize-btn::before {
+  content: "✦";
+  font-family: var(--font-aux);
+  font-size: 13px;
+  line-height: 1;
+  color: var(--moss);
+}
+.atlas-finalize-btn:hover:not(:disabled) {
+  background: rgba(133, 168, 151, 0.24);
+  border-color: rgba(133, 168, 151, 0.8);
+  transform: translateY(-2px);
+}
+.atlas-finalize-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
 /* 分章：纵向引导线 + 缩进挂载 */
 .atlas-chapters {
   margin-left: 30px;
