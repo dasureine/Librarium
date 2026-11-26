@@ -136,18 +136,78 @@ def sanitize_slug(slug: str) -> str:
     return slug or "book"
 
 
+SOURCE_MANIFEST = "source.json"
+
+
+def source_manifest_path(slug: str) -> Path:
+    return WORKSPACE / sanitize_slug(slug) / SOURCE_MANIFEST
+
+
+def read_source_manifest(slug: str) -> dict:
+    """读取该书最近一次上传的原始文件清单（决定 resplit / 生成使用哪份文件）。"""
+    path = source_manifest_path(slug)
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def write_source_manifest(slug: str, book_path: Path,
+                          inspection: Optional[dict] = None) -> dict:
+    """记录当前生效的原始电子书，避免同 slug 下旧 PDF 抢走 EPUB 的目录解析。"""
+    slug = sanitize_slug(slug)
+    workspace = WORKSPACE / slug
+    workspace.mkdir(parents=True, exist_ok=True)
+    book_path = Path(book_path)
+    try:
+        rel = str(book_path.resolve().relative_to(ROOT.resolve())).replace("\\", "/")
+    except ValueError:
+        rel = str(book_path)
+    data = {
+        "filename": book_path.name,
+        "path": rel,
+        "format": (inspection or {}).get("format") or split_book.detect_format(book_path),
+        "uploaded_at": beijing_now().isoformat(timespec="seconds"),
+        "inspection": inspection or {},
+    }
+    (workspace / SOURCE_MANIFEST).write_text(
+        json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    return data
+
+
 def find_raw_book(slug: str) -> Optional[Path]:
-    """在 raw_books/ 中定位 slug 对应的电子书。"""
+    """定位 slug 当前生效的原始电子书。
+
+    优先使用上传清单 source.json；没有清单时取 raw_books/ 中最新的一份，
+    不再固定优先 .pdf，避免上传 EPUB 后仍去解析旧 PDF。
+    """
+    slug = sanitize_slug(slug)
+    data = read_source_manifest(slug)
+    rel = str(data.get("path") or "").strip()
+    if rel:
+        candidate = Path(rel)
+        if not candidate.is_absolute():
+            candidate = ROOT / candidate
+        if candidate.is_file():
+            return candidate
     if not RAW_BOOKS.is_dir():
         return None
-    for ext in (".pdf", ".epub"):
-        p = RAW_BOOKS / f"{slug}{ext}"
-        if p.exists():
-            return p
-    for p in RAW_BOOKS.iterdir():
-        if p.is_file() and p.stem == slug and p.suffix.lower() in (".pdf", ".epub"):
-            return p
-    return None
+    candidates = [
+        p for p in RAW_BOOKS.iterdir()
+        if p.is_file() and p.stem == slug and p.suffix.lower() in split_book.SUPPORTED_EXTS
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda p: p.stat().st_mtime)
+
+
+def inspect_book(book_path: Path) -> dict:
+    """识别电子书格式 / 目录 / 文字层（供上传接口与前端体检卡使用）。"""
+    return split_book.inspect_book(book_path)
 
 
 def natural_key(path: Path):
@@ -397,31 +457,15 @@ def list_jobs() -> list:
         return [job.snapshot() for job in _JOBS.values()]
 
 
-def _sample_page_avg(doc, page_count: int, sample_size: int = 18) -> float:
-    """对 PDF 前中后均匀抽样约 sample_size 页，返回平均每页字符数。
+def split_precheck(slug: str, book_path: Path, page_map: Optional[str] = None,
+                   level: int = 1, offset: int = 0, skip_noncontent: bool = True) -> dict:
+    """阶段1：切分电子书为逐章纯文本，并返回格式 / 目录体检结果。
 
-    用于 30MB+ 大文件在逐页抽字前快速判定扫描版，避免长时间卡顿。
-    """
-    if page_count <= 0:
-        return 0.0
-    if page_count <= sample_size:
-        pages = list(range(page_count))
-    else:
-        step = (page_count - 1) / (sample_size - 1)
-        pages = sorted({round(step * i) for i in range(sample_size)})
-        if pages[0] != 0:
-            pages.insert(0, 0)
-        if pages[-1] != page_count - 1:
-            pages.append(page_count - 1)
-    chars = sum(len((doc.load_page(p).get_text() or "").strip()) for p in pages)
-    return chars / len(pages)
-
-
-def split_precheck(slug: str, book_path: Path, page_map: Optional[str] = None, level: int = 1, offset: int = 0) -> dict:
-    """阶段1：切分电子书为逐章纯文本，并做扫描版/无目录预检。
-
-    返回 dict：status 为 ready / needs_page_map / empty，chapters 为章节列表。
-    纯图片扫描版（平均每页 < 30 字）抛 ScannedBookError。
+    支持 PDF（含文字层或无文字层的扫描版）、EPUB 与 TXT：
+      · 带目录且有文字层 -> 直接按目录拆章（status=ready）
+      · 有文字层但无目录 -> 返回 needs_page_map，等待手动目录映射
+      · 无文字层（扫描版）-> 抛 ScannedBookError，提示先 OCR
+    返回 dict：status / chapters / inspection / skipped / unit / page_count / offset。
     """
     workspace = WORKSPACE / slug
     chapters_dir = workspace / "chapters"
@@ -434,85 +478,55 @@ def split_precheck(slug: str, book_path: Path, page_map: Optional[str] = None, l
     if not glossary.exists():
         glossary.write_text(split_book.GLOSSARY_HEADER, encoding="utf-8")
 
-    fitz = split_book.load_fitz()
-    doc = fitz.open(str(book_path))
-    try:
-        page_count = doc.page_count
-        toc = doc.get_toc()
-        spans = []
-        if toc:
-            toc_entries = split_book.filter_toc(toc, level)
-            spans = split_book.toc_to_spans(toc_entries, page_count)
+    result = split_book.split_into_chapters(
+        book_path,
+        chapters_dir,
+        level=level,
+        offset=offset,
+        skip_noncontent=skip_noncontent,
+        map_path=page_map,
+    )
+    status = result.get("status")
+    unit = result.get("unit") or "页"
+    total_units = int(result.get("total_units") or 0)
+    inspection = result.get("inspection") or {}
+    skipped = result.get("skipped") or []
 
-        if not spans:
-            if page_map:
-                map_path = Path(page_map)
-                if not map_path.exists():
-                    raise FileNotFoundError(f"找不到页码映射文件 {map_path}")
-                spans = split_book.map_to_spans(split_book.parse_map(map_path), page_count)
-            else:
-                map_file = split_book.generate_map_file(workspace, page_count)
-                return {
-                    "status": "needs_page_map",
-                    "page_count": page_count,
-                    "map_file": str(map_file),
-                    "chapters": [],
-                    "message": "该电子书无内嵌目录，请填写页码映射后调用 /api/books/resplit。",
-                }
-
-        # 大文件先抽样预检扫描版（前中后约 18 页），避免逐页抽字卡顿
-        try:
-            file_size = book_path.stat().st_size
-        except OSError:
-            file_size = 0
-        if file_size >= 30 * 1024 * 1024:
-            sample_avg = _sample_page_avg(doc, page_count)
-            if sample_avg < 30:
-                raise ScannedBookError(
-                    f"检测到疑似纯图片扫描版（抽样平均每页 {sample_avg:.1f} 字，低于 30 字），请先完成 OCR 转换。"
-                )
-
-        chapters = []
-        total_chars = 0
-        total_pages = 0
-        for idx, (title, start, end) in enumerate(spans, start=1):
-            start = max(0, start)
-            end = min(page_count, max(end, start + 1))
-            if start >= page_count:
-                continue
-            # 逐页写入轻量页码锚点 [[p.N]]，供 Pass 1 精读做页码溯源；
-            # 字符统计仍按原始正文计算，避免页码标记干扰平均字数与扫描版判定。
-            parts = []
-            raw_chars = 0
-            for pno in range(start, end):
-                page_text = doc.load_page(pno).get_text() or ""
-                raw_chars += len(page_text)
-                parts.append(f"[[p.{pno + 1}]]\n{page_text}")
-            text = "\n".join(parts).strip()
-            total_pages += end - start
-            total_chars += raw_chars
-            global_idx = idx + max(0, int(offset or 0))
-            filename = f"{global_idx:02d}_{split_book.to_filename(title) or '未命名章节'}.txt"
-            (chapters_dir / filename).write_text(text, encoding="utf-8")
-            chapters.append({
-                "index": global_idx,
-                "filename": filename,
-                "title": title or "未命名章节",
-                "chars": raw_chars,
-                "pages": end - start,
-            })
-
-        if not chapters:
-            return {"status": "empty", "chapters": [], "message": "未能拆分出任何章节，请检查目录层级或页码映射。"}
-
-        avg = total_chars / total_pages if total_pages else 0
-        if avg < 30:
-            raise ScannedBookError(
-                f"检测到疑似纯图片扫描版（平均每页 {avg:.1f} 字，低于 30 字），请先完成 OCR 转换。"
-            )
-        return {"status": "ready", "chapters": chapters, "avg_chars_per_page": round(avg, 1)}
-    finally:
-        doc.close()
+    if status == "ready":
+        return {
+            "status": "ready",
+            "chapters": result.get("chapters") or [],
+            "avg_chars_per_page": result.get("avg_chars"),
+            "inspection": inspection,
+            "skipped": skipped,
+            "unit": unit,
+            "page_count": total_units,
+            "offset": max(0, int(offset or 0)),
+        }
+    if status == "scanned":
+        raise ScannedBookError(result.get("message") or "检测到无文字层的扫描版，请先完成 OCR 转换。")
+    if status == "needs_manual_map":
+        map_file = ""
+        if unit == "页":
+            map_file = str(split_book.generate_map_file(workspace, total_units, unit))
+        return {
+            "status": "needs_page_map",
+            "page_count": total_units,
+            "unit": unit,
+            "inspection": inspection,
+            "skipped": skipped,
+            "map_file": map_file,
+            "chapters": [],
+            "message": result.get("message") or "该电子书没有可用目录，请填写目录映射。",
+        }
+    return {
+        "status": "empty",
+        "chapters": [],
+        "inspection": inspection,
+        "unit": unit,
+        "page_count": total_units,
+        "message": result.get("message") or "未能拆分出任何章节。",
+    }
 
 
 def list_existing_chapters(slug: str) -> list:
@@ -548,10 +562,20 @@ def stage1_split(job: JobState) -> list:
     book = find_raw_book(job.slug)
     if not book:
         raise RuntimeError(f"未在 raw_books/ 找到 {job.slug} 的电子书，请先调用 /api/books/upload 上传。")
+    inspection = inspect_book(book)
+    toc_desc = (
+        f"目录 {inspection.get('toc_count')} 条"
+        if inspection.get("has_toc") else "无可用目录"
+    )
+    job.log(
+        f"识别原始文件：{book.name}（{inspection.get('format_label')}，{toc_desc}，"
+        f"{inspection.get('total_units')} {inspection.get('unit')}）"
+    )
     result = split_precheck(job.slug, book)
     if result["status"] == "needs_page_map":
         raise RuntimeError(
-            f"该电子书无内嵌目录，请先通过 /api/books/resplit 提交页码映射。示例表：{result.get('map_file')}"
+            "该电子书没有可用目录，请先通过 /api/books/resplit 提交目录映射"
+            "（或改传带目录的 EPUB / TXT）。"
         )
     if result["status"] == "empty":
         raise RuntimeError(result.get("message", "未能拆分出章节"))

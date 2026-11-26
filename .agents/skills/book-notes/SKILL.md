@@ -9,10 +9,11 @@ description: 当用户要求对一部大部头电子书执行「拆章 -> 逐章
 
 ## 0. 准备工作
 
-- 拆分原文：运行 `python scripts/split_book.py <电子书路径> [--name 英文书名缩写] [--level 目录层级] [--map 页码映射文件]`。
-  - 脚本会在 `workspace/<书名缩写>/chapters/` 生成各章纯文本，并自动创建 `chapter_notes/` 与空的 `glossary.md`。
-  - 若电子书无内嵌目录，脚本会生成 `workspace/<书名缩写>/pages_map.txt`，按提示填写后以 `--map` 指向该文件重新运行。
-  - 若脚本提示「疑似纯图片扫描版 PDF」，先完成 OCR 转换后再继续。
+- 拆分原文：运行 `python scripts/split_book.py <电子书路径> [--name 英文书名缩写] [--level 目录层级] [--map 目录映射文件] [--keep-noncontent]`。
+  - 支持 .pdf / .epub / .txt；默认跳过版权页、目录页、前言、参考文献等非正文条目，需要保留时加 `--keep-noncontent`。
+  - 脚本会在 `workspace/<书名缩写>/chapters/` 生成各章纯文本（旧章节自动归档到 `_chapters_prev/`），并自动创建 `chapter_notes/` 与空的 `glossary.md`。
+  - 若电子书无内嵌目录或 TXT 无章标题，脚本会生成 `workspace/<书名缩写>/pages_map.txt`，按提示填写后以 `--map` 指向该文件重新运行。
+  - 若脚本提示「无文字层 / 疑似纯图片扫描版」，先完成 OCR 转换后再继续。
 
 ## 1. 分批推进机制
 

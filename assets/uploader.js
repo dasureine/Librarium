@@ -13,8 +13,14 @@
     cancel: function (id) { return '/api/books/cancel/' + encodeURIComponent(id); },
     gitStatus: '/api/git/status',
     gitSync: '/api/git/sync',
-    shutdown: '/api/shutdown'
+    shutdown: '/api/shutdown',
+    library: '/api/library/overview',
+    openFolder: '/api/library/open'
   };
+
+  var ACCEPT_EXT = '.pdf,.epub,.txt,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff';
+  var DOC_FILE_RE = /\.(pdf|epub|txt)$/i;
+  var IMAGE_FILE_RE = /\.(png|jpe?g|webp|bmp|tiff?)$/i;
 
   var STAGES = [
     { key: 'split', label: '切分' },
@@ -39,7 +45,7 @@
 
   var health = null;
   var step = 1;
-  var selectedFile = null;
+  var selectedFiles = [];
   var chapters = [];
   var needsPageMap = false;
   var pageCount = 0;
@@ -53,6 +59,15 @@
   var elapsedSeconds = 0;
   var renderedLogs = 0;
   var activeTag = '全部';
+
+  // 文件体检与目录识别结果
+  var inspection = null;      // 后端返回的格式 / 目录 / 文字层信息
+  var skippedTitles = [];     // 被自动跳过的非正文条目
+  var unitLabel = '页';        // 页码范围单位：页 / 行
+  var ocrRequired = false;    // 扫描版 / 图片，无文字层
+  var skipNonContent = true;  // 是否自动跳过版权页、目录页等
+  var noticeMessage = '';     // 需要展示给用户的切分提示
+  var libraryInfo = null;     // 书库概览缓存
 
   // 续传已有书目相关状态
   var mode = 'new'; // 'new' | 'resume'
@@ -103,11 +118,36 @@
       (2 * third + 1) + '-' + pageCount + ' | 第三章';
   }
 
+  function totalFileSize(files) {
+    return files.reduce(function (sum, f) { return sum + (f && f.size ? f.size : 0); }, 0);
+  }
+
+  function fileChipHtml() {
+    if (!selectedFiles.length) return '';
+    var names = selectedFiles.map(function (f) { return f.name; });
+    var label = names.length > 2
+      ? (names.slice(0, 2).join('、') + ' 等 ' + names.length + ' 个文件')
+      : names.join('、');
+    return '<span class="lr-file-name">' + escapeHtml(label) + '</span>' +
+      '<span class="lr-file-size">' + humanSize(totalFileSize(selectedFiles)) + '</span>' +
+      '<button class="lr-file-clear" type="button" aria-label="移除文件">&times;</button>';
+  }
+
   function apiFetch(url, opts) {
     return fetch(url, opts).then(function (res) {
       return res.json().catch(function () { return {}; }).then(function (data) {
         if (!res.ok) {
-          var msg = (data && (data.detail || data.message)) || ('HTTP ' + res.status);
+          var detail = data && (data.detail || data.message);
+          var msg;
+          if (Array.isArray(detail)) {
+            msg = detail.map(function (d) {
+              return (d && (d.msg || d.detail)) || JSON.stringify(d);
+            }).join('；');
+          } else if (detail && typeof detail === 'object') {
+            msg = JSON.stringify(detail);
+          } else {
+            msg = detail || ('HTTP ' + res.status);
+          }
           throw new Error(msg);
         }
         return data;
@@ -131,6 +171,21 @@
     if (!footEl) return;
     var bar = footEl.querySelector('.lr-error-bar');
     if (bar) bar.remove();
+  }
+
+  /* ---------- 切分结果（上传 / 重新切分共用） ---------- */
+
+  function absorbSplitData(data) {
+    data = data || {};
+    if (data.inspection) inspection = data.inspection;
+    if (Array.isArray(data.skipped)) skippedTitles = data.skipped;
+    if (data.unit) unitLabel = data.unit;
+    if (Array.isArray(data.chapters)) chapters = data.chapters;
+    if (typeof data.page_count === 'number') pageCount = data.page_count;
+    if (data.message) noticeMessage = String(data.message);
+    if (data.status) needsPageMap = data.status === 'needs_page_map';
+    ocrRequired = !!(inspection && inspection.route === 'need_ocr');
+    return data;
   }
 
   /* ---------- 续传已有书目辅助 ---------- */
@@ -261,15 +316,15 @@
     var mapEl = bodyEl && bodyEl.querySelector('#lrPageMap');
     fd.append('page_map', mapEl ? mapEl.value : '');
     fd.append('offset', String(currentOffset()));
+    fd.append('skip_noncontent', skipNonContent ? 'true' : 'false');
     return apiFetch(API.resplit, { method: 'POST', body: fd, cache: 'no-store' })
       .then(function (data) {
+        absorbSplitData(data);
         if (data && data.status === 'scanned') {
-          showError(data.message || '切分失败');
-          return;
+          ocrRequired = true;
+          needsPageMap = true;
+          chapters = [];
         }
-        chapters = Array.isArray(data.chapters) ? data.chapters : [];
-        needsPageMap = data.status === 'needs_page_map';
-        pageCount = data.page_count || 0;
         renderStepB();
       })
       .catch(function (err) {
@@ -441,6 +496,7 @@
   function openModal() {
     console.log('[Librarium] open uploader');
     buildModal();
+    refreshLibraryCount();
     if (jobId && jobStatus && (jobStatus === 'queued' || jobStatus === 'running')) {
       renderedLogs = 0;
       goStep(3);
@@ -457,7 +513,7 @@
 
   function resetRun() {
     step = 1;
-    selectedFile = null;
+    selectedFiles = [];
     chapters = [];
     needsPageMap = false;
     pageCount = 0;
@@ -475,6 +531,11 @@
     offsetMode = 'none';
     offsetStart = 1;
     existing = { chapters: [], max_order: 0, map_files: [] };
+    inspection = null;
+    skippedTitles = [];
+    unitLabel = '页';
+    ocrRequired = false;
+    noticeMessage = '';
   }
 
   function goStep(n) {
@@ -520,16 +581,11 @@
       ? ''
       : '<div class="lr-alert">未检测到有效 <code>API_KEY</code>。请先在项目根目录的 <code>.env</code> 中配置密钥后再开始生成，否则无法调用模型。</div>';
 
-    var hintHtml = selectedFile
+    var hintHtml = selectedFiles.length
       ? ''
-      : '<div class="lr-drop-hint" id="lrDropHint">拖拽文件到这里，或<em>点击选择</em></div>';
-    var chipHtml = selectedFile
-      ? '<div class="lr-file-chip" id="lrFileChip">' +
-          '<span class="lr-file-name">' + escapeHtml(selectedFile.name) + '</span>' +
-          '<span class="lr-file-size">' + humanSize(selectedFile.size) + '</span>' +
-          '<button class="lr-file-clear" type="button" aria-label="移除文件">&times;</button>' +
-        '</div>'
-      : '<div class="lr-file-chip" id="lrFileChip" hidden></div>';
+      : '<div class="lr-drop-hint" id="lrDropHint">拖拽 PDF / EPUB / TXT，或整组扫描图片到这里，或<em>点击选择</em></div>';
+    var chipHtml = '<div class="lr-file-chip" id="lrFileChip"' + (selectedFiles.length ? '' : ' hidden') + '>' +
+      fileChipHtml() + '</div>';
 
     bodyEl.innerHTML =
       bannerHtml + alertHtml +
@@ -543,11 +599,13 @@
         '<div class="lr-hint" id="lrResumeHint"></div>' +
       '</div>' +
       '<div class="lr-field">' +
-        '<label>电子书文件（.pdf / .epub）</label>' +
+        '<label>电子书文件（.pdf / .epub / .txt / 图片）</label>' +
         '<div class="lr-dropzone" id="lrDrop">' +
-          '<input type="file" id="lrFile" accept=".pdf,.epub" hidden>' +
+          '<input type="file" id="lrFile" accept="' + ACCEPT_EXT + '" multiple hidden>' +
           hintHtml + chipHtml +
         '</div>' +
+        '<label class="lr-check"><input type="checkbox" id="lrSkipNonContent"' + (skipNonContent ? ' checked' : '') + '> 自动跳过版权页 / 目录页 / 前言 / 参考文献等非正文条目</label>' +
+        '<div class="lr-hint">带目录的 EPUB、带文字层且有目录的 PDF、带章标题的 TXT 会直接拆章；无目录或扫描版会引导你手动填写目录。</div>' +
       '</div>' +
       '<div class="lr-field">' +
         '<label>英文短名（slug）</label>' +
@@ -564,9 +622,9 @@
       '</div>';
 
     footEl.innerHTML =
-      '<span class="lr-foot-note">文件仅保存在本地后端 raw_books/</span>' +
+      '<span class="lr-foot-note">文件保存在 raw_books/</span>' +
       '<button class="lr-btn lr-btn-ghost" type="button" data-act="close">取消</button>' +
-      '<button class="lr-btn lr-btn-primary" type="button" id="lrParseBtn">上传并解析目录</button>';
+      '<button class="lr-btn lr-btn-primary" type="button" id="lrParseBtn">上传并识别目录</button>';
 
     wireStepA();
   }
@@ -582,17 +640,14 @@
     parseBtn.addEventListener('click', handleUpload);
 
     function refreshChip() {
-      if (selectedFile) {
+      if (selectedFiles.length) {
         var hint = bodyEl.querySelector('#lrDropHint');
         if (hint) hint.remove();
         chip.hidden = false;
-        chip.innerHTML =
-          '<span class="lr-file-name">' + escapeHtml(selectedFile.name) + '</span>' +
-          '<span class="lr-file-size">' + humanSize(selectedFile.size) + '</span>' +
-          '<button class="lr-file-clear" type="button" aria-label="移除文件">&times;</button>';
+        chip.innerHTML = fileChipHtml();
         chip.querySelector('.lr-file-clear').addEventListener('click', function (e) {
           e.stopPropagation();
-          selectedFile = null;
+          selectedFiles = [];
           fileInput.value = '';
           refreshChip();
         });
@@ -600,16 +655,26 @@
         chip.hidden = true;
         chip.innerHTML = '';
         if (!bodyEl.querySelector('#lrDropHint')) {
-          drop.insertAdjacentHTML('afterbegin', '<div class="lr-drop-hint" id="lrDropHint">拖拽文件到这里，或<em>点击选择</em></div>');
+          drop.insertAdjacentHTML('afterbegin', '<div class="lr-drop-hint" id="lrDropHint">拖拽 PDF / EPUB / TXT，或整组扫描图片到这里，或<em>点击选择</em></div>');
         }
       }
     }
 
-    function setFile(file) {
-      if (!file) return;
-      if (!/\.(pdf|epub)$/i.test(file.name)) return;
-      selectedFile = file;
-      var stem = file.name.replace(/\.[^.]+$/, '');
+    function setFiles(fileList) {
+      var incoming = Array.prototype.slice.call(fileList || []);
+      if (!incoming.length) return;
+      var docs = incoming.filter(function (f) { return DOC_FILE_RE.test(f.name); });
+      var images = incoming.filter(function (f) { return IMAGE_FILE_RE.test(f.name); });
+      if (docs.length > 1) {
+        showError('一次只能上传一份 PDF / EPUB / TXT；图片可以多选，按顺序合并为扫描版 PDF。');
+      }
+      var picked = docs.length ? [docs[0]] : images;
+      if (!picked.length) {
+        showError('不支持该文件格式。仅支持 .pdf / .epub / .txt 或 .png / .jpg / .webp / .tif 图片。');
+        return;
+      }
+      selectedFiles = picked;
+      var stem = picked[0].name.replace(/\.[^.]+$/, '');
       var sug = slugify(stem);
       if (sug && !draft.slug) { draft.slug = sug; slugInput.value = sug; }
       if (!draft.title) { draft.title = stem; titleInput.value = stem; }
@@ -617,7 +682,7 @@
     }
 
     drop.addEventListener('click', function () { fileInput.click(); });
-    fileInput.addEventListener('change', function () { setFile(fileInput.files[0]); });
+    fileInput.addEventListener('change', function () { setFiles(fileInput.files); });
     ['dragenter', 'dragover'].forEach(function (ev) {
       drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('is-drag'); });
     });
@@ -625,9 +690,13 @@
       drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('is-drag'); });
     });
     drop.addEventListener('drop', function (e) {
-      var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-      setFile(f);
+      setFiles(e.dataTransfer && e.dataTransfer.files);
     });
+
+    var skipBox = bodyEl.querySelector('#lrSkipNonContent');
+    if (skipBox) {
+      skipBox.addEventListener('change', function () { skipNonContent = !!skipBox.checked; });
+    }
 
     slugInput.addEventListener('input', function () { draft.slug = slugInput.value; refreshSlugHint(); });
     titleInput.addEventListener('input', function () { draft.title = titleInput.value; });
@@ -665,12 +734,12 @@
       clearError();
       // 点击瞬间锁定按钮并切换文案，防止重复提交
       parseBtn.disabled = true;
-      parseBtn.textContent = '正在上传并解析目录…';
+      parseBtn.textContent = '正在上传并识别目录…';
 
       // 前置校验：文件、slug、书名、API Key，任一不通过都给出明确中文提示
-      if (!selectedFile) {
+      if (!selectedFiles.length) {
         console.warn('[Librarium] handleUpload: 未选择文件');
-        showError('请先选择一个 .pdf 或 .epub 电子书文件。');
+        showError('请先选择 PDF / EPUB / TXT 电子书或扫描图片。');
         return;
       }
 
@@ -705,14 +774,15 @@
       }
 
       var fd = new FormData();
-      fd.append('file', selectedFile, selectedFile.name);
+      selectedFiles.forEach(function (file) { fd.append('files', file, file.name); });
       fd.append('slug', slug);
+      fd.append('skip_noncontent', skipNonContent ? 'true' : 'false');
       if (mode === 'resume') fd.append('offset', String(currentOffset()));
       console.log(
         '[Librarium] handleUpload: POST ' + API.upload +
         ' slug=' + slug +
-        ' file=' + selectedFile.name +
-        ' size=' + humanSize(selectedFile.size)
+        ' files=' + selectedFiles.map(function (f) { return f.name; }).join(', ') +
+        ' size=' + humanSize(totalFileSize(selectedFiles))
       );
 
       var data = await apiFetch(API.upload, { method: 'POST', body: fd, cache: 'no-store' });
@@ -725,37 +795,92 @@
       var btn = footEl.querySelector('#lrParseBtn');
       if (btn) {
         btn.disabled = false;
-        btn.textContent = '上传并解析目录';
+        btn.textContent = '上传并识别目录';
       }
     }
   }
 
   function handleSplitResult(data) {
-    data = data || {};
-    chapters = Array.isArray(data.chapters) ? data.chapters : [];
-    needsPageMap = data.status === 'needs_page_map';
-    pageCount = data.page_count || 0;
-
-    if (data.status === 'scanned' || data.status === 'empty') {
-      showError(data.message || '未能解析出章节');
+    data = absorbSplitData(data);
+    if (data.status === 'scanned') {
+      chapters = [];
+      needsPageMap = true;
+      ocrRequired = true;
+      goStep(2);
       return;
     }
-
+    if (data.status === 'empty') {
+      showError(data.message || '未能解析出章节');
+      goStep(2);
+      return;
+    }
     goStep(2);
   }
 
   /* ---------- 步骤 B：目录预检 ---------- */
 
+  function renderInspection() {
+    if (!inspection) return '';
+    var total = inspection.total_units || inspection.page_count || 0;
+    var unit = inspection.unit || unitLabel || '页';
+    var tocText = inspection.has_toc
+      ? (inspection.toc_source === 'headings' ? 'TXT 章标题 ' : '内嵌目录 ') +
+        (inspection.toc_total || inspection.toc_count) + ' 条'
+      : '无可用目录';
+    if (inspection.has_toc && skippedTitles.length) {
+      tocText += ' → 采用 ' + (chapters.length || inspection.toc_count || 0) + ' 章';
+    }
+    var textText = inspection.format === 'image'
+      ? '图片 · 无文字层'
+      : (inspection.text_layer ? '有文字层' : '无文字层 · 扫描版');
+    var routeText = ocrRequired
+      ? '需先 OCR'
+      : (inspection.route === 'auto_split' ? '直接拆书' : '手动填写目录');
+    var skipHtml = '';
+    if (!needsPageMap && skippedTitles.length) {
+      skipHtml = '<div class="lr-inspect-note">已跳过 ' + skippedTitles.length + ' 条非正文：' +
+        escapeHtml(skippedTitles.join(' / ')) +
+        ' <button type="button" class="lr-link" id="lrToggleNonContent">恢复这些条目</button></div>';
+    } else if (!needsPageMap && !skipNonContent) {
+      skipHtml = '<div class="lr-inspect-note">当前保留了全部目录条目。' +
+        '<button type="button" class="lr-link" id="lrToggleNonContent">改为跳过版权页 / 目录页等</button></div>';
+    }
+    return '<div class="lr-inspect">' +
+      '<div class="lr-inspect-head">文件体检 <span>' + escapeHtml(inspection.filename || '') + '</span></div>' +
+      '<div class="lr-inspect-grid">' +
+        '<div class="lr-inspect-item"><span>格式</span><b>' + escapeHtml(inspection.format_label || inspection.format || '') + '</b></div>' +
+        '<div class="lr-inspect-item"><span>目录</span><b>' + escapeHtml(tocText) + '</b></div>' +
+        '<div class="lr-inspect-item"><span>正文</span><b>' + escapeHtml(fmt(total) + ' ' + unit + ' · ' + textText) + '</b></div>' +
+        '<div class="lr-inspect-item"><span>去向</span><b>' + escapeHtml(routeText) + '</b></div>' +
+      '</div>' + skipHtml +
+    '</div>';
+  }
+
   function renderStepB() {
     var isResume = mode === 'resume';
-    var content = '';
+    var content = renderInspection();
+
+    if (ocrRequired) {
+      var ocrText = (noticeMessage && /OCR|文字层|扫描/.test(noticeMessage))
+        ? noticeMessage
+        : '检测到该文件没有文字层（扫描版 / 图片）。可以继续填写目录切出章节骨架，但正文为空，无法生成笔记；请先 OCR 成文字层 PDF 或 TXT 再上传。';
+      content += '<div class="lr-alert">' + escapeHtml(ocrText) + '</div>';
+    }
+
     if (needsPageMap) {
-      content =
+      var unitName = unitLabel === '行' ? '行' : '页';
+      var isTxt = !!(inspection && inspection.format === 'txt');
+      content +=
         '<div class="lr-field">' +
-          '<label>该电子书无内嵌目录，请按「起始页-结束页 | 章节名」填写页码映射（每行一章，页码从 1 起算，结束页含本页）</label>' +
-          '<textarea class="lr-input" id="lrPageMap" spellcheck="false">' + escapeHtml(defaultPageMap()) + '</textarea>' +
+          '<label>该' + (isTxt ? ' TXT' : '电子书') + '没有可用目录，请按「起始' + unitName + '-结束' + unitName + ' | 章节名」填写目录映射（每行一章，' + unitName + '码从 1 起算，结束' + unitName + '含本' + unitName + '）</label>' +
+          '<textarea class="lr-input" id="lrPageMap" spellcheck="false" placeholder="起始' + unitName + '-结束' + unitName + ' | 章节名"></textarea>' +
+          '<div class="lr-hint">共 ' + fmt(pageCount) + ' ' + unitName + '。' +
+            (unitName === '页'
+              ? '<button type="button" class="lr-link" id="lrFillDemo">填入三等分示例（需自行修改）</button>'
+              : '') +
+          '</div>' +
         '</div>' +
-        '<div class="lr-empty">提交后将重新切分，并在下方展示章节与字数。</div>';
+        '<div class="lr-empty">提交后将重新切分，并在上方展示章节与字数。</div>';
     } else if (chapters.length) {
       var rows = chapters.map(function (c) {
         var existed = isResume && isChapterExisting(c.index);
@@ -769,21 +894,22 @@
           '<span class="c-idx">' + String(c.index).padStart(2, '0') + '</span>' +
           '<span class="c-title">' + escapeHtml(c.title) + tag + '</span>' +
           '<span class="c-chars">' + fmt(c.chars) + ' 字</span>' +
-          '<span class="c-pages">' + fmt(c.pages) + ' 页</span>' +
+          '<span class="c-pages">' + fmt(c.pages) + ' ' + unitLabel + '</span>' +
         '</div>';
       }).join('');
-      content =
+      content +=
         '<div class="lr-chapters' + (isResume ? ' has-check' : '') + '">' +
           '<div class="lr-chapters-head">' +
-            (isResume ? '<span>选</span>' : '') + '<span>编号</span><span>章节</span><span>字数</span><span>页数</span>' +
+            (isResume ? '<span>选</span>' : '') +
+            '<span>编号</span><span>章节</span><span>字数</span><span>' + unitLabel + '数</span>' +
           '</div>' +
           '<div class="lr-chapters-list">' + rows + '</div>' +
         '</div>';
     } else {
-      content = '<div class="lr-empty">暂无章节信息，请返回上一步重新上传。</div>';
+      content += '<div class="lr-empty">暂无章节信息，请返回上一步重新上传。</div>';
     }
 
-    var rangeHtml;
+    var rangeHtml = '';
     if (isResume) {
       var numVal = (offsetMode === 'custom')
         ? (parseInt(offsetStart, 10) || 1)
@@ -796,8 +922,8 @@
           '<label><input type="radio" name="lrOffset" value="custom"' + (offsetMode === 'custom' ? ' checked' : '') + '> 自定义起始章号</label>' +
           '<span class="lr-offset-num">第 <input type="number" id="lrOffsetN" min="1" value="' + numVal + '"' + (offsetMode === 'custom' ? '' : ' disabled') + '> 章</span>' +
         '</div>' +
-        '<div class="lr-hint lr-resume-count">将生成勾选的新章节，已入藏章节默认跳过（可手动勾选覆盖）。</div>';
-    } else {
+        '<div class="lr-hint lr-resume-count">将生成勾选的新章节，已入藏章节默认跳过（可手动勾选覆盖）。「按原目录编号」保留目录中的章号；「接续顺延」从已入藏最大章号 +1 开始，会重新命名分章文件。</div>';
+    } else if (!needsPageMap) {
       rangeHtml =
         '<div class="lr-range">' +
           '<span>运行范围</span>' +
@@ -808,18 +934,45 @@
 
     bodyEl.innerHTML = content + rangeHtml;
 
-    var canStart = chapters.length > 0;
+    var canStart = chapters.length > 0 && !ocrRequired;
     footEl.innerHTML =
       '<button class="lr-btn lr-btn-ghost" type="button" data-act="back">上一步</button>' +
+      (chapters.length
+        ? '<button class="lr-btn lr-btn-ghost" type="button" id="lrOpenBookBtn">打开本书原文</button>'
+        : '') +
       (needsPageMap
         ? '<button class="lr-btn lr-btn-primary" type="button" id="lrResplitBtn">重新切分</button>'
-        : '<button class="lr-btn lr-btn-primary" type="button" id="lrStartBtn"' + (canStart ? '' : ' disabled') + '>开始生成</button>');
+        : '<button class="lr-btn lr-btn-primary" type="button" id="lrStartBtn"' + (canStart ? '' : ' disabled') + '>' +
+          (ocrRequired ? '需先 OCR' : '开始生成') + '</button>');
 
     wireStepB();
   }
 
   function wireStepB() {
     footEl.querySelector('[data-act="back"]').addEventListener('click', function () { goStep(1); });
+
+    var fillDemo = bodyEl.querySelector('#lrFillDemo');
+    if (fillDemo) {
+      fillDemo.addEventListener('click', function () {
+        var ta = bodyEl.querySelector('#lrPageMap');
+        if (ta) ta.value = defaultPageMap();
+      });
+    }
+
+    var toggleNonContent = bodyEl.querySelector('#lrToggleNonContent');
+    if (toggleNonContent) {
+      toggleNonContent.addEventListener('click', function () {
+        skipNonContent = !skipNonContent;
+        applyOffset();
+      });
+    }
+
+    var openBookBtn = footEl.querySelector('#lrOpenBookBtn');
+    if (openBookBtn) {
+      openBookBtn.addEventListener('click', function () {
+        openFolder('chapters', slugify(draft.slug));
+      });
+    }
 
     if (mode === 'resume') {
       bodyEl.querySelectorAll('input[name="lrOffset"]').forEach(function (r) {
@@ -856,7 +1009,8 @@
   }
 
   function resplit() {
-    var mapText = bodyEl.querySelector('#lrPageMap').value;
+    var mapEl = bodyEl.querySelector('#lrPageMap');
+    var mapText = mapEl ? mapEl.value : '';
     var btn = footEl.querySelector('#lrResplitBtn');
     btn.disabled = true;
     btn.textContent = '正在重新切分…';
@@ -864,25 +1018,26 @@
     var fd = new FormData();
     fd.append('slug', slugify(draft.slug) || 'book');
     fd.append('page_map', mapText);
+    fd.append('skip_noncontent', skipNonContent ? 'true' : 'false');
     if (mode === 'resume') fd.append('offset', String(currentOffset()));
 
     apiFetch(API.resplit, { method: 'POST', body: fd, cache: 'no-store' })
       .then(function (data) {
+        absorbSplitData(data);
         if (data && data.status === 'scanned') {
-          btn.disabled = false;
-          btn.textContent = '重新切分';
-          var empty = bodyEl.querySelector('.lr-empty');
-          if (empty) empty.textContent = data.message || '切分失败';
-          return;
+          ocrRequired = true;
+          needsPageMap = true;
+          chapters = [];
         }
-        chapters = Array.isArray(data.chapters) ? data.chapters : [];
-        needsPageMap = data.status === 'needs_page_map';
-        pageCount = data.page_count || 0;
         renderStepB();
+        if (data && data.status === 'needs_page_map') {
+          var empty = bodyEl.querySelector('.lr-empty');
+          if (empty) empty.textContent = data.message || '仍未解析出目录，请检查填写格式。';
+        }
       })
       .catch(function (err) {
-        btn.disabled = false;
-        btn.textContent = '重新切分';
+        var b = footEl.querySelector('#lrResplitBtn');
+        if (b) { b.disabled = false; b.textContent = '重新切分'; }
         var empty = bodyEl.querySelector('.lr-empty');
         if (empty) empty.textContent = '切分失败：' + err.message;
       });
@@ -1183,9 +1338,13 @@
         '</div>';
       footEl.innerHTML =
         '<button class="lr-btn lr-btn-ghost" type="button" data-act="close">关闭</button>' +
+        '<button class="lr-btn lr-btn-ghost" type="button" data-act="folder">原文文件夹</button>' +
         '<button class="lr-btn lr-btn-ghost" type="button" data-act="git">同步至 GitHub</button>' +
         '<a class="lr-btn lr-btn-primary" href="' + escapeHtml(data.result.map_url) + '">查看新书地图</a>';
       footEl.querySelector('[data-act="close"]').addEventListener('click', closeModal);
+      footEl.querySelector('[data-act="folder"]').addEventListener('click', function () {
+        openFolder('chapters', slugify(draft.slug));
+      });
       footEl.querySelector('[data-act="git"]').addEventListener('click', syncToGit);
       renderStepsDone();
     } else if (data.status === 'done') {
@@ -1198,8 +1357,12 @@
         '</div>';
       footEl.innerHTML =
         '<button class="lr-btn lr-btn-ghost" type="button" data-act="close">关闭</button>' +
+        '<button class="lr-btn lr-btn-ghost" type="button" data-act="folder">原文文件夹</button>' +
         '<button class="lr-btn lr-btn-ghost" type="button" data-act="git">同步至 GitHub</button>';
       footEl.querySelector('[data-act="close"]').addEventListener('click', closeModal);
+      footEl.querySelector('[data-act="folder"]').addEventListener('click', function () {
+        openFolder('chapters', slugify(draft.slug));
+      });
       footEl.querySelector('[data-act="git"]').addEventListener('click', syncToGit);
       renderStepsDone();
     } else if (data.status === 'cancelled') {
@@ -1284,6 +1447,36 @@
       });
   }
 
+  /* ---------- 本机书库：打开全部原文本 / 某本书的章节文件夹 ---------- */
+
+  function openFolder(target, slug) {
+    var payload = { target: target || 'workspace' };
+    if (slug) payload.slug = slug;
+    apiFetch(API.openFolder, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      cache: 'no-store'
+    }).then(function (data) {
+      showSyncNotice('已在资源管理器中打开：' + ((data && data.path) || ''));
+    }).catch(function (err) {
+      showSyncNotice('打开文件夹失败：' + err.message);
+    });
+  }
+
+  function refreshLibraryCount() {
+    apiFetch(API.library, { cache: 'no-store' })
+      .then(function (data) {
+        libraryInfo = data || null;
+        var btn = document.getElementById('lrOpenFolderBtn');
+        if (btn && data) {
+          btn.title = '工作区共 ' + (data.total_books || 0) + ' 本书、' +
+            (data.total_chapters || 0) + ' 个原文本文件';
+        }
+      })
+      .catch(function () { /* 后端离线时静默忽略 */ });
+  }
+
   function mountSideTools(foot) {
     if (!foot) return;
     var host = foot.querySelector('.lr-foot-note');
@@ -1292,15 +1485,31 @@
     var bar = document.createElement('span');
     bar.className = 'lr-side-tools';
     bar.innerHTML =
+      '<button class="lr-tool" type="button" id="lrOpenFolderBtn" title="打开所有已拆书的原文本文件夹">原文文件夹</button>' +
       '<button class="lr-tool" type="button" id="lrGitBtn">' +
         '<span class="lr-tool-label">同步至 GitHub</span>' +
         '<span class="lr-git-dot" id="lrGitDot" hidden></span>' +
       '</button>' +
       '<button class="lr-tool" type="button" id="lrSleepBtn">休眠服务</button>';
     host.appendChild(bar);
+    bar.querySelector('#lrOpenFolderBtn').addEventListener('click', function () {
+      openFolder('workspace');
+    });
     bar.querySelector('#lrGitBtn').addEventListener('click', syncToGit);
-    bar.querySelector('#lrSleepBtn').addEventListener('click', sleepService);
+    bar.querySelector('#lrSleepBtn').addEventListener('click', function () {
+      if (jobId && (jobStatus === 'queued' || jobStatus === 'running')) {
+        showSyncNotice('生成任务进行中：休眠会直接中断任务。已完成章节会保留、可断点续跑；建议先「中止生成」。');
+        return;
+      }
+      sleepService();
+    });
     refreshGitStatus();
+    if (libraryInfo) {
+      var n = libraryInfo.total_books || 0;
+      var m = libraryInfo.total_chapters || 0;
+      var folderBtn = bar.querySelector('#lrOpenFolderBtn');
+      if (folderBtn) folderBtn.title = '工作区共 ' + n + ' 本书、' + m + ' 个原文本文件';
+    }
   }
 
   // 每个步骤重建 footer 后，自动把「同步 / 休眠」工具挂回左侧状态区

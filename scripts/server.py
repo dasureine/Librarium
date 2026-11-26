@@ -47,25 +47,91 @@ def health():
 
 
 @app.post("/api/books/upload")
-def upload(file: UploadFile = File(...), slug: str = Form(...), offset: int = Form(0)):
+def upload(
+    files: list[UploadFile] = File(...),
+    slug: str = Form(...),
+    offset: int = Form(0),
+    skip_noncontent: bool = Form(True),
+):
+    """上传并解析原始电子书。
+
+    支持 .pdf / .epub / .txt；多选图片会按顺序合并为一份扫描版 PDF。
+    上传后立刻做格式与目录体检：带目录且有文字层直接拆章，
+    无目录返回 needs_page_map 让前端填写目录，扫描版返回 scanned 提示 OCR。
+    """
     slug = pipeline.sanitize_slug(slug)
-    ext = Path(file.filename or "").suffix.lower()
-    if ext not in (".pdf", ".epub"):
-        raise HTTPException(status_code=400, detail="仅支持 .pdf 或 .epub 文件")
+    if not files:
+        raise HTTPException(status_code=400, detail="未收到任何文件")
+
+    names = [f.filename or "" for f in files]
+    exts = [Path(name).suffix.lower() for name in names]
+    supported = pipeline.split_book.SUPPORTED_EXTS
+    bad = [name for name, ext in zip(names, exts) if ext not in supported]
+    if bad:
+        raise HTTPException(
+            status_code=400,
+            detail="不支持的文件格式：" + "、".join(bad) + "（仅支持 PDF / EPUB / TXT / 图片）",
+        )
+
+    image_exts = pipeline.split_book.SUPPORTED_IMAGE_EXTS
+    if len(files) > 1 and any(ext not in image_exts for ext in exts):
+        raise HTTPException(
+            status_code=400,
+            detail="一次只能上传一份 PDF / EPUB / TXT；图片可以多选，按顺序合并为扫描版 PDF。",
+        )
+
     pipeline.RAW_BOOKS.mkdir(parents=True, exist_ok=True)
-    dest = pipeline.RAW_BOOKS / f"{slug}{ext}"
-    with dest.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
     try:
-        result = pipeline.split_precheck(slug, dest, offset=offset)
+        if all(ext in image_exts for ext in exts):
+            tmp_dir = pipeline.RAW_BOOKS / f".{slug}_images"
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+            tmp_dir.mkdir(parents=True, exist_ok=True)
+            image_paths = []
+            try:
+                for index, (upload_file, ext) in enumerate(zip(files, exts)):
+                    image_path = tmp_dir / f"{index:04d}{ext}"
+                    with image_path.open("wb") as fh:
+                        shutil.copyfileobj(upload_file.file, fh)
+                    image_paths.append(image_path)
+                dest = pipeline.RAW_BOOKS / f"{slug}.pdf"
+                pipeline.split_book.images_to_pdf(image_paths, dest)
+            finally:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+        else:
+            dest = pipeline.RAW_BOOKS / f"{slug}{exts[0]}"
+            with dest.open("wb") as fh:
+                shutil.copyfileobj(files[0].file, fh)
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=400, detail=f"保存文件失败：{exc}")
+
+    inspection = pipeline.inspect_book(dest)
+    pipeline.write_source_manifest(slug, dest, inspection)
+
+    try:
+        result = pipeline.split_precheck(
+            slug, dest, offset=offset, skip_noncontent=skip_noncontent
+        )
     except pipeline.ScannedBookError as e:
-        return {"status": "scanned", "message": str(e), "chapters": []}
+        return {
+            "status": "scanned",
+            "message": str(e),
+            "chapters": [],
+            "inspection": inspection,
+            "saved_to": str(dest),
+        }
     result["saved_to"] = str(dest)
     return result
 
 
 @app.post("/api/books/resplit")
-def resplit(slug: str = Form(...), page_map: str = Form(""), offset: int = Form(0)):
+def resplit(
+    slug: str = Form(...),
+    page_map: str = Form(""),
+    offset: int = Form(0),
+    skip_noncontent: bool = Form(True),
+):
     slug = pipeline.sanitize_slug(slug)
     book = pipeline.find_raw_book(slug)
     if not book:
@@ -73,13 +139,27 @@ def resplit(slug: str = Form(...), page_map: str = Form(""), offset: int = Form(
     workspace = pipeline.WORKSPACE / slug
     workspace.mkdir(parents=True, exist_ok=True)
     map_file = None
-    if page_map:
+    if page_map.strip():
         map_file = workspace / "pages_map.txt"
         map_file.write_text(page_map, encoding="utf-8")
+    inspection = pipeline.inspect_book(book)
+    if not pipeline.read_source_manifest(slug):
+        pipeline.write_source_manifest(slug, book, inspection)
     try:
-        result = pipeline.split_precheck(slug, book, page_map=str(map_file) if map_file else None, offset=offset)
+        result = pipeline.split_precheck(
+            slug,
+            book,
+            page_map=str(map_file) if map_file else None,
+            offset=offset,
+            skip_noncontent=skip_noncontent,
+        )
     except pipeline.ScannedBookError as e:
-        return {"status": "scanned", "message": str(e), "chapters": []}
+        return {
+            "status": "scanned",
+            "message": str(e),
+            "chapters": [],
+            "inspection": inspection,
+        }
     return result
 
 
@@ -453,6 +533,85 @@ def shutdown(request: Request):
 
     threading.Thread(target=_stop, daemon=True).start()
     return {"status": "ok", "message": "本地服务已休眠，下次双击桌面图标即可唤醒"}
+
+
+# ---------- 本机书库：查看 / 打开已拆书的原文本 ----------
+
+def _open_path(path: Path) -> None:
+    """在本机文件管理器（Windows 资源管理器）中打开指定目录。"""
+    if os.name == "nt":
+        os.startfile(str(path))  # type: ignore[attr-defined]
+        return
+    opener = "open" if sys.platform == "darwin" else "xdg-open"
+    subprocess.Popen(
+        [opener, str(path)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+
+@app.get("/api/library/overview")
+def library_overview():
+    """列出 workspace/ 下所有已拆书及其原文本、笔记、地图数量。"""
+    titles = {}
+    for book in pipeline.load_books():
+        if isinstance(book, dict) and book.get("id"):
+            titles[book["id"]] = book.get("title") or ""
+    books = []
+    workspace = pipeline.WORKSPACE
+    if workspace.is_dir():
+        for entry in sorted(workspace.iterdir(), key=lambda p: p.name.lower()):
+            if not entry.is_dir() or entry.name.startswith((".", "_")):
+                continue
+            chapters_dir = entry / "chapters"
+            chapters = sorted(chapters_dir.glob("*.txt")) if chapters_dir.is_dir() else []
+            notes_dir = entry / "chapter_notes"
+            notes = sorted(notes_dir.glob("*.md")) if notes_dir.is_dir() else []
+            maps_dir = pipeline.MAPS_DIR / entry.name
+            maps = sorted(maps_dir.glob("ch*.html")) if maps_dir.is_dir() else []
+            manifest = pipeline.read_source_manifest(entry.name)
+            books.append({
+                "slug": entry.name,
+                "title": titles.get(entry.name) or entry.name,
+                "source": manifest.get("filename") or "",
+                "format": manifest.get("format") or "",
+                "chapters": len(chapters),
+                "notes": len(notes),
+                "maps": len(maps),
+                "path": str(chapters_dir),
+            })
+    return {
+        "workspace": str(workspace),
+        "books": books,
+        "total_books": len(books),
+        "total_chapters": sum(item["chapters"] for item in books),
+    }
+
+
+@app.post("/api/library/open")
+def library_open(request: Request, payload: Optional[dict] = Body(None)):
+    """在资源管理器中打开书库目录：默认全部原文本，也可定位某本书的 chapters。"""
+    if not _is_local(request):
+        raise HTTPException(status_code=403, detail="仅允许本机访问")
+    payload = payload or {}
+    target = str(payload.get("target") or "workspace").strip().lower()
+    slug = pipeline.sanitize_slug(payload.get("slug") or "")
+    if target == "raw":
+        path = pipeline.RAW_BOOKS
+    elif target in ("chapters", "book"):
+        if not str(payload.get("slug") or "").strip():
+            raise HTTPException(status_code=400, detail="缺少 slug")
+        path = pipeline.WORKSPACE / slug
+        if target == "chapters":
+            path = path / "chapters"
+    else:
+        path = pipeline.WORKSPACE
+    path.mkdir(parents=True, exist_ok=True)
+    try:
+        _open_path(path)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"打开文件夹失败：{exc}")
+    return {"status": "ok", "path": str(path)}
 
 
 # 静态站点服务（挂载项目根目录，须在 API 路由之后注册）
